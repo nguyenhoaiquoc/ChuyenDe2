@@ -1,7 +1,6 @@
 import { Text, View, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'react-native';
-import { TextInput } from 'react-native';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { FontAwesome5 } from "@expo/vector-icons";
 import "../../global.css"

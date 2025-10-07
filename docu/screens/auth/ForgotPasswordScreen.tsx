@@ -1,6 +1,6 @@
 
 import '../../global.css';
-import { Text, View, TouchableOpacity } from 'react-native';
+import { Text, View, TouchableOpacity, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Image } from 'react-native';
 import { TextInput } from 'react-native';
@@ -9,14 +9,36 @@ import Button from '../../components/Button';
 import Header_lg_reg from '../../components/HeaderAuth';
 import FloatingInput from '../../components/FloatingInput';
 import { useState } from 'react';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../../types';
+import axios from 'axios';
 
-export default function ForgotPasswordScreen({ navigation }: { navigation: any }) {
+type Props = {
+    navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>
+}
+export default function ForgotPasswordScreen({ navigation }: Props) {
     const [email, setEmail] = useState("");
+      const [loading, setLoading] = useState(false);
+const handleSendOtp = async () => {
+    if (!email) return Alert.alert('Vui lòng nhập email');
+
+    try {
+      setLoading(true);
+      const res = await axios.post('http://192.168.100.149:3000/auth/forgot-password', { email });
+      Alert.alert(res.data.message);
+      // Điều hướng sang màn OTPVerifyScreen kèm param email
+      navigation.navigate('OTPVerifyScreen', { email });
+    } catch (err: any) {
+      Alert.alert(err.response?.data?.message || 'Gửi OTP thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
     return (
         <View className="">
             <View className="pl-5 pt-20" >
 
-                <FontAwesome onPress={() => navigation.navigate("Login")} name="arrow-left" size={20} color="#000" />
+                <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
             </View>
 
             <StatusBar style="auto" />
@@ -37,7 +59,7 @@ export default function ForgotPasswordScreen({ navigation }: { navigation: any }
                         onChangeText={setEmail}
                     />
 
-                    <Button value="Tiếp tục" />
+                    <Button value="Tiếp tục" onPress ={handleSendOtp}/>
 
                 </View>
             </View>

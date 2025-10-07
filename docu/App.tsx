@@ -2,7 +2,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types'; 
-
 import HomeScreen from './screens/home/HomeScreen';
 import AllCategoriesScreen from './screens/categories/AllCategoriesScreen';
 import CategoryIndex from './screens/categories/CategoryIndex';
@@ -26,13 +25,17 @@ import SavedSearchScreen from './screens/profile/SavedSearchScreen';
 import SavedPosts from './screens/profile/SavedPosts';
 import FeedbackScreen from './screens/profile/FeedbackScreen';
 import UserScreen from './screens/profile/UserScreen';
+import HomeAdminScreen from './screens/admin/HomeAdminScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>(); 
 
 export default function App() {
+  
+
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }} >
         {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="AllCategories" component={AllCategoriesScreen} />
@@ -57,6 +60,9 @@ export default function App() {
         <Stack.Screen name="SavedPosts" component={SavedPosts} />
         <Stack.Screen name="FeedbackScreen" component={FeedbackScreen} />
         <Stack.Screen name="UserScreen" component={UserScreen} />
+        <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+
+
       </Stack.Navigator>
     </NavigationContainer>
   );

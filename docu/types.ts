@@ -4,12 +4,12 @@ export type RootStackParamList = {
   CategoryIndex: { categoryId: string; categoryName?: string } | undefined;
   LoginScreen: undefined;
   RegisterScreen: undefined;
-  VerifyAccountScreen: undefined;
+  VerifyAccountScreen: { email: string };
   ForgotPasswordScreen: undefined;
-  NewPasswordScreen: undefined;
+  NewPasswordScreen: { token: string }; 
   ChatListScreen: undefined;
   ChatRoomScreen: undefined;
-  OTPVerifyScreen: undefined;
+   OTPVerifyScreen: { email: string }; 
   ProductDetail: { product: ProductType }; 
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
@@ -22,6 +22,7 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  HomeAdminScreen: undefined;
   // TestApi: undefined;
 };
 
