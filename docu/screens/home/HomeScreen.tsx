@@ -1,13 +1,15 @@
-import { View, TextInput, TouchableOpacity, Image, ScrollView, Text, StatusBar, FlatList } from "react-native";
+import { View, TextInput, TouchableOpacity, Image, ScrollView, Text, StatusBar, FlatList, Easing } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import "../../global.css"
+import { BackHandler, ToastAndroid, Animated } from 'react-native';
+
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
 }
@@ -44,10 +46,49 @@ interface Product {
 
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
+const [exitApp, setExitApp] = useState(false);
+const fadeAnim = useRef(new Animated.Value(0)).current;
+useEffect(() => {
+  const backAction = () => {
+    if (exitApp) {
+      BackHandler.exitApp();
+      return true; // ✅ phải return boolean
+    } else {
+      setExitApp(true);
+
+      // Fade in mượt
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 180,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+
+      // Sau 1.2s thì fade out nhẹ
+      const timer = setTimeout(() => {
+        setExitApp(false);
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 400,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      }, 500);
+
+      // ❌ Không return function ở đây
+      return true; // ✅ chỉ return true để báo "đã xử lý"
+    }
+  };
+
+  const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+  return () => backHandler.remove(); // ✅ cleanup chuẩn
+}, [exitApp]);
+
 
   useEffect(() => {
      console.log("HomeScreen mounted, gọi API...");
-    axios.get("http://192.168.1.92:3000/products")
+    axios.get("http://192.168.1.87:3000/products")
       .then((res) => {
         console.log("Dữ liệu từ backend:", res.data);
         const rawData = Array.isArray(res.data) ? res.data : [res.data];
@@ -212,6 +253,21 @@ export default function HomeScreen({ navigation }: Props) {
 
       {/* Menu dưới */}
       <Menu />
+<Animated.View
+  style={{
+    position: 'absolute',
+    bottom: 40,
+    left: '15%',
+    right: '15%',
+    opacity: fadeAnim,
+    backgroundColor: '#333333',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  }}
+>
+  <Text style={{ color: 'white' }}>Back lần nữa sẽ thoát chương trình</Text>
+</Animated.View>
     </View>
   );
 }

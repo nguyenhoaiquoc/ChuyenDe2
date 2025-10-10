@@ -33,6 +33,7 @@ export class AuthService {
       password: hashedPassword,
       fullName: dto.fullName,
       phone: dto.phone,
+        roleId: 2,
     });
     await this.userRepository.save(user);
 

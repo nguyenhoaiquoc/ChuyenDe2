@@ -13,6 +13,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { path } from '../../config';
+import { Linking } from 'react-native';
+
 
 const content = [
   "Email",
@@ -41,7 +44,7 @@ const handleLogin = async () => {
   }
 
   try {
-    const res = await axios.post('http://192.168.100.149:3000/auth/login', {
+    const res = await axios.post(`https://ttgb.id.vn/api/login`, {
       email,
       password,
     });
@@ -49,11 +52,21 @@ const handleLogin = async () => {
 
     // Lưu token nếu muốn
     await AsyncStorage.setItem('token', res.data.token);
-     if (res.data.role === 'admin') {
-      navigation.navigate('HomeAdminScreen');
-    } else {
-      navigation.navigate('Home');
-    }
+    // console.log(res.data);
+    
+    
+   if (res.data.role === 'Admin') {
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'HomeAdminScreen' }],
+  });
+} else {
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'Home' }],
+  });
+}
+
   } catch (err: any) {
   setLoginError(err.response?.data?.message || 'Email hoặc mật khẩu chưa đúng \n vui lòng kiểm tra lại');
   }
@@ -139,7 +152,7 @@ const handleLogin = async () => {
 
         <Text className="text-[12px] border-r pr-5 ">Cao Đẳng CN Thủ Đức</Text>
         <Text className="text-[12px] border-r pr-5">Chính sách bảo mật</Text>
-        <Text className="text-[12px]">Liên hệ hỗ trợ</Text>
+        <Text className="text-[12px]" onPress={() => Linking.openURL('https://ttgb.id.vn/')}>Liên hệ hỗ trợ</Text>
       </View>
     </View>
   );

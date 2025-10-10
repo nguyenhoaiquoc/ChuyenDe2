@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsPhoneNumber, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, Matches, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
@@ -18,4 +18,8 @@ export class RegisterDto {
   @IsOptional()
   @IsPhoneNumber('VN', { message: 'Số điện thoại không hợp lệ' })
   phone?: string; 
+
+  @IsOptional()
+  @IsNumber({}, { message: 'RoleId phải là số' })
+  roleId?: number; // <-- thêm trường RoleId
 }

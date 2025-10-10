@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Report } from "./report.entity";
 
 @Entity('products')
 export class Product {
@@ -40,9 +42,9 @@ export class Product {
 
   @Column({ type: 'bigint' })
   condition_id: number;
-  
-@Column({ type: 'json', nullable: true })
-address_json: object;
+
+  @Column({ type: 'json', nullable: true })
+  address_json: object;
 
 
   @Column({ type: 'bigint' })
@@ -57,9 +59,13 @@ address_json: object;
   @Column({ type: 'boolean' })
   is_approved: boolean;
 
+  @OneToMany(() => Report, (report) => report.product)
+  reports: Report[];
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
 }

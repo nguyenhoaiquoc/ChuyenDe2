@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
+import { path } from '../../config';
 
 type RouteParams = {
   email: string;
@@ -20,6 +21,8 @@ type Props = {
 export default function OTPVerifyScreen({ navigation }: Props) {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+const [loginError, setLoginError] = useState<string | null>(null);
+
   const route = useRoute();
   const { email } = route.params as RouteParams;
 const handleVerifyOtp = async () => {
@@ -27,7 +30,7 @@ const handleVerifyOtp = async () => {
 
     try {
       setLoading(true);
-      const res = await axios.post('http://192.168.100.149:3000/auth/verify-reset-otp', {
+      const res = await axios.post(`https://ttgb.id.vn/api/verify-reset-otp`, {
         email,
         otp,
       });
@@ -37,7 +40,7 @@ const handleVerifyOtp = async () => {
       // Điều hướng sang màn NewPasswordScreen kèm token reset
       navigation.navigate('NewPasswordScreen', { token: res.data.resetToken });
     } catch (err: any) {
-      Alert.alert(err.response?.data?.message || 'Xác thực OTP thất bại');
+  setLoginError(err.response?.data?.message || 'Xác thực OTP thất bại');
     } finally {
       setLoading(false);
     }
@@ -50,7 +53,14 @@ const handleVerifyOtp = async () => {
 
       <StatusBar style="auto" />
       <Header_lg_reg value="Đặt lại mật khẩu" />
-
+{loginError && (
+  <View className="flex items-center px-2">
+    <View className="flex-row gap-2 bg-red-100 py-4 justify-center  w-full rounded-xl">
+      <FontAwesome name="warning" className="mt-0.5" size={16} color="red" />
+      <Text>{loginError}</Text>
+    </View>
+  </View>
+)}
       <View className="px-2 mt-10">
         <Text>Nhập mã xác nhận</Text>
       </View>

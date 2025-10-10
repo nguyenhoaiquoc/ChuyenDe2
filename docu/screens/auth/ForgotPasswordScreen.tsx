@@ -12,6 +12,7 @@ import { useState } from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import axios from 'axios';
+import { path } from '../../config';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>
@@ -24,7 +25,7 @@ const handleSendOtp = async () => {
 
     try {
       setLoading(true);
-      const res = await axios.post('http://192.168.100.149:3000/auth/forgot-password', { email });
+      const res = await axios.post(`https://ttgb.id.vn/api/send-reset-otp`, { email });
       Alert.alert(res.data.message);
       // Điều hướng sang màn OTPVerifyScreen kèm param email
       navigation.navigate('OTPVerifyScreen', { email });

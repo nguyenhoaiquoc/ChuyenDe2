@@ -12,6 +12,7 @@ import HeaderAuth from '../../components/HeaderAuth';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { RootStackParamList } from '../../types'
 import axios from 'axios'
+import { path } from '../../config'
 
 
 
@@ -25,22 +26,23 @@ export default function VerifyAccountScreen({ navigation,route  }: Props) {
     const [otp, setOtp] = useState("")
 
 const handleVerifyOTP = async () => {
-    if (!otp) {
+    if (!otp.trim()) {
       Alert.alert('Vui lòng nhập mã OTP');
       return;
     }
 
     try {
-      const res = await axios.post('http://192.168.100.149:3000/auth/verify-otp', {
-        email,
-        otp,
+      const res = await axios.post(`https://ttgb.id.vn/api/verify-otp`, {
+        email: email.trim(),
+        code: otp.trim(), // loại bỏ khoảng trắng
       });
       Alert.alert(res.data.message);
-      navigation.navigate('LoginScreen'); // sau khi xác thực thành công
+      navigation.navigate('LoginScreen');
     } catch (err: any) {
       Alert.alert(err.response?.data?.message || 'Xác thực thất bại');
     }
-  };
+};
+
 
     return (
         <View className="">

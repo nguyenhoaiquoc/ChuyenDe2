@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { AuthModule } from './auth/auth.module';
       
     }),
       AuthModule,
-    ProductModule
+    ProductModule,
+     ReportModule
   ],
   controllers: [AppController],
   providers: [AppService],

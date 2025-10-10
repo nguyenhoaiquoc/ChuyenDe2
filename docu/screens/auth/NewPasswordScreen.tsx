@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
+import { path } from '../../config';
 
 const pass = ["Mật khẩu mới", "Xác nhận mật khẩu mới"];
 
@@ -25,6 +26,7 @@ export default function NewPasswordScreen({ navigation }: Props) {
   const route = useRoute();
   const { token } = route.params as RouteParams
 const [loading, setLoading] = useState(false);
+const [loginError, setLoginError] = useState<string | null>(null);
 
   const [values, setValues] = useState<string[]>(["", ""]);
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]);
@@ -42,14 +44,17 @@ const handleResetPassword = async () => {
 
     try {
       setLoading(true);
-      const res = await axios.post('http://192.168.100.149:3000/auth/reset-password', {
+      const res = await axios.post(`https://ttgb.id.vn/api/reset-password`, {
         token,
-        newPassword: values[0],
+        password: values[0],
+        password_confirmation: values[1], 
+
+
       });
       Alert.alert(res.data.message);
       navigation.navigate('LoginScreen'); // quay về login
     } catch (err: any) {
-      Alert.alert(err.response?.data?.message || 'Đặt lại mật khẩu thất bại');
+  setLoginError(err.response?.data?.message || 'Mật khẩu chưa phù hợp');
     } finally {
       setLoading(false);
     }
@@ -64,7 +69,14 @@ const handleResetPassword = async () => {
 
       <StatusBar style="auto" />
       <HeaderAuth value="Đặt lại mật khẩu" />
-
+{loginError && (
+  <View className="flex items-center px-2">
+    <View className="flex-row gap-2 bg-red-100 py-4 justify-center  w-full rounded-xl">
+      <FontAwesome name="warning" className="mt-0.5" size={16} color="red" />
+      <Text>{loginError}</Text>
+    </View>
+  </View>
+)}
       <View className="px-2 mt-10">
         <Text>Nhập mật khẩu mới của bạn</Text>
       </View>

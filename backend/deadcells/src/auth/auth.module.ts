@@ -8,6 +8,7 @@ import { Status } from 'src/entities/status.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { OtpVerification } from 'src/entities/otp-verification.entity';
+import { RoleSeedService } from './seed/role.seed.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { OtpVerification } from 'src/entities/otp-verification.entity';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [AuthService,MailService],
+  providers: [AuthService,MailService,RoleSeedService],
   controllers: [AuthController],
 })
 export class AuthModule {}

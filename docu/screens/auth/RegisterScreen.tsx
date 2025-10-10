@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import axios from 'axios';
 import { Alert } from 'react-native';
+import { path } from '../../config';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RegisterScreen'>
@@ -32,10 +33,11 @@ export default function RegisterScreen({ navigation }: Props) {
     }
 
     try {
-      const res = await axios.post('http://192.168.100.149:3000/auth/register', {
-        fullName,
+      const res = await axios.post(`https://ttgb.id.vn/api/register`, {
+         name: fullName,
         email,
         password,
+        password_confirmation: confirmPassword,
         phone,
       });
       Alert.alert(res.data.message);

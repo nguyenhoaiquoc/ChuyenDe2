@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Role } from './role.entity';       // Entity roles
 import { Status } from './status.entity';   // Entity statuses
+import { Report } from "./report.entity";
 
 @Entity('users')
 export class User {
@@ -10,7 +11,11 @@ export class User {
   @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id' })
   role: Role;
-
+  
+  
+  @Column({ type: 'bigint', name: 'role_id' })
+  roleId: number; // 
+  
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
 
@@ -47,7 +52,9 @@ resetToken?: string | null;
   @Column({ type: 'datetime', nullable: true })
   resetTokenExpires?: Date;
 
-  
+  @OneToMany(() => Report, (report) => report.reporter)
+reports: Report[];
+
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

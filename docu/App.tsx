@@ -26,6 +26,8 @@ import SavedPosts from './screens/profile/SavedPosts';
 import FeedbackScreen from './screens/profile/FeedbackScreen';
 import UserScreen from './screens/profile/UserScreen';
 import HomeAdminScreen from './screens/admin/HomeAdminScreen';
+import UserDetail from './screens/profile/UserDetail';
+
 
 const Stack = createNativeStackNavigator<RootStackParamList>(); 
 
@@ -61,6 +63,7 @@ export default function App() {
         <Stack.Screen name="FeedbackScreen" component={FeedbackScreen} />
         <Stack.Screen name="UserScreen" component={UserScreen} />
         <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+        <Stack.Screen name="UserDetail" component={UserDetail} />
 
 
       </Stack.Navigator>

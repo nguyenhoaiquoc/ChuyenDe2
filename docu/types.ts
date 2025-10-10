@@ -23,6 +23,7 @@ export type RootStackParamList = {
   FeedbackScreen: undefined;
   UserScreen: undefined;
   HomeAdminScreen: undefined;
+  UserDetail: undefined;
   // TestApi: undefined;
 };
 

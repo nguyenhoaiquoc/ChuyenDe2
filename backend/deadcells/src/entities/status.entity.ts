@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { Report } from "./report.entity";
 
 @Entity('statuses')
 export class Status {
@@ -10,6 +11,9 @@ export class Status {
 
   @Column({ type: 'varchar', length: 191, nullable: true })
   description: string;
+
+  @OneToMany(() => Report, (report) => report.status)
+reports: Report[];
 
   @Column({ type: 'timestamp', nullable: true, name: 'created_at' })
   createdAt: Date;
