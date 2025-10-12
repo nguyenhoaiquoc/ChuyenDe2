@@ -19,20 +19,21 @@ type Props = {
 }
 export default function ForgotPasswordScreen({ navigation }: Props) {
     const [email, setEmail] = useState("");
-      const [loading, setLoading] = useState(false);
+      const [isLoading, setIsLoading] = useState(false);
+
 const handleSendOtp = async () => {
     if (!email) return Alert.alert('Vui lòng nhập email');
 
     try {
-      setLoading(true);
-      const res = await axios.post(`https://ttgb.id.vn/api/send-reset-otp`, { email });
+        setIsLoading(true);
+      const res = await axios.post(`${path}:3000/auth/forgot-password`, { email });
       Alert.alert(res.data.message);
       // Điều hướng sang màn OTPVerifyScreen kèm param email
       navigation.navigate('OTPVerifyScreen', { email });
     } catch (err: any) {
       Alert.alert(err.response?.data?.message || 'Gửi OTP thất bại');
     } finally {
-      setLoading(false);
+           setIsLoading(false);
     }
   };
     return (
@@ -60,7 +61,7 @@ const handleSendOtp = async () => {
                         onChangeText={setEmail}
                     />
 
-                    <Button value="Tiếp tục" onPress ={handleSendOtp}/>
+                    <Button value="Tiếp tục" onPress ={handleSendOtp} loading={isLoading}/>
 
                 </View>
             </View>

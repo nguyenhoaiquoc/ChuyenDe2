@@ -25,7 +25,7 @@ type Props = {
 export default function NewPasswordScreen({ navigation }: Props) {
   const route = useRoute();
   const { token } = route.params as RouteParams
-const [loading, setLoading] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
 const [loginError, setLoginError] = useState<string | null>(null);
 
   const [values, setValues] = useState<string[]>(["", ""]);
@@ -43,11 +43,10 @@ const handleResetPassword = async () => {
     if (values[0] !== values[1]) return Alert.alert('Mật khẩu không trùng khớp');
 
     try {
-      setLoading(true);
-      const res = await axios.post(`https://ttgb.id.vn/api/reset-password`, {
+      setIsLoading(true)
+      const res = await axios.post(`${path}:3000/auth/reset-password`, {
         token,
-        password: values[0],
-        password_confirmation: values[1], 
+       newPassword: values[0],
 
 
       });
@@ -56,7 +55,7 @@ const handleResetPassword = async () => {
     } catch (err: any) {
   setLoginError(err.response?.data?.message || 'Mật khẩu chưa phù hợp');
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
   };
  
@@ -97,7 +96,7 @@ const handleResetPassword = async () => {
           />
         ))}
 
-        <Button value="Tiếp tục"      onPress={handleResetPassword}/>
+        <Button value="Tiếp tục" onPress={handleResetPassword} loading={isLoading}/>
       </View>
     </View>
   );

@@ -28,6 +28,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [values, setValues] = useState<string[]>(["", ""]);
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]);
 const [loginError, setLoginError] = useState<string | null>(null);
+const [isLoading, setIsLoading] = useState(false);
 
   const togglePassword = (index: number) => {
     const newShow = [...showPasswords];
@@ -36,39 +37,30 @@ const [loginError, setLoginError] = useState<string | null>(null);
   };
 
 const handleLogin = async () => {
-  const [email, password] = values;
+  if (isLoading) return; // tránh spam
 
+  const [email, password] = values;
   if (!email || !password) {
     Alert.alert('Vui lòng nhập đầy đủ thông tin');
     return;
   }
 
   try {
-    const res = await axios.post(`https://ttgb.id.vn/api/login`, {
-      email,
-      password,
-    });
+    setIsLoading(true);
+    const res = await axios.post(`${path}:3000/auth/login`, { email, password });
     Alert.alert('Đăng nhập thành công');
-
-    // Lưu token nếu muốn
     await AsyncStorage.setItem('token', res.data.token);
-    // console.log(res.data);
-    
-    
-   if (res.data.role === 'Admin') {
-  navigation.reset({
-    index: 0,
-    routes: [{ name: 'HomeAdminScreen' }],
-  });
-} else {
-  navigation.reset({
-    index: 0,
-    routes: [{ name: 'Home' }],
-  });
-}
+      await AsyncStorage.setItem('userName', res.data.fullName);
 
+    if (res.data.role === 'Admin') {
+      navigation.reset({ index: 0, routes: [{ name: 'HomeAdminScreen' }] });
+    } else {
+      navigation.reset({ index: 0, routes: [{ name: 'Home' }] });
+    }
   } catch (err: any) {
-  setLoginError(err.response?.data?.message || 'Email hoặc mật khẩu chưa đúng \n vui lòng kiểm tra lại');
+    setLoginError(err.response?.data?.message || 'Email hoặc mật khẩu chưa đúng \n vui lòng kiểm tra lại');
+  } finally {
+    setIsLoading(false);
   }
 };
 
@@ -132,7 +124,7 @@ const handleLogin = async () => {
 
         <Text onPress={() => navigation.navigate("ForgotPasswordScreen")} className="font-thin text-[12px]">Quên mật khẩu?</Text>
 
-        <Button value="Đăng nhập" onPress={handleLogin} />
+        <Button value="Đăng nhập" onPress={handleLogin} loading={isLoading} />
 
         <View className="flex flex-row gap-2 justify-center mt-5 items-center ">
           <View className="relative w-full h-[1px] bg-gray-300">

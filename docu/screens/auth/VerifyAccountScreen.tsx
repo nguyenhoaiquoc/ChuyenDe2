@@ -24,6 +24,8 @@ type Props = {
 export default function VerifyAccountScreen({ navigation,route  }: Props) {
   const { email } = route.params; // lấy email truyền từ RegisterScreen
     const [otp, setOtp] = useState("")
+    const [isLoading, setIsLoading] = useState(false);
+
 
 const handleVerifyOTP = async () => {
     if (!otp.trim()) {
@@ -32,15 +34,19 @@ const handleVerifyOTP = async () => {
     }
 
     try {
-      const res = await axios.post(`https://ttgb.id.vn/api/verify-otp`, {
-        email: email.trim(),
-        code: otp.trim(), // loại bỏ khoảng trắng
+      setIsLoading(true);
+      const res = await axios.post(`${path}:3000/auth/verify-otp`, {
+        email,
+        otp,
       });
       Alert.alert(res.data.message);
       navigation.navigate('LoginScreen');
     } catch (err: any) {
       Alert.alert(err.response?.data?.message || 'Xác thực thất bại');
-    }
+    } finally {
+    setIsLoading(false);
+  }
+
 };
 
 
@@ -67,7 +73,7 @@ const handleVerifyOTP = async () => {
                     onChangeText={setOtp}
                 />
 
-        <Button value="Xác nhận" onPress={handleVerifyOTP} />
+        <Button value="Xác nhận" onPress={handleVerifyOTP} loading={isLoading}/>
             </View>
         </View>
     )

@@ -20,7 +20,7 @@ type Props = {
 }
 export default function OTPVerifyScreen({ navigation }: Props) {
   const [otp, setOtp] = useState("");
-  const [loading, setLoading] = useState(false);
+const [isLoading, setIsLoading] = useState(false);
 const [loginError, setLoginError] = useState<string | null>(null);
 
   const route = useRoute();
@@ -29,8 +29,8 @@ const handleVerifyOtp = async () => {
     if (!otp) return Alert.alert('Vui lòng nhập OTP');
 
     try {
-      setLoading(true);
-      const res = await axios.post(`https://ttgb.id.vn/api/verify-reset-otp`, {
+      setIsLoading(true)
+      const res = await axios.post(`${path}:3000/auth/verify-reset-otp`, {
         email,
         otp,
       });
@@ -42,7 +42,7 @@ const handleVerifyOtp = async () => {
     } catch (err: any) {
   setLoginError(err.response?.data?.message || 'Xác thực OTP thất bại');
     } finally {
-      setLoading(false);
+      setIsLoading(false)
     }
   };
   return (
@@ -72,7 +72,7 @@ const handleVerifyOtp = async () => {
           onChangeText={setOtp}
         />
 
-  <Button value="Xác nhận"  onPress={handleVerifyOtp}/>
+  <Button value="Xác nhận"  onPress={handleVerifyOtp}  loading={isLoading}/>
        
       </View>
      

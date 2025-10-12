@@ -15,9 +15,11 @@ export class RegisterDto {
   @IsNotEmpty({ message: 'Họ tên không được để trống' })
   fullName: string;
 
-  @IsOptional()
-  @IsPhoneNumber('VN', { message: 'Số điện thoại không hợp lệ' })
-  phone?: string; 
+@IsOptional()
+@IsNotEmpty({ message: 'Số điện thoại không được để trống nếu có nhập' })
+@Matches(/^[0-9]{10}$/, { message: 'Số điện thoại phải gồm đúng 10 chữ số' })
+phone?: string;
+
 
   @IsOptional()
   @IsNumber({}, { message: 'RoleId phải là số' })

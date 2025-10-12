@@ -6,10 +6,18 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+const [name, setName] = useState('');
+
+useEffect(() => {
+  AsyncStorage.getItem('userName').then(value => {
+    if (value) setName(value);
+  });
+}, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -48,7 +56,7 @@ export default function UserScreen() {
             color: "#1f2937",
           }}
         >
-          Hoàng Hữu Dũng
+        {name || "Đang tải..."}
         </Text>
         <View style={{ flexDirection: "row", marginTop: 4 }}>
           <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>

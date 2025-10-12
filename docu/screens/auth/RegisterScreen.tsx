@@ -18,6 +18,7 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RegisterScreen'>
 }
 export default function RegisterScreen({ navigation }: Props) {
+const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     const [fullName, email, phone, password, confirmPassword] = values;
@@ -33,18 +34,20 @@ export default function RegisterScreen({ navigation }: Props) {
     }
 
     try {
-      const res = await axios.post(`https://ttgb.id.vn/api/register`, {
-         name: fullName,
+          setIsLoading(true);
+      const res = await axios.post(`${path}:3000/auth/register`, {
+        fullName,
         email,
         password,
-        password_confirmation: confirmPassword,
         phone,
       });
       Alert.alert(res.data.message);
       navigation.navigate('VerifyAccountScreen', { email: values[1] });
     } catch (err: any) {
   setLoginError(err.response?.data?.message || 'Sai thông');
-    }
+    } finally {
+    setIsLoading(false);
+  }
   };
 
   const content = [
@@ -138,7 +141,7 @@ const [loginError, setLoginError] = useState<string | null>(null);
         ))}
 
 
-        <Button value="Đăng ký" onPress={handleRegister} />
+        <Button value="Đăng ký" onPress={handleRegister} loading={isLoading}/>
 
         <View className="flex flex-row gap-2 justify-center mt-5 items-center ">
           <View className="relative w-full h-[1px] bg-gray-300">

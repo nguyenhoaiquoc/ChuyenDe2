@@ -85,7 +85,7 @@ export class AuthService {
     const payload = { id: user.id, email: user.email };
     const token = this.jwtService.sign(payload);
 
-    return { token,   role: user.role.name  };
+    return { token,   role: user.role.name, fullName: user.fullName, };
   }
 
  // --- Gửi OTP quên mật khẩu ---
