@@ -24,6 +24,9 @@ export type RootStackParamList = {
   UserScreen: undefined;
   HomeAdminScreen: undefined;
   UserDetail: undefined;
+  ManagerGroupsScreen : undefined;
+  CreateGroupScreen: undefined;
+  GroupDetailScreen: { group: GroupType }; 
   // TestApi: undefined;
 };
 
@@ -39,3 +42,19 @@ export type ProductType = {
   isFavorite: boolean;
 };
 
+export type GroupType = {
+  id: number;
+  name: string;
+  members: string;
+  posts: string;
+  image: any; 
+};
+
+export type PostType = {
+  id: string;
+  groupId: number;
+  author: string;
+  avatar: any; 
+  content: string;
+  time: string;
+};

@@ -27,6 +27,11 @@ import FeedbackScreen from './screens/profile/FeedbackScreen';
 import UserScreen from './screens/profile/UserScreen';
 import HomeAdminScreen from './screens/admin/HomeAdminScreen';
 import UserDetail from './screens/profile/UserDetail';
+import ManagerGroupsScreen from './screens/groups/ManagerGroupsScreen';
+import CreateGroupScreen from './screens/groups/CreateGroupScreen';
+import GroupDetailScreen from './screens/groups/GroupDetailScreen';
+
+
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>(); 
@@ -64,7 +69,9 @@ export default function App() {
         <Stack.Screen name="UserScreen" component={UserScreen} />
         <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
         <Stack.Screen name="UserDetail" component={UserDetail} />
-
+        <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
+        <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
+        <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

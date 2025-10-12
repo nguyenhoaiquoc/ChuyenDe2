@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { ProductModule } from './product/product.module';
 import { AuthModule } from './auth/auth.module';
 import { ReportModule } from './report/report.module';
+import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { ReportModule } from './report/report.module';
     }),
       AuthModule,
     ProductModule,
-     ReportModule
+     ReportModule,
+      FavoritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -4,6 +4,7 @@ import { BadRequestException, ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors({ origin: '*' });
     app.useGlobalPipes(new ValidationPipe({
     whitelist: true,         // loại bỏ các field không có trong DTO
     forbidNonWhitelisted: true, // ném lỗi nếu có field thừa
@@ -17,6 +18,7 @@ async function bootstrap() {
 },
 
   }));
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
+
 }
 bootstrap();

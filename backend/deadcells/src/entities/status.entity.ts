@@ -13,7 +13,7 @@ export class Status {
   description: string;
 
   @OneToMany(() => Report, (report) => report.status)
-reports: Report[];
+  reports: Report[];
 
   @Column({ type: 'timestamp', nullable: true, name: 'created_at' })
   createdAt: Date;
