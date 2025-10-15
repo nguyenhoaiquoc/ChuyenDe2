@@ -26,7 +26,7 @@ export class Product {
   @Column({ type: 'varchar', length: 191, default: '' })
   name: string;
 
-  @Column({ type: 'longtext', default: '' })
+  @Column({ type: 'longtext', nullable: false })
   description: string;
 
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
@@ -89,12 +89,8 @@ export class Product {
   condition: Condition;
 
   // ===== Địa chỉ =====
-  @Column({
-    type: 'json',
-    nullable: true,
-    default: () => `'{"province": "", "district": "", "ward": "", "village": ""}'`,
-  })
-  address_json: object;
+ @Column({ type: 'json', nullable: true })
+address_json: object;
 
   @OneToMany(() => Report, (report) => report.product)
   reports: Report[];
