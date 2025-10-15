@@ -5,10 +5,19 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+const [name, setName] = useState('');
+
+useEffect(() => {
+  AsyncStorage.getItem('userName').then(value => {
+    if (value) setName(value);
+  });
+}, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -47,7 +56,7 @@ export default function UserScreen() {
             color: "#1f2937",
           }}
         >
-          Hoàng Hữu Dũng
+        {name || "Đang tải..."}
         </Text>
         <View style={{ flexDirection: "row", marginTop: 4 }}>
           <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
@@ -84,6 +93,11 @@ export default function UserScreen() {
           }}
         >
           <UtilityItem
+            icon="person-outline"
+            title="Tài khoản của tôi  "
+            onPress={() => navigation.navigate("ViewHistory")}
+          />
+          <UtilityItem
             icon="heart-outline"
             title="Tin đăng đã lưu "
             onPress={() => navigation.navigate("ViewHistory")}
@@ -104,6 +118,25 @@ export default function UserScreen() {
             isLast={true}
             onPress={() => navigation.navigate("FeedbackScreen")}
           />
+          <UtilityItem
+            icon="log-out-outline"
+            title="Đăng xuất"
+            isLast={true}
+            color="red"
+            onPress={async () => {
+              // Xóa token đăng nhập
+              await AsyncStorage.removeItem("token");
+              // Nếu có lưu thông tin user khác cũng xóa luôn
+              // await AsyncStorage.removeItem("userInfo");
+
+              // Chuyển về màn hình đăng nhập
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "LoginScreen" }],
+              });
+            }}
+          />
+
         </View>
       </View>
       <Menu />
@@ -117,12 +150,20 @@ function UtilityItem({
   title,
   isLast = false,
   onPress,
+  textStyle, // thêm prop
+  color,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   isLast?: boolean;
   onPress?: () => void;
+  textStyle?: object; // kiểu style cho text
+  color?: string; // màu tùy chọn
+
+
 }) {
+  const textColor = color || "#1f2937"; // default text
+  const iconColor = color || "#6b7280"; // default icon
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -137,8 +178,8 @@ function UtilityItem({
       activeOpacity={0.7}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Ionicons name={icon} size={24} color="#6b7280" />
-        <Text style={{ marginLeft: 16, fontSize: 16, color: "#1f2937" }}>
+        <Ionicons name={icon} size={24} color={iconColor} />
+        <Text style={[{ marginLeft: 16, fontSize: 16, color: "#1f2937" }, textStyle]}>
           {title}
         </Text>
       </View>

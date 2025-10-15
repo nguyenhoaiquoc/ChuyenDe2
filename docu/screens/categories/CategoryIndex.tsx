@@ -1,37 +1,146 @@
-// categories/CategoryIndex.tsx
-import React, { useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, ProductType } from '../../types';
 import { Feather } from '@expo/vector-icons';
 import ProductCard from '../../components/ProductCard';
 import Menu from '../../components/Menu';
+import axios from "axios";
+import { path } from "../../config";
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CategoryIndex'>;
 
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
   const [query, setQuery] = useState('');
+  const [products, setProducts] = useState<ProductType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const products: ProductType[] = useMemo(
-    () => [
-      { id: '1', image: require('../../assets/hoa.png'), title: 'Sản phẩm A', price: '150.000 đ', location: 'TP Hồ Chí Minh', time: '2 ngày trước', tag: 'Đồ dùng', imageCount: 3, isFavorite: false },
-      { id: '2', image: require('../../assets/hoa.png'), title: 'Sản phẩm B', price: '250.000 đ', location: 'Thủ Đức', time: '1 ngày trước', tag: 'Thời trang', imageCount: 2, isFavorite: false },
-      { id: '3', image: require('../../assets/hoa.png'), title: 'Sản phẩm C', price: '99.000 đ', location: 'Quận 1', time: '3 ngày trước', tag: 'Đồ dùng', imageCount: 1, isFavorite: false },
-      { id: '4', image: require('../../assets/hoa.png'), title: 'Sản phẩm D', price: '120.000 đ', location: 'Quận 3', time: '4 ngày trước', tag: 'Đồ gia dụng', imageCount: 2, isFavorite: false },
-      { id: '5', image: require('../../assets/hoa.png'), title: 'Sản phẩm E', price: '75.000 đ', location: 'Bình Thạnh', time: '5 ngày trước', tag: 'Phụ kiện', imageCount: 1, isFavorite: false },
-      { id: '6', image: require('../../assets/hoa.png'), title: 'Sản phẩm F', price: '300.000 đ', location: 'Thủ Đức', time: '6 ngày trước', tag: 'Điện tử', imageCount: 4, isFavorite: false },
-    ],
-    [categoryId]
-  );
+  useEffect(() => {
+    if (!categoryId) {
+      setError("Không có ID danh mục");
+      setLoading(false);
+      return;
+    }
 
+    console.log("Fetching products for categoryId:", categoryId);
+    setLoading(true);
+    setError(null);
+
+    // Fetch từ backend với query param category_id
+    axios.get(`${path}/products?category_id=${categoryId}`)
+      .then((res) => {
+        // Đảm bảo dữ liệu là mảng
+        const rawData = Array.isArray(res.data) ? res.data : [res.data];
+
+        // Map dữ liệu backend sang format ProductType
+        const mapped = rawData.map((item: any) => {
+          // Lấy URL ảnh chính
+          const imageUrl =
+            item.thumbnail_url
+              ? item.thumbnail_url.startsWith('file://')
+                ? item.thumbnail_url
+                : `${path}${item.thumbnail_url}`
+              : item.images?.length
+                ? `${path}${item.images[0].image_url}`
+                : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
+
+          // Location từ address_json
+          let locationText = "Chưa rõ địa chỉ";
+          if (item.address_json) {
+            try {
+              const addr = typeof item.address_json === "string" ? JSON.parse(item.address_json) : item.address_json;
+              if (addr.full) {
+                locationText = addr.full;
+              } else {
+                const parts = [addr.ward, addr.district, addr.province].filter(Boolean).slice(-2);
+                locationText = parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
+              }
+            } catch (e) {
+              console.log("Lỗi parse address:", e);
+              locationText = "Chưa rõ địa chỉ";
+            }
+          }
+
+          // Thời gian
+          const createdAt = item.created_at ? new Date(item.created_at) : new Date();
+          const timeDisplay = timeSince(createdAt);
+
+          // Danh mục (tag)
+          let tagText = "Không có danh mục";
+          const categoryNameItem = item.category?.name || null;
+          const subCategoryName = item.subCategory?.name || null;
+          if (categoryNameItem && subCategoryName) {
+            tagText = `${categoryNameItem} - ${subCategoryName}`;
+          } else if (categoryNameItem) {
+            tagText = categoryNameItem;
+          } else if (subCategoryName) {
+            tagText = subCategoryName;
+          }
+
+          return {
+            id: item.id.toString(),
+            image: imageUrl,
+            name: item.name || "Không có tiêu đề",
+            price: (() => {
+              if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+              if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+              return item.price ? `${item.price.toLocaleString("vi-VN")} đ` : "Liên hệ";
+            })(),
+            location: locationText,
+            time: timeDisplay,
+            tag: tagText,
+            category: categoryNameItem || null,
+            subCategory: subCategoryName || null,
+            imageCount: item.images?.length || 1,
+            isFavorite: false,
+          };
+        });
+        setProducts(mapped);
+      })
+      .catch((err) => {
+        console.error("Lỗi fetch products:", err);
+        setError("Không thể tải sản phẩm. Vui lòng thử lại.");
+      })
+      .finally(() => setLoading(false));
+  }, [categoryId]);
+
+  // Filter theo query
   const filtered = useMemo(
-    () => products.filter((p) => p.title.toLowerCase().includes(query.trim().toLowerCase())),
+    () => products.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())),
     [products, query]
   );
 
+  // Hàm tính thời gian
+  const timeSince = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval >= 1) return Math.floor(interval) + " năm trước";
+    interval = seconds / 2592000;
+    if (interval >= 1) return Math.floor(interval) + " tháng trước";
+    interval = seconds / 86400;
+    if (interval >= 1) return Math.floor(interval) + " ngày trước";
+    interval = seconds / 3600;
+    if (interval >= 1) return Math.floor(interval) + " giờ trước";
+    interval = seconds / 60;
+    if (interval >= 1) return Math.floor(interval) + " phút trước";
+    return Math.floor(seconds) > 5 ? Math.floor(seconds) + " giây trước" : "vừa xong";
+  };
+
+  if (error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-white">
+        <Text className="text-red-500 text-center px-4">{error}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} className="mt-4">
+          <Text className="text-blue-500">Quay lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <View className="flex-1 bg-white3 mt-5">
+    <View className="flex-1 bg-white">
       <View className="flex-row items-center px-4 pt-6 pb-3 bg-slate-50">
         <TouchableOpacity
           className="p-2 rounded-lg bg-white shadow"
@@ -68,28 +177,42 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
         {categoryName ?? categoryId}
       </Text>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 12, paddingBottom: 120 }}
-        numColumns={2}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        ListEmptyComponent={<Text className="text-center text-slate-500 mt-8">Không tìm thấy sản phẩm</Text>}
-        renderItem={({ item }) => (
-          <ProductCard
-            image={item.image}
-            title={item.title}
-            price={item.price}
-            location={item.location}
-            time={item.time}
-            tag={item.tag}
-            imageCount={item.imageCount}
-            isFavorite={item.isFavorite}
-            onPress={() => navigation.navigate('ProductDetail', { product: item })}
-            onToggleFavorite={() => { }}
-          />
-        )}
-      />
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#9D7BFF" />
+          <Text className="text-slate-500 mt-2">Đang tải sản phẩm...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 12, paddingBottom: 120 }}
+          numColumns={2}
+          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          ListEmptyComponent={
+            <View className="flex-1 justify-center items-center p-8">
+              <Text className="text-center text-slate-500 text-lg mb-2">Không tìm thấy sản phẩm</Text>
+              <Text className="text-center text-slate-400 text-sm">Thử tìm kiếm khác hoặc quay lại danh mục chính</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <ProductCard
+              image={item.image}
+              name={item.name}
+              price={item.price}
+              location={item.location}
+              time={item.time}
+              tag={item.tag}
+              category={item.category}
+              subCategory={item.subCategory}
+              imageCount={item.imageCount}
+              isFavorite={item.isFavorite}
+              onPress={() => navigation.navigate('ProductDetail', { product: item })}
+              onToggleFavorite={() => { }}
+            />
+          )}
+        />
+      )}
 
       <View className="absolute bottom-0 left-0 right-0">
         <Menu />

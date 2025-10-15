@@ -108,7 +108,7 @@ export default function ManagePostsScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-      <Menu/>
+      <Menu />
     </SafeAreaView>
 
   );

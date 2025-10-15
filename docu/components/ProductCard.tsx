@@ -2,12 +2,19 @@ import { View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type ProductCardProps = {
-  image: any;
-  title: string;
+  image?: string;
+  name: string;
   price: string;
   location: string;
   time: string;
   tag: string;
+  category?: string;
+  subCategory?: {
+    id?: number;
+    name?: string;
+    source_table?: string;
+    source_detail?: any;
+  };
   imageCount?: number;
   isFavorite?: boolean;
   onPress?: () => void;
@@ -16,22 +23,38 @@ type ProductCardProps = {
 
 export default function ProductCard({
   image,
-  title,
+  name,
   price,
   location,
   time,
   tag,
-  imageCount,
+  category,
+  subCategory,
+  imageCount = 0,
   isFavorite = false,
   onPress,
   onToggleFavorite,
 }: ProductCardProps) {
+  const placeholder =
+    "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
+
   return (
-    <View className="w-[48%] mx-[1%] mb-3 bg-white rounded-lg overflow-hidden shadow-sm" style={{ elevation: 2 }}>
+    <View
+      className="w-[48%] mx-[1%] mb-3 bg-white rounded-lg overflow-hidden shadow-sm"
+      style={{ elevation: 2 }}
+    >
       {/* Ảnh sản phẩm */}
       <TouchableOpacity onPress={onPress}>
-        <View className="relative">
-          <Image source={image} className="w-full h-[140px] rounded-t-lg" resizeMode="cover" />
+        <View className="relative w-full h-[140px] bg-gray-200 justify-center items-center">
+          <Image
+            source={
+              image && typeof image === "string"
+                ? { uri: image }
+                : { uri: placeholder }
+            }
+            className="w-full h-full rounded-t-lg"
+            resizeMode="contain"
+          />
 
           {/* Icon tim */}
           <TouchableOpacity
@@ -56,26 +79,34 @@ export default function ProductCard({
 
       {/* Nội dung */}
       <View className="p-3">
-        {/* Tiêu đề */}
         <TouchableOpacity onPress={onPress}>
           <Text
             className="text-[13px] font-medium text-[#333] leading-[17px] mb-1.5"
             numberOfLines={2}
           >
-            {title}
+            {name}
           </Text>
         </TouchableOpacity>
 
-        {/* Tag danh mục */}
-        <Text className="text-[11px] text-gray-600 mb-1.5">{tag}</Text>
+        <View className="flex-row justify-between items-center mb-1.5">
+          
+          <Text>{category}{subCategory?.name ? ` - ${subCategory.name}` : "dqq"}</Text>
+        </View>
 
-        {/* Giá */}
         <TouchableOpacity onPress={onPress}>
-          <Text className="text-[15px] text-red-500 font-bold mb-1.5">{price}</Text>
+          <Text className="text-[15px] text-red-500 font-bold mb-1.5">
+            {price}
+          </Text>
         </TouchableOpacity>
 
-        {/* Địa điểm */}
-        <Text className="text-[11px] text-[#666]">{location}</Text>
+        {/* FIX: Location luôn string, truncate nếu dài */}
+        <Text
+          className="text-[11px] text-[#666]"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {location || "Chưa rõ địa chỉ"}
+        </Text>
       </View>
     </View>
   );

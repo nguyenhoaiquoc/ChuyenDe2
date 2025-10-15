@@ -19,6 +19,9 @@ export default function Menu() {
     });
     return unsub;
   }, [navigation]);
+
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   return (
     <View className="absolute bottom-0 left-0 right-0">
       <View className="flex-row justify-around items-end bg-white pt-3 pb-4 border-t border-[#f0f0f0]">
@@ -63,7 +66,13 @@ export default function Menu() {
         {/* Tài khoản */}
         <TouchableOpacity
           className="items-center flex-1"
-          onPress={() => navigation.navigate("UserScreen")}
+          onPress={() => {
+            if (isLoggedIn) {
+              navigation.navigate("UserScreen");
+            } else {
+              navigation.navigate("LoginScreen");
+            }
+          }}
         >
           <FontAwesome
             name="user"
@@ -76,6 +85,7 @@ export default function Menu() {
             Tài khoản
           </Text>
         </TouchableOpacity>
+
 
       </View>
     </View>

@@ -1,10 +1,9 @@
 // App.tsx
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RootStackParamList } from './types'; 
+import { RootStackParamList } from './types';
 
 import HomeScreen from './screens/home/HomeScreen';
-import AllCategoriesScreen from './screens/categories/AllCategoriesScreen';
 import CategoryIndex from './screens/categories/CategoryIndex';
 import ProductDetail from './screens/products/ProductDetailScreen';
 import LoginScreen from './screens/auth/LoginScreen';
@@ -26,8 +25,12 @@ import SavedSearchScreen from './screens/profile/SavedSearchScreen';
 import SavedPosts from './screens/profile/SavedPosts';
 import FeedbackScreen from './screens/profile/FeedbackScreen';
 import UserScreen from './screens/profile/UserScreen';
+import ChooseExchangeCategoryScreen from './screens/post/ChooseExchangeCategoryScreen';
+import ChooseExchangeSubCategoryScreen from './screens/post/ChooseExchangeSubCategoryScreen';
+import HomeAdminScreen from './screens/admin/HomeAdminScreen';
+import UserDetail from './screens/profile/UserDetail';
 
-const Stack = createNativeStackNavigator<RootStackParamList>(); 
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
@@ -35,8 +38,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
         <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="AllCategories" component={AllCategoriesScreen} />
-        <Stack.Screen name="CategoryIndex" component={CategoryIndex}  />
+        <Stack.Screen name="CategoryIndex" component={CategoryIndex} />
         <Stack.Screen name="ProductDetail" component={ProductDetail} />
         <Stack.Screen name="LoginScreen" component={LoginScreen} />
         <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
@@ -57,6 +59,11 @@ export default function App() {
         <Stack.Screen name="SavedPosts" component={SavedPosts} />
         <Stack.Screen name="FeedbackScreen" component={FeedbackScreen} />
         <Stack.Screen name="UserScreen" component={UserScreen} />
+        <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
+        <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
+        <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+        <Stack.Screen name="UserDetail" component={UserDetail} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
