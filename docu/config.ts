@@ -1,1 +1,1 @@
-export const path = "http://192.168.1.118:3000";
+export const path = "https://appdocu-backend.onrender.com";

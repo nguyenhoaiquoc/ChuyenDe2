@@ -18,10 +18,11 @@ import { SubCategoryModule } from './sub-category/sub-category.module';
 import { AuthModule } from './auth/auth.module';
 import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
+import { ProductTypeModule } from './product-types/product-type.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true}),
+    ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -32,6 +33,9 @@ import { ConfigModule } from '@nestjs/config';
       database: process.env.DATABASE_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
+      ssl: {
+        rejectUnauthorized: false,
+      },
     }),
     ProductModule,
     CategoryModule,
@@ -48,6 +52,7 @@ import { ConfigModule } from '@nestjs/config';
     SubCategoryModule,
     AuthModule,
     ReportModule,
+    ProductTypeModule
   ],
   controllers: [AppController],
   providers: [AppService],

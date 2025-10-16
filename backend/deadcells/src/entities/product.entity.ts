@@ -14,6 +14,7 @@ import { Condition } from './condition.entity';
 import { Category } from './category.entity';
 import { SubCategory } from './sub-category.entity';
 import { Report } from './report.entity';
+import { ProductType } from './product_types.entity';
 
 @Entity('products')
 export class Product {
@@ -26,7 +27,15 @@ export class Product {
   @Column({ type: 'varchar', length: 191, default: '' })
   name: string;
 
-  @Column({ type: 'longtext', nullable: true })
+  @ManyToOne(() => ProductType)
+  @JoinColumn({ name: 'product_type_id' })
+  productType: ProductType;
+
+  @Column({ type: 'bigint', nullable: true })
+  product_type_id: number | null;
+
+
+  @Column({ type: 'longtext', nullable: false })
   description: string;
 
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
@@ -89,7 +98,7 @@ export class Product {
   condition: Condition;
 
   // ===== Địa chỉ =====
- @Column({ type: 'json', nullable: true })
+  @Column({ type: 'json', nullable: true })
   address_json: object;
   
   @OneToMany(() => Report, (report) => report.product)

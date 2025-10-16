@@ -22,6 +22,11 @@ export class AuthService {
     private readonly mailService: MailService,
   ) { }
 
+
+  async getUsers() {
+    return await this.userRepository.find();
+  }
+
   async register(dto: RegisterDto) {
     const existing = await this.userRepository.findOne({ where: { email: dto.email } });
     if (existing) throw new BadRequestException('Email đã tồn tại');

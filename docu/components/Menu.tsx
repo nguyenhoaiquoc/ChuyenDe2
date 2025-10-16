@@ -87,7 +87,7 @@ useEffect(() => {
           <FontAwesome
             name="user"
             size={22}
-            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"} // 👈 dùng "userscreen"
+            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"} 
           />
           <Text 
             className={`text-[10px] mt-1 font-medium ${activeTab === "userscreen" ? "text-blue-500 font-semibold" : "text-[#aaa]"}`}
@@ -95,8 +95,6 @@ useEffect(() => {
             Tài khoản
           </Text>
         </TouchableOpacity>
-
-
       </View>
     </View>
   );

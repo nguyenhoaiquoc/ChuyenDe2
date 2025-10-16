@@ -170,12 +170,12 @@ export class ProductService {
         // 🧩 4️⃣ Lưu ảnh
         if (data.images && Array.isArray(data.images)) {
             const imagesToSave = data.images
-                .filter((img: string) => img && img.length > 0) // chỉ bỏ rỗng, chấp nhận cả relative path
+                .filter((img: string) => img && img.length > 0) 
                 .map((img: string) =>
                     this.imageRepo.create({
                         product: { id: savedProduct.id },
                         name: savedProduct.name,
-                        image_url: img, // có thể là relative path hoặc full URL
+                        image_url: img,
                     }),
                 );
 
@@ -188,7 +188,7 @@ export class ProductService {
             }
         }
 
-        // 🧩 5️⃣ Trả về dữ liệu đầy đủ
+        // Trả về dữ liệu đầy đủ
         const fullProduct = await this.productRepo.findOne({
             where: { id: savedProduct.id },
             relations: ['images', 'dealType', 'condition', 'category', 'subCategory', 'categoryChange', 'subCategoryChange']
