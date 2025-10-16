@@ -9,7 +9,7 @@ export type RootStackParamList = {
   ChatListScreen: undefined;
   ChatRoomScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product: ProductType };
+  ProductDetail: { product?: ProductType } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
   ChooseSubCategoryScreen: { category: { id: string; name: string } } | undefined;

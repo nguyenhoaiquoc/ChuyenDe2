@@ -16,6 +16,7 @@ export class CategoryController {
   async createCategory(@Body() data: Partial<Category>): Promise<Category> {
     return this.categoryService.create(data);
   }
+  
 
   @Get('search')
   async search(@Query('name') name: string): Promise<Category[]> {

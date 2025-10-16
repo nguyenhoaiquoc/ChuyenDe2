@@ -100,7 +100,7 @@ export class Product {
   // ===== Địa chỉ =====
   @Column({ type: 'json', nullable: true })
   address_json: object;
-
+  
   @OneToMany(() => Report, (report) => report.product)
   reports: Report[];
 
