@@ -55,39 +55,49 @@ export class AuthService {
     return { message: 'Đăng ký thành công. OTP đã được gửi về email' };
   }
 
-  async verifyOtp(email: string, otp: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) throw new BadRequestException('Email không tồn tại');
+ async verifyOtp(email: string, otp: string) {
+  const user = await this.userRepository.findOne({ where: { email } });
+  if (!user) throw new BadRequestException('Email không tồn tại');
 
-    const otpRecord = await this.otpRepository.findOne({
-      where: { user: { id: user.id }, otp, used: false },
-      order: { created_at: 'DESC' },
-    });
-    if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
-    if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
+  const otpRecord = await this.otpRepository.findOne({
+    where: { user: { id: user.id }, otp, used: false },
+    order: { created_at: 'DESC' },
+  });
+  if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
+  if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
 
-    otpRecord.used = true;
-    await this.otpRepository.save(otpRecord);
+  otpRecord.used = true;
+  await this.otpRepository.save(otpRecord);
 
-    return { message: 'Xác thực thành công' };
-  }
+  // ✅ Cập nhật trạng thái xác thực tài khoản
+  user.is_verified = true;
+  await this.userRepository.save(user);
+
+  return { message: 'Xác thực thành công' };
+}
+
 
   async login(dto: LoginDto) {
-    const user = await this.userRepository.findOne({
-      where: { email: dto.email },
-      relations: ['role', 'status'], // load role
-    });
+  const user = await this.userRepository.findOne({
+    where: { email: dto.email },
+    relations: ['role', 'status'],
+  });
 
-    if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+  if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
-    const passwordValid = await bcrypt.compare(dto.password, user.password);
-    if (!passwordValid) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
-
-    const payload = { id: user.id, email: user.email };
-    const token = this.jwtService.sign(payload);
-
-    return { token, role: user.role.name, fullName: user.fullName, };
+  // ✅ Kiểm tra xác thực tài khoản
+  if (!user.is_verified) {
+    throw new UnauthorizedException('Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực OTP.');
   }
+
+  const passwordValid = await bcrypt.compare(dto.password, user.password);
+  if (!passwordValid) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+
+  const payload = { id: user.id, email: user.email };
+  const token = this.jwtService.sign(payload);
+
+  return { token, role: user.role.name, fullName: user.fullName };
+}
 
   // --- Gửi OTP quên mật khẩu ---
   async forgotPassword(email: string) {

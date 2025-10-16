@@ -30,7 +30,7 @@ const handleVerifyOtp = async () => {
 
     try {
       setIsLoading(true)
-      const res = await axios.post(`${path}:3000/auth/verify-reset-otp`, {
+      const res = await axios.post(`${path}/auth/verify-reset-otp`, {
         email,
         otp,
       });

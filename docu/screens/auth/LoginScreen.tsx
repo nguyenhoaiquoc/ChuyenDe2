@@ -146,6 +146,7 @@ const handleLogin = async () => {
         <Text className="text-[12px] border-r pr-5">Chính sách bảo mật</Text>
         <Text className="text-[12px]" onPress={() => Linking.openURL('https://ttgb.id.vn/')}>Liên hệ hỗ trợ</Text>
       </View>
+      
     </View>
   );
 
