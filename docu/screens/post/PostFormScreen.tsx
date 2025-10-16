@@ -51,13 +51,28 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   };
 
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const [productTypeId, setProductTypeId] = useState<number | null>(null);
-  const productTypeOptions = ["Đồ nam", "Đồ nữ", "Đồ cả nam và nữ"];
+  const [productTypes, setProductTypes] = useState<{ id: number; name: string }[]>([]);
+  const [selectedProductTypeId, setSelectedProductTypeId] = useState<number | null>(null);
 
-  const handleSelectProductType = (index: number) => {
-    setProductTypeId(index + 1); // ID từ 1 đến 3
+  useEffect(() => {
+    const fetchProductTypes = async () => {
+      try {
+        const res = await axios.get(`${path}/product-types`);
+        if (res.status === 200) {
+          setProductTypes(res.data);
+        }
+      } catch (err) {
+        console.error("Lỗi tải product types:", err);
+      }
+    };
+    fetchProductTypes();
+  }, []);
+
+
+  const handleSelectProductType = (id: number) => {
+    setSelectedProductTypeId(id);
     setShowTypeModal(false);
-  };
+  }
 
   const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>([]);
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
@@ -67,7 +82,7 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   const [exchangeSubCategory, setExchangeSubCategory] = useState<{ id: string, name: string } | null>(null);
 
 
-  // Hàm chọn hình thức giao dịc
+  // Hàm chọn hình thức giao dịch
   const handleSelectDealType = (id: number) => {
     setDealTypeId(id);
     setShowDealTypeModal(false);
@@ -148,14 +163,15 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
       const payload: any = {
         name: name || finalTitle,
         title: finalTitle,
+        product_type_id: selectedProductTypeId,
         description,
         price: dealTypeId === 1 ? parseFloat(price) || 0 : 0,
         exchange_category: dealTypeId === 3 ? exchangeCategory : null,
         exchange_sub_category: dealTypeId === 3 ? exchangeSubCategory : null,
         user_id: 1, // tạm
         category_id: (category as any)?.id || null,
-        sub_category_id: subCategory?.id || null, // ✅ đổi chỗ này
-        post_type_id: productTypeId || 1,
+        sub_category_id: subCategory?.id || null,
+        post_type_id: selectedProductTypeId || 1,
         deal_type_id: String(dealTypeId),
         condition_id: String(conditionId),
         address_json:
@@ -296,14 +312,15 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
             <Text style={styles.dropdownLabel}>Loại sản phẩm</Text>
             <View style={styles.dropdownContent}>
               <Text style={styles.dropdownText}>
-                {productTypeId ? productTypeOptions[productTypeId - 1] : "Chọn loại sản phẩm"}
+                {selectedProductTypeId
+                  ? (productTypes.find((t) => t.id === selectedProductTypeId)?.name ?? "Không xác định")
+                  : "Chọn loại sản phẩm"}
               </Text>
               <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
             </View>
           </TouchableOpacity>
           <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
         </View>
-
         {/* Hình thức giao dịch */}
         <View style={styles.section}>
           <TouchableOpacity
@@ -422,16 +439,16 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.dropdownLabel}>Chọn loại sản phẩm</Text>
-            {productTypeOptions.map((option, index) => (
+            {productTypes.map((type) => (
               <TouchableOpacity
-                key={index}
+                key={type.id}
                 style={[
                   styles.modalOption,
-                  productTypeId === index + 1 && styles.modalOptionSelected
+                  selectedProductTypeId === type.id && styles.modalOptionSelected
                 ]}
-                onPress={() => handleSelectProductType(index)}
+                onPress={() => handleSelectProductType(type.id)}
               >
-                <Text style={styles.modalOptionText}>{option}</Text>
+                <Text style={styles.modalOptionText}>{type.name}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity onPress={() => setShowTypeModal(false)} style={styles.modalCancelButton}>

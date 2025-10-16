@@ -18,6 +18,7 @@ import { SubCategoryModule } from './sub-category/sub-category.module';
 import { AuthModule } from './auth/auth.module';
 import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
+import { ProductTypeModule } from './product-types/product-type.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { ConfigModule } from '@nestjs/config';
     DealTypeModule,
     SubCategoryModule,
     AuthModule,
-    ReportModule
+    ReportModule,
+    ProductTypeModule
   ],
   controllers: [AppController],
   providers: [AppService],
