@@ -21,7 +21,7 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true}),
+    ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -32,6 +32,9 @@ import { ConfigModule } from '@nestjs/config';
       database: process.env.DATABASE_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
+      ssl: {
+        rejectUnauthorized: false,
+      },
     }),
     ProductModule,
     CategoryModule,
