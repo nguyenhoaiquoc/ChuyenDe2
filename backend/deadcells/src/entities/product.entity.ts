@@ -14,6 +14,7 @@ import { Condition } from './condition.entity';
 import { Category } from './category.entity';
 import { SubCategory } from './sub-category.entity';
 import { Report } from './report.entity';
+import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
 
 @Entity('products')
@@ -51,6 +52,10 @@ export class Product {
   @Column({ type: 'bigint' })
   user_id: number;
 
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'user_id' }) // Nối bằng cột user_id
+  user: User;
+
   // ===== Phân loại =====
   @Column({ type: 'bigint', nullable: true })
   post_type_id: number;
@@ -59,7 +64,7 @@ export class Product {
   deal_type_id: number | null;
 
   @ManyToOne(() => DealType)
-  @JoinColumn({ name: "deal_type_id" })
+  @JoinColumn({ name: 'deal_type_id' })
   dealType: DealType;
 
   @Column({ type: 'bigint', nullable: true })
@@ -72,7 +77,10 @@ export class Product {
   @Column({ name: 'sub_category_id', type: 'bigint', nullable: true })
   sub_category_id: number | null;
 
-  @ManyToOne(() => SubCategory, (subCategory) => subCategory.products, { eager: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => SubCategory, (subCategory) => subCategory.products, {
+    eager: false,
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'sub_category_id' })
   subCategory: SubCategory;
 
@@ -94,13 +102,13 @@ export class Product {
   subCategoryChange: SubCategory | null;
 
   @ManyToOne(() => Condition)
-  @JoinColumn({ name: "condition_id" })
+  @JoinColumn({ name: 'condition_id' })
   condition: Condition;
 
   // ===== Địa chỉ =====
   @Column({ type: 'json', nullable: true })
   address_json: object;
-  
+
   @OneToMany(() => Report, (report) => report.product)
   reports: Report[];
 

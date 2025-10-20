@@ -28,6 +28,7 @@ export type RootStackParamList = {
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
   UserDetail: undefined;
+  ManagerGroupsScreen : undefined;
   // TestApi: undefined;
 };
 
