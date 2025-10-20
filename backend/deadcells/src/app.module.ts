@@ -21,12 +21,12 @@ import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({isGlobal: true}),
+    ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DATABASE_HOST,
-      port: parseInt(process.env.DATABASE_PORT || '3307', 10),
+      port: parseInt(process.env.DATABASE_PORT || '3306', 10),
       username: process.env.DATABASE_USER,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
@@ -47,9 +47,9 @@ import { ConfigModule } from '@nestjs/config';
     DealTypeModule,
     SubCategoryModule,
     AuthModule,
-    ReportModule
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

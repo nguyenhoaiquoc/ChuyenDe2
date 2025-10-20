@@ -29,6 +29,7 @@ import ChooseExchangeCategoryScreen from './screens/post/ChooseExchangeCategoryS
 import ChooseExchangeSubCategoryScreen from './screens/post/ChooseExchangeSubCategoryScreen';
 import HomeAdminScreen from './screens/admin/HomeAdminScreen';
 import UserDetail from './screens/profile/UserDetail';
+import ManagerGroupsScreen from './screens/groups/ManagerGroupsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -63,6 +64,7 @@ export default function App() {
         <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
         <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
         <Stack.Screen name="UserDetail" component={UserDetail} />
+        <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
 
       </Stack.Navigator>
     </NavigationContainer>

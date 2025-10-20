@@ -1,18 +1,27 @@
-import { View, TextInput, TouchableOpacity, Image, ScrollView, Text, StatusBar, FlatList } from "react-native";
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  Text,
+  StatusBar,
+  FlatList,
+} from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import "../../global.css"
+import "../../global.css";
 import { path } from "../../config";
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-}
+  navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
+};
 
 const filters = [
   { id: "1", label: "Dành cho bạn" },
@@ -28,10 +37,11 @@ interface Product {
   image: any;
   name: string;
   price: string;
+  phone?: string;
   location: string;
   time: string;
   tag: string;
-  category: string | undefined,
+  category: string | undefined;
   subCategory?: {
     id?: number;
     name?: string;
@@ -40,12 +50,18 @@ interface Product {
   };
   imageCount: number;
   isFavorite: boolean;
-  images?: { id: string; product_id: string; name: string; image_url: string; created_at: string }[];  // ✅ Thêm: Full array images từ backend
+  images?: {
+    id: string;
+    product_id: string;
+    name: string;
+    image_url: string;
+    created_at: string;
+  }[]; // ✅ Thêm: Full array images từ backend
   description?: string;
   condition?: { id: string; name: string };
   address_json?: { full: string };
   dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string };  // Để dùng category.name
+  categoryObj?: { id: string; name: string }; // Để dùng category.name
   created_at?: string;
   author_name?: string;
 }
@@ -65,13 +81,14 @@ export default function HomeScreen({ navigation }: Props) {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    axios.get(`${path}/categories`)
+    axios
+      .get(`${path}/categories`)
       .then((res) => {
         const mapped = res.data.map((item: Category) => ({
           id: item.id.toString(),
           name: item.name,
           image: item.image
-            ? item.image.startsWith('/uploads')
+            ? item.image.startsWith("/uploads")
               ? `${path}${item.image}`
               : `${path}/uploads/categories/${item.image}`
             : `${path}/uploads/categories/default.png`,
@@ -82,38 +99,43 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   useEffect(() => {
-    axios.get(`${path}/products`)
+    axios
+      .get(`${path}/products`)
       .then((res) => {
-
         // Đảm bảo dữ liệu là mảng
         const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
         const mapped = rawData.map((item: any) => {
           // Lấy URL ảnh chính
-          const imageUrl =
-            item.thumbnail_url
-              ? item.thumbnail_url.startsWith('file://') // check local file
-                ? item.thumbnail_url
-                : `${path}${item.thumbnail_url}`
-              : item.images?.length
-                ? `${path}${item.images[0].image_url}`  // Sửa: dùng image_url từ backend
-                : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
+          const imageUrl = item.thumbnail_url
+            ? item.thumbnail_url.startsWith("file://") // check local file
+              ? item.thumbnail_url
+              : `${path}${item.thumbnail_url}`
+            : item.images?.length
+              ? `${path}${item.images[0].image_url}` // Sửa: dùng image_url từ backend
+              : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
 
           // FIX: Location dùng addr.full nếu có, fallback string an toàn
           let locationText = "Chưa rõ địa chỉ";
           if (item.address_json) {
             try {
-              const addr = typeof item.address_json === "string" ? JSON.parse(item.address_json) : item.address_json;
+              const addr =
+                typeof item.address_json === "string"
+                  ? JSON.parse(item.address_json)
+                  : item.address_json;
               // Ưu tiên full nếu có, fallback join ward/district/province
               if (addr.full) {
                 locationText = addr.full;
               } else {
-                const parts = [addr.ward, addr.district, addr.province].filter(Boolean).slice(-2);  // Chỉ 2 phần cuối để ngắn
-                locationText = parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
+                const parts = [addr.ward, addr.district, addr.province]
+                  .filter(Boolean)
+                  .slice(-2); // Chỉ 2 phần cuối để ngắn
+                locationText =
+                  parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
               }
             } catch (e) {
               console.log("Lỗi parse address cho product", item.id, ":", e);
-              locationText = "Chưa rõ địa chỉ";  // Fallback string
+              locationText = "Chưa rõ địa chỉ"; // Fallback string
             }
           }
 
@@ -128,7 +150,7 @@ export default function HomeScreen({ navigation }: Props) {
           let tagText = "Không có danh mục";
 
           // LƯU Ý: Đảm bảo backend đã JOIN cả Category và SubCategory vào item
-          const categoryName = item.category?.name || null;      // Tên danh mục cha
+          const categoryName = item.category?.name || null; // Tên danh mục cha
           const subCategoryName = item.subCategory?.name || null; // Tên danh mục con
 
           if (categoryName && subCategoryName) {
@@ -149,7 +171,9 @@ export default function HomeScreen({ navigation }: Props) {
             price: (() => {
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-              return item.price ? `${item.price.toLocaleString("vi-VN")} đ` : "Liên hệ";
+              return item.price
+                ? `${item.price.toLocaleString("vi-VN")} đ`
+                : "Liên hệ";
             })(),
             location: locationText,
             time: timeDisplay,
@@ -157,24 +181,30 @@ export default function HomeScreen({ navigation }: Props) {
             category: categoryName || null,
             subCategory: item.subCategory
               ? {
-                id: item.subCategory.id ? parseInt(item.subCategory.id) : undefined,
-                name: item.subCategory.name,
-                source_table: item.subCategory.source_table,
-                source_detail: item.subCategory.source_detail,
-              }
+                  id: item.subCategory.id
+                    ? parseInt(item.subCategory.id)
+                    : undefined,
+                  name: item.subCategory.name,
+                  source_table: item.subCategory.source_table,
+                  source_detail: item.subCategory.source_detail,
+                }
               : undefined,
             categoryChange_id: item.categoryChange_id || null,
             subCategoryChange_id: item.subCategoryChange_id || null,
             categoryChange: item.categoryChange || null,
             subCategoryChange: item.subCategoryChange || null,
             imageCount: item.images?.length || 1,
+            phone: item.phone || null,
             isFavorite: false,
-            images: item.images || [],  // ✅ Thêm: Pass full array để Detail swipe
+            images: item.images || [], // ✅ Thêm: Pass full array để Detail swipe
             description: item.description || "",
             condition: item.condition || { id: "1", name: "Chưa rõ" },
             address_json: item.address_json || { full: locationText },
             dealType: item.dealType || { id: "1", name: "Bán" },
-            categoryObj: item.category || { id: "1", name: categoryName || "Chưa rõ" },
+            categoryObj: item.category || {
+              id: "1",
+              name: categoryName || "Chưa rõ",
+            },
             created_at: item.created_at || new Date().toISOString(),
             author_name: item.author_name || "Người bán",
           };
@@ -217,12 +247,11 @@ export default function HomeScreen({ navigation }: Props) {
       return Math.floor(interval) + " phút trước";
     }
     // Mặc định cho dưới 1 phút
-    return Math.floor(seconds) > 5 ? Math.floor(seconds) + " giây trước" : "vừa xong";
-
-
+    return Math.floor(seconds) > 5
+      ? Math.floor(seconds) + " giây trước"
+      : "vừa xong";
   };
   return (
-
     <View className="flex-1 bg-[#f5f6fa] mt-6">
       <StatusBar className="auto" />
 
@@ -274,7 +303,9 @@ export default function HomeScreen({ navigation }: Props) {
 
         {/* Tiêu đề danh mục */}
         <View className="flex-row justify-between items-center px-4 mt-6 mb-2">
-          <Text className="text-base font-semibold text-gray-800">Khám phá danh mục</Text>
+          <Text className="text-base font-semibold text-gray-800">
+            Khám phá danh mục
+          </Text>
         </View>
 
         {/* Danh mục vuốt ngang */}
@@ -289,9 +320,9 @@ export default function HomeScreen({ navigation }: Props) {
               className="w-20 items-center mr-4 bg-white rounded-lg p-2 shadow-sm"
               onPress={() => {
                 // Navigate sang CategoryIndex với categoryId (danh mục cha) để fetch sản phẩm theo cha
-                navigation.navigate('CategoryIndex', {
-                  categoryId: item.id.toString(),  // ID danh mục cha để filter products
-                  categoryName: item.name
+                navigation.navigate("CategoryIndex", {
+                  categoryId: item.id.toString(), // ID danh mục cha để filter products
+                  categoryName: item.name,
                 });
               }}
             >
@@ -304,7 +335,7 @@ export default function HomeScreen({ navigation }: Props) {
                 className="text-[12px] text-gray-800 text-center leading-tight"
                 numberOfLines={2}
                 ellipsizeMode="tail"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               >
                 {item.name}
               </Text>
@@ -319,18 +350,23 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
-                  ? "bg-blue-500 border-blue-500"
-                  : "bg-white border-gray-300"
-                  }`}
+                className={`px-4 py-2 mr-3 rounded-full border ${
+                  selectedFilter === item.label
+                    ? "bg-blue-500 border-blue-500"
+                    : "bg-white border-gray-300"
+                }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);
 
                   if (item.label === "Đồ miễn phí") {
-                    setFilteredProducts(products.filter(p => p.price === "Miễn phí"));
+                    setFilteredProducts(
+                      products.filter((p) => p.price === "Miễn phí")
+                    );
                   } else if (item.label === "Trao đổi") {
-                    setFilteredProducts(products.filter(p => p.price === "Trao đổi"));
+                    setFilteredProducts(
+                      products.filter((p) => p.price === "Trao đổi")
+                    );
                   } else {
                     setFilteredProducts(products); // các filter khác hiển thị tất cả
                   }
@@ -344,7 +380,6 @@ export default function HomeScreen({ navigation }: Props) {
               </TouchableOpacity>
             )}
           />
-
         </View>
         {/* Danh sách sản phẩm */}
         <View className="px-4 mt-4">
@@ -367,7 +402,9 @@ export default function HomeScreen({ navigation }: Props) {
                 subCategory={item.subCategory}
                 imageCount={item.imageCount}
                 isFavorite={item.isFavorite}
-                onPress={() => navigation.navigate('ProductDetail', { product: item })}
+                onPress={() =>
+                  navigation.navigate("ProductDetail", { product: item })
+                }
                 onToggleFavorite={() => console.log("Yêu thích:", item.name)}
               />
             )}
