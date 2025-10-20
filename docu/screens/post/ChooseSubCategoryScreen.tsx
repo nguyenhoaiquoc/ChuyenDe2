@@ -39,7 +39,9 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
       .then((res) => {
         const subData = res.data.map((item: any) => ({ name: item.name, id: item.id }));
         setSubCategories(subData);
+         console.log(subData);
       })
+      
       .catch((err) => {
         console.log("❌ Lỗi khi lấy danh mục con:", err.message);
       })

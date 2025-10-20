@@ -112,7 +112,7 @@ interface Product {
 }
 
 type RootStackParamList = {
-  ProductDetail: { product: Product };
+    ProductDetail: { product: Product,  };
 };
 
 type ProductDetailScreenRouteProp = RouteProp<

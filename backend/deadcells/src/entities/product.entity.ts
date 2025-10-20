@@ -15,6 +15,7 @@ import { Category } from './category.entity';
 import { SubCategory } from './sub-category.entity';
 import { Report } from './report.entity';
 import { User } from './user.entity';
+import { ProductType } from './product_types.entity';
 
 @Entity('products')
 export class Product {
@@ -26,6 +27,14 @@ export class Product {
 
   @Column({ type: 'varchar', length: 191, default: '' })
   name: string;
+
+  @ManyToOne(() => ProductType)
+  @JoinColumn({ name: 'product_type_id' })
+  productType: ProductType;
+
+  @Column({ type: 'bigint', nullable: true })
+  product_type_id: number | null;
+
 
   @Column({ type: 'longtext', nullable: false })
   description: string;

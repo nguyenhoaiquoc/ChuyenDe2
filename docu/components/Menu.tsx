@@ -11,6 +11,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Menu() {
   const navigation =
@@ -27,6 +28,15 @@ export default function Menu() {
   }, [navigation]);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+// Kiểm tra trạng thái đăng nhập khi component mount
+useEffect(() => {
+  const checkLogin = async () => {
+    const token = await AsyncStorage.getItem('token');
+    setIsLoggedIn(!!token); // true nếu có token
+  };
+  checkLogin();
+}, []);
 
   return (
     <View className="absolute bottom-0 left-0 right-0">
@@ -96,22 +106,22 @@ export default function Menu() {
         </TouchableOpacity>
 
         {/* Tài khoản */}
-        <TouchableOpacity
+    <TouchableOpacity
           className="items-center flex-1"
           onPress={() => {
-            if (isLoggedIn) {
-              navigation.navigate("UserScreen");
-            } else {
-              navigation.navigate("LoginScreen");
-            }
-          }}
+  if (isLoggedIn) {
+    navigation.navigate("UserScreen");
+  } else {
+    navigation.navigate("LoginScreen");
+  }
+}}
         >
           <FontAwesome
             name="user"
             size={22}
-            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"} // 👈 dùng "userscreen"
+            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"} 
           />
-          <Text
+          <Text 
             className={`text-[10px] mt-1 font-medium ${activeTab === "userscreen" ? "text-blue-500 font-semibold" : "text-[#aaa]"}`}
           >
             Tài khoản
