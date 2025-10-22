@@ -116,7 +116,6 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         return;
       }
 
-      // ✅ Viết tường minh
       setImages((prevImages) => {
         const updatedImages = prevImages.concat(selected);
         return updatedImages;

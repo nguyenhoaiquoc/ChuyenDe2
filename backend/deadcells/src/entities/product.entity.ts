@@ -35,7 +35,6 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   product_type_id: number | null;
 
-  // ⚙️ Sửa longtext → text (Postgres không có longtext)
   @Column({ type: 'text', nullable: false })
   description: string;
 

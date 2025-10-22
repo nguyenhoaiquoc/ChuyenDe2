@@ -42,9 +42,11 @@ export class User {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  // ⚙️ Sửa tinyint → smallint cho PostgreSQL
+
   @Column({ type: 'smallint', default: 0 })
-  gender: number; // 0 = không xác định, 1 = Nam, 2 = Nữ
+  gender: number; // 0 = không xác định
+
+
 
   @ManyToOne(() => Status)
   @JoinColumn({ name: 'status_id' })
@@ -56,7 +58,6 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resetToken?: string | null;
 
-  // ⚙️ Sửa datetime → timestamp (Postgres)
   @Column({ type: 'timestamp', nullable: true })
   resetTokenExpires?: Date;
 
