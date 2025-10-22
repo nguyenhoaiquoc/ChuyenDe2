@@ -19,19 +19,16 @@ import { AuthModule } from './auth/auth.module';
 import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductTypeModule } from './product-types/product-type.module';
+import { FavoritesModule } from './favorites/favorites.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
     TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: process.env.DATABASE_HOST,
-      port: parseInt(process.env.DATABASE_PORT || '3306', 10),
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
-      entities: [__dirname + '/**/*.entity{.ts,.js}'],
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      autoLoadEntities: true,
       synchronize: true,
       ssl: {
         rejectUnauthorized: false,
@@ -52,9 +49,10 @@ import { ProductTypeModule } from './product-types/product-type.module';
     SubCategoryModule,
     AuthModule,
     ReportModule,
-    ProductTypeModule
+    ProductTypeModule,
+    FavoritesModule
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

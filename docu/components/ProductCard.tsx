@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 
 type ProductCardProps = {
   image?: string;
@@ -16,9 +16,9 @@ type ProductCardProps = {
     source_detail?: any;
   };
   imageCount?: number;
-  isFavorite?: boolean;
-  onPress?: () => void;
-  onToggleFavorite?: () => void;
+  isFavorite: boolean; //  Prop mới: cho biết sản phẩm có được yêu thích không
+  onPress: () => void; // Hàm xử lý khi nhấn vào cả card
+  onToggleFavorite: () => void; //  Prop mới: hàm xử lý khi nhấn vào trái tim
 };
 
 export default function ProductCard({
@@ -35,8 +35,7 @@ export default function ProductCard({
   onPress,
   onToggleFavorite,
 }: ProductCardProps) {
-  const placeholder =
-    "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
+  const placeholder = "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
 
   return (
     <View
@@ -58,14 +57,16 @@ export default function ProductCard({
 
           {/* Icon tim */}
           <TouchableOpacity
-            className="absolute top-2 right-2 bg-white rounded-full w-[28px] h-[28px] justify-center items-center"
-            onPress={onToggleFavorite}
+            onPress={onToggleFavorite} // ✅ Khi nhấn, gọi hàm onToggleFavorite
+            className="absolute top-2 right-2 bg-black/40 p-2 rounded-full"
           >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={16}
-              color={isFavorite ? "red" : "#666"}
-            />
+            {isFavorite ? (
+              // Nếu isFavorite là true, hiển thị trái tim màu đỏ
+              <FontAwesome name="heart" size={16} color="#ef4444" />
+            ) : (
+              // Nếu là false, hiển thị trái tim rỗng
+              <FontAwesome name="heart-o" size={16} color="white" />
+            )}
           </TouchableOpacity>
 
           {/* Overlay thời gian + số ảnh */}
@@ -89,8 +90,10 @@ export default function ProductCard({
         </TouchableOpacity>
 
         <View className="flex-row justify-between items-center mb-1.5">
-          
-          <Text>{category}{subCategory?.name ? ` - ${subCategory.name}` : "dqq"}</Text>
+          <Text>
+            {category}
+            {subCategory?.name ? ` - ${subCategory.name}` : "dqq"}
+          </Text>
         </View>
 
         <TouchableOpacity onPress={onPress}>

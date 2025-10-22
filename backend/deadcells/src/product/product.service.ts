@@ -16,6 +16,7 @@ import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity
 import { ProductResponseDto } from './dto/product-response.dto';
 import path from 'path';
 import { DataSource } from 'typeorm';
+import { FavoritesService } from 'src/favorites/favorites.service';
 
 @Injectable()
 export class ProductService {
@@ -55,6 +56,8 @@ export class ProductService {
 
     @InjectRepository(VehicleCategory)
     private readonly vehicleRepo: Repository<VehicleCategory>,
+
+    private readonly favoritesService: FavoritesService,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -300,7 +303,7 @@ export class ProductService {
   }
 
   // 🧩 Lấy toàn bộ sản phẩm (cho Postman, trả full dữ liệu chi tiết)
-  async getAllProducts(): Promise<any[]> {
+  async getAllProducts(user_id: number): Promise<any[]> {
     const products = await this.productRepo.find({
       relations: [
         'images',
@@ -314,7 +317,7 @@ export class ProductService {
       order: { created_at: 'DESC' },
     });
 
-    return this.formatProducts(products);
+    return this.formatProducts(products, user_id);
   }
 
   // Format dữ liệu cho client (React Native)
@@ -430,75 +433,85 @@ export class ProductService {
     });
   }
 
-  async formatProducts(products: Product[]): Promise<any[]> {
-    return products.map((p) => ({
-      id: p.id,
-      author_name: p.author_name,
-      name: p.name,
-      description: p.description,
-      price: Number(p.price),
-      thumbnail_url: p.images?.[0]?.image_url || null,
+  async formatProducts(products: Product[], user_id: number): Promise<any[]> {
+    let favoriteProductIds: (string | number)[] = [];
+    if (user_id) {
+      favoriteProductIds =
+        await this.favoritesService.getFavoriteProductIdsByUser(user_id);
+    }
+    return products.map((p) => {
+      const isUserFavorite = favoriteProductIds
+        .map(String)
+        .includes(String(p.id));
+      return {
+        id: p.id,
+        author_name: p.author_name,
+        name: p.name,
+        description: p.description,
+        price: Number(p.price),
+        thumbnail_url: p.images?.[0]?.image_url || null,
+        isFavorite: isUserFavorite,
+        user_id: p.user_id,
+        deal_type_id: p.deal_type_id,
+        category_id: p.category_id,
+        sub_category_id: p.sub_category_id,
+        categoryChange_id: p.categoryChange_id,
+        subCategoryChange_id: p.subCategoryChange_id,
+        is_approved: p.is_approved,
+        address_json: p.address_json,
+        created_at: p.created_at,
+        updated_at: p.updated_at,
 
-      user_id: p.user_id,
-      deal_type_id: p.deal_type_id,
-      category_id: p.category_id,
-      sub_category_id: p.sub_category_id,
-      categoryChange_id: p.categoryChange_id,
-      subCategoryChange_id: p.subCategoryChange_id,
-      is_approved: p.is_approved,
-      address_json: p.address_json,
-      created_at: p.created_at,
-      updated_at: p.updated_at,
-
-      dealType: p.dealType
-        ? { id: p.dealType.id, name: p.dealType.name }
-        : null,
-      condition: p.condition
-        ? { id: p.condition.id, name: p.condition.name }
-        : null,
-      category: p.category
-        ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
-        : null,
-      subCategory: p.subCategory
-        ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
-        : null,
-      categoryChange: p.categoryChange
-        ? {
-            id: p.categoryChange.id,
-            name: p.categoryChange.name,
-            image: p.categoryChange.image,
-          }
-        : null,
-      subCategoryChange: p.subCategoryChange
-        ? {
-            id: p.subCategoryChange.id,
-            name: p.subCategoryChange.name,
-            parent_category_id: p.subCategoryChange.parent_category_id,
-            source_table: p.subCategoryChange.source_table,
-            source_id: p.subCategoryChange.source_id,
-          }
-        : null,
-      images: p.images
-        ? p.images.map((img) => ({
-            id: img.id,
-            product_id: img.product_id,
-            name: img.name,
-            image_url: img.image_url,
-            created_at: img.created_at,
-          }))
-        : [],
-    }));
+        dealType: p.dealType
+          ? { id: p.dealType.id, name: p.dealType.name }
+          : null,
+        condition: p.condition
+          ? { id: p.condition.id, name: p.condition.name }
+          : null,
+        category: p.category
+          ? {
+              id: p.category.id,
+              name: p.category.name,
+              image: p.category.image,
+              hot: p.category.hot,
+            }
+          : null,
+        subCategory: p.subCategory
+          ? {
+              id: p.subCategory.id,
+              name: p.subCategory.name,
+              parent_category_id: p.subCategory.parent_category_id,
+              source_table: p.subCategory.source_table,
+              source_id: p.subCategory.source_id,
+            }
+          : null,
+        categoryChange: p.categoryChange
+          ? {
+              id: p.categoryChange.id,
+              name: p.categoryChange.name,
+              image: p.categoryChange.image,
+            }
+          : null,
+        subCategoryChange: p.subCategoryChange
+          ? {
+              id: p.subCategoryChange.id,
+              name: p.subCategoryChange.name,
+              parent_category_id: p.subCategoryChange.parent_category_id,
+              source_table: p.subCategoryChange.source_table,
+              source_id: p.subCategoryChange.source_id,
+            }
+          : null,
+        images: p.images
+          ? p.images.map((img) => ({
+              id: img.id,
+              product_id: img.product_id,
+              name: img.name,
+              image_url: img.image_url,
+              created_at: img.created_at,
+            }))
+          : [],
+      };
+    });
   }
 
   // 🔧 Format địa chỉ

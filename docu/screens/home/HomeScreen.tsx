@@ -50,6 +50,7 @@ interface Product {
   };
   imageCount: number;
   isFavorite: boolean;
+
   images?: {
     id: string;
     product_id: string;
@@ -79,6 +80,35 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  // ✅ HÀM LOGIC MỚI ĐỂ XỬ LÝ YÊU THÍCH
+  const handleToggleFavorite = (productId: string) => {
+    // 1. Cập nhật giao diện ngay lập tức (Optimistic Update)
+    // Giao diện sẽ thay đổi ngay mà không cần chờ server phản hồi
+    setProducts((currentProducts) =>
+      currentProducts.map((p) =>
+        p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p
+      )
+    );
+    // 2. Gọi API đến backend để cập nhật database
+    // (Sau này bạn sẽ cần thêm token xác thực người dùng ở đây)
+    axios
+      .post(`${path}/favorites/toggle/${productId}`)
+      .then((res) => {
+        // Nếu thành công, log ra thông báo từ server
+        console.log(`Sản phẩm ${productId}:`, res.data.message);
+      })
+      .catch((err) => {
+        // 3. Nếu API thất bại, khôi phục lại trạng thái giao diện cũ
+        console.error("Lỗi khi cập nhật yêu thích:", err.message);
+        setProducts((currentProducts) =>
+          currentProducts.map((p) =>
+            p.id === productId ? { ...p, isFavorite: !p.isFavorite } : p
+          )
+        );
+        alert("Thao tác thất bại, vui lòng thử lại!");
+      });
+  };
 
   useEffect(() => {
     axios
@@ -195,7 +225,7 @@ export default function HomeScreen({ navigation }: Props) {
             subCategoryChange: item.subCategoryChange || null,
             imageCount: item.images?.length || 1,
             phone: item.phone || null,
-            isFavorite: false,
+            isFavorite: item.isFavorite,
             images: item.images || [], // ✅ Thêm: Pass full array để Detail swipe
             description: item.description || "",
             condition: item.condition || { id: "1", name: "Chưa rõ" },
@@ -210,6 +240,7 @@ export default function HomeScreen({ navigation }: Props) {
           };
         });
         setProducts(mapped);
+        ``;
       })
       .catch((err) => {
         if (err.response) {
@@ -402,10 +433,10 @@ export default function HomeScreen({ navigation }: Props) {
                 subCategory={item.subCategory}
                 imageCount={item.imageCount}
                 isFavorite={item.isFavorite}
+                onToggleFavorite={() => handleToggleFavorite(item.id)}
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
                 }
-                onToggleFavorite={() => console.log("Yêu thích:", item.name)}
               />
             )}
           />
