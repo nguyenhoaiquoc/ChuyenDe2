@@ -55,6 +55,8 @@ export class ProductService {
     @InjectRepository(VehicleCategory)
     private readonly vehicleRepo: Repository<VehicleCategory>,
 
+    private readonly favoritesService: FavoritesService,
+
     private readonly dataSource: DataSource,
   ) { }
 
@@ -215,7 +217,7 @@ export class ProductService {
   }
 
   // 🧩 Lấy toàn bộ sản phẩm (cho Postman, trả full dữ liệu chi tiết)
-  async getAllProducts(): Promise<any[]> {
+  async getAllProducts(user_id: number): Promise<any[]> {
     const products = await this.productRepo.find({
       relations: [
         'images',
@@ -229,7 +231,7 @@ export class ProductService {
       order: { created_at: 'DESC' },
     });
 
-    return this.formatProducts(products);
+    return this.formatProducts(products, user_id);
   }
 
   // Format dữ liệu cho client (React Native)

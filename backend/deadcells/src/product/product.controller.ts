@@ -14,7 +14,7 @@ import { CloudinaryMulter } from "src/cloudinary/cloudinary.config";
 
 @Controller("products")
 export class ProductController {
-  constructor(private readonly productService: ProductService) { }
+  constructor(private readonly productService: ProductService) {}
 
   // Upload ảnh lên Cloudinary và tạo sản phẩm
   @Post()
