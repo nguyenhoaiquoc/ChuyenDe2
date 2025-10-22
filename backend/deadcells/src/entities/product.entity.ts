@@ -36,7 +36,7 @@ export class Product {
   product_type_id: number | null;
 
 
-  @Column({ type: 'longtext', nullable: false })
+  @Column({ type: 'text', nullable: false })
   description: string;
 
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })

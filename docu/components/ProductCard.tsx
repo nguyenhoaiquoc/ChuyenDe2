@@ -35,6 +35,7 @@ export default function ProductCard({
   onPress,
   onToggleFavorite,
 }: ProductCardProps) {
+  console.log("🖼️ Image prop nhận vào:", image);
   const placeholder =
     "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
 

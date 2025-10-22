@@ -11,11 +11,11 @@ export class User {
   @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id' })
   role: Role;
-  
-  
+
+
   @Column({ type: 'bigint', name: 'role_id' })
   roleId: number; // 
-  
+
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
 
@@ -31,12 +31,12 @@ export class User {
   @Column({ type: 'varchar', length: 191, nullable: true })
   image: string; // avatar
 
-@Column({ type: 'json', nullable: true })
-address_json: object;
+  @Column({ type: 'json', nullable: true })
+  address_json: object;
 
 
-@Column({ type: 'tinyint', default: 0 })
-gender: number; // 0 = không xác định
+  @Column({ type: 'smallint', default: 0 })
+  gender: number; // 0 = không xác định
 
 
   @ManyToOne(() => Status)
@@ -46,14 +46,14 @@ gender: number; // 0 = không xác định
   @Column({ type: 'boolean', default: false })
   is_verified: boolean;
 
-@Column({ type: 'varchar', length: 255, nullable: true })
-resetToken?: string | null;  
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  resetToken?: string | null;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   resetTokenExpires?: Date;
 
   @OneToMany(() => Report, (report) => report.reporter)
-reports: Report[];
+  reports: Report[];
 
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
