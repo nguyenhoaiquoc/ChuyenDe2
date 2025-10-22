@@ -107,14 +107,15 @@ export default function HomeScreen({ navigation }: Props) {
 
         const mapped = rawData.map((item: any) => {
           // Lấy URL ảnh chính
-          const imageUrl = item.thumbnail_url
-            ? item.thumbnail_url.startsWith("file://") // check local file
-              ? item.thumbnail_url
-              : `${path}${item.thumbnail_url}`
-            : item.images?.length
-              ? `${path}${item.images[0].image_url}` // Sửa: dùng image_url từ backend
-              : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
+          const imageUrl = (() => {
+            if (!item.thumbnail_url && item.images?.length)
+              return item.images[0].image_url;
 
+            const url = item.thumbnail_url || "";
+            if (url.startsWith("http")) return url; // ✅ Cloudinary hoặc CDN
+
+            return `${path}${url}`;
+          })();
           // FIX: Location dùng addr.full nếu có, fallback string an toàn
           let locationText = "Chưa rõ địa chỉ";
           if (item.address_json) {
@@ -181,13 +182,13 @@ export default function HomeScreen({ navigation }: Props) {
             category: categoryName || null,
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
-                  name: item.subCategory.name,
-                  source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
-                }
+                id: item.subCategory.id
+                  ? parseInt(item.subCategory.id)
+                  : undefined,
+                name: item.subCategory.name,
+                source_table: item.subCategory.source_table,
+                source_detail: item.subCategory.source_detail,
+              }
               : undefined,
             categoryChange_id: item.categoryChange_id || null,
             subCategoryChange_id: item.subCategoryChange_id || null,
@@ -350,11 +351,10 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${
-                  selectedFilter === item.label
+                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
                     ? "bg-blue-500 border-blue-500"
                     : "bg-white border-gray-300"
-                }`}
+                  }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);

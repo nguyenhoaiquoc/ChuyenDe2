@@ -32,7 +32,7 @@ export class CategoryService {
       .where("category.name LIKE :name", { name: `%${name}%` })
       .getMany();
   }
-  
+
   // 🧩 Lấy danh mục cha và danh mục con
   async findAllWithChildren(): Promise<any[]> {
     const categories = await this.categoryRepo.find();
