@@ -124,7 +124,6 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     }
   };
 
-
   // Hàm xóa ảnh
   const removeImage = (index: number) => {
     const updatedImages = [...images];
@@ -160,32 +159,48 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     }
 
     try {
-      const payload: any = {
-        name: name || finalTitle,
-        title: finalTitle,
-        product_type_id: selectedProductTypeId,
-        description,
-        price: dealTypeId === 1 ? parseFloat(price) || 0 : 0,
-        exchange_category: dealTypeId === 3 ? exchangeCategory : null,
-        exchange_sub_category: dealTypeId === 3 ? exchangeSubCategory : null,
-        user_id: 1, // tạm
-        category_id: (category as any)?.id || null,
-        sub_category_id: subCategory?.id || null,
-        post_type_id: selectedProductTypeId || 1,
-        deal_type_id: String(dealTypeId),
-        condition_id: String(conditionId),
-        address_json:
-          typeof address === "string" && address.trim() !== ""
-            ? { full: address }
-            : {},
-        is_approved: false,
-        status_id: 1,
-        images: images,
-        categoryChange_id: dealTypeId === 3 && exchangeCategory ? exchangeCategory.id : null,
-        subCategoryChange_id: dealTypeId === 3 && exchangeSubCategory ? exchangeSubCategory.id : null,
-      };
+      // 🧩 Tạo FormData để gửi dạng multipart
+      const formData = new FormData();
 
-      const response = await axios.post(`${path}/products`, payload);
+      formData.append("name", name || finalTitle);
+      formData.append("title", finalTitle);
+      formData.append("product_type_id", String(selectedProductTypeId || ""));
+      formData.append("description", description);
+      formData.append("price", dealTypeId === 1 ? String(price) : "0");
+      formData.append("user_id", "1");
+      formData.append("category_id", String((category as any)?.id || ""));
+      formData.append("sub_category_id", String(subCategory?.id || ""));
+      formData.append("post_type_id", String(selectedProductTypeId || 1));
+      formData.append("deal_type_id", String(dealTypeId));
+      formData.append("condition_id", String(conditionId));
+      formData.append("status_id", "1");
+      formData.append("is_approved", "false");
+      formData.append("address_json", JSON.stringify({ full: address }));
+
+      if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
+        formData.append("categoryChange_id", String(exchangeCategory.id));
+        formData.append("subCategoryChange_id", String(exchangeSubCategory.id));
+      }
+
+      // 🧩 Gửi từng file ảnh
+      images.forEach((uri, index) => {
+        const filename = uri.split("/").pop();
+        const ext = filename?.split(".").pop();
+        const type = ext ? `image/${ext}` : "image";
+
+        formData.append("files", {
+          uri,
+          name: filename || `photo_${index}.jpg`,
+          type,
+        } as any);
+      });
+
+      // 🧩 Gửi request với header đúng kiểu multipart/form-data
+      const response = await axios.post(`${path}/products`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.status === 201 || response.status === 200) {
         Alert.alert("Thành công", "Đăng tin thành công!");

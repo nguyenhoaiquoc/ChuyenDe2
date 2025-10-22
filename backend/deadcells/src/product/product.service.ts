@@ -13,9 +13,8 @@ import { AnimalCategory } from 'src/entities/categories/animal-category.entity';
 import { ElectronicCategory } from 'src/entities/categories/electronic-category.entity';
 import { HouseCategory } from 'src/entities/categories/house-category.entity';
 import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity';
-import { ProductResponseDto } from './dto/product-response.dto';
-import path from 'path';
 import { DataSource } from 'typeorm';
+import { Express } from 'express';
 
 @Injectable()
 export class ProductService {
@@ -57,10 +56,10 @@ export class ProductService {
     private readonly vehicleRepo: Repository<VehicleCategory>,
 
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
-  async create(data: any) {
+  async create(data: any, files?: Express.Multer.File[]) {
     const dealType = await this.dealTypeRepo.findOne({
       where: { id: Number(data.deal_type_id) },
     });
@@ -70,7 +69,7 @@ export class ProductService {
 
     let subCategoryId: number | null = null;
 
-    // 🧩 1️⃣ Kiểm tra / tạo SubCategory nếu frontend gửi object
+    // 🧩 1️⃣ Kiểm tra / tạo SubCategory nếu cần (giữ nguyên logic cũ)
     if (data.category_id && data.sub_category && data.sub_category.name) {
       const existingSub = await this.subCategoryRepo.findOne({
         where: {
@@ -81,36 +80,16 @@ export class ProductService {
 
       if (existingSub) {
         subCategoryId = existingSub.id;
-        console.log(
-          `✅ Sử dụng sub_category tồn tại: ${data.sub_category.name} (id=${subCategoryId})`,
-        );
       } else {
-        // Xác định source_table theo category cha
         let sourceTable: string | null = null;
         switch (data.category_id) {
-          case 1:
-            sourceTable = 'fashion_categories';
-            break;
-          case 2:
-            sourceTable = 'game_categories';
-            break;
-          case 3:
-            sourceTable = 'academic_categories';
-            break;
-          case 4:
-            sourceTable = 'animal_categories';
-            break;
-          case 5:
-            sourceTable = 'electronic_categories';
-            break;
-          case 6:
-            sourceTable = 'house_categories';
-            break;
-          case 7:
-            sourceTable = 'vehicle_categories';
-            break;
-          default:
-            sourceTable = null;
+          case 1: sourceTable = 'fashion_categories'; break;
+          case 2: sourceTable = 'game_categories'; break;
+          case 3: sourceTable = 'academic_categories'; break;
+          case 4: sourceTable = 'animal_categories'; break;
+          case 5: sourceTable = 'electronic_categories'; break;
+          case 6: sourceTable = 'house_categories'; break;
+          case 7: sourceTable = 'vehicle_categories'; break;
         }
 
         const newSub = this.subCategoryRepo.create({
@@ -121,69 +100,12 @@ export class ProductService {
         });
         const savedSub = await this.subCategoryRepo.save(newSub);
         subCategoryId = savedSub.id;
-        console.log(
-          `✅ Tạo sub_category mới: ${data.sub_category.name} (${sourceTable})`,
-        );
       }
     } else if (data.sub_category_id) {
       subCategoryId = data.sub_category_id;
     }
 
-    // 🧠 2️⃣ Sau khi biết subCategoryId → tự động fill source_table + source_id nếu đang null
-    if (subCategoryId) {
-      const subCategory = await this.subCategoryRepo.findOne({
-        where: { id: subCategoryId },
-      });
-
-      if (subCategory) {
-        // Lấy tên bảng gốc theo category cha
-        let sourceTable: string | null = null;
-        switch (data.category_id) {
-          case 1:
-            sourceTable = 'fashion_categories';
-            break;
-          case 2:
-            sourceTable = 'game_categories';
-            break;
-          case 3:
-            sourceTable = 'academic_categories';
-            break;
-          case 4:
-            sourceTable = 'animal_categories';
-            break;
-          case 5:
-            sourceTable = 'electronic_categories';
-            break;
-          case 6:
-            sourceTable = 'house_categories';
-            break;
-          case 7:
-            sourceTable = 'vehicle_categories';
-            break;
-          default:
-            sourceTable = null;
-        }
-
-        // ✅ Nếu chưa có source_table, tìm record tương ứng trong bảng con
-        if (!subCategory.source_table && sourceTable && subCategory.name) {
-          const repo = this.getRepoByTable(sourceTable);
-
-          const match = await repo.findOne({
-            where: { name: subCategory.name }, // ✅ name luôn có giá trị string
-          });
-
-          subCategory.source_table = sourceTable;
-          subCategory.source_id = match?.id ?? null;
-
-          await this.subCategoryRepo.save(subCategory);
-          console.log(
-            `🔗 Đã cập nhật source_table (${sourceTable}) và source_id=${subCategory.source_id}`,
-          );
-        }
-      }
-    }
-
-    // 🧩 3️⃣ Lưu Product
+    // 🧩 2️⃣ Tạo sản phẩm
     const product = this.productRepo.create({
       name: data.name,
       description: data.description || '',
@@ -196,42 +118,34 @@ export class ProductService {
       subCategoryChange_id: data.subCategoryChange_id || null,
       address_json: data.address_json || {},
       is_approved: false,
-      thumbnail_url:
-        Array.isArray(data.images) && data.images.length > 0
-          ? data.images[0]
-          : null,
-
+      // 🖼️ Thumbnail: lấy ảnh đầu tiên từ Cloudinary
+      thumbnail_url: files && files.length > 0 ? files[0].path : null,
       dealType: dealType!,
       condition: condition!,
-    }) as Product;
+    });
 
-    const savedProduct = (await this.productRepo.save(product)) as Product;
+    const savedProduct = await this.productRepo.save(product);
 
-    // 🧩 4️⃣ Lưu ảnh
-    if (data.images && Array.isArray(data.images)) {
-      const imagesToSave = data.images
-        .filter((img: string) => img && img.length > 0)
-        .map((img: string) =>
-          this.imageRepo.create({
-            product: { id: savedProduct.id },
-            name: savedProduct.name,
-            image_url: img,
-          }),
-        );
+    // 🧩 3️⃣ Lưu ảnh vào bảng ProductImage
+    if (files && files.length > 0) {
+      const imagesToSave = files.map((file) =>
+        this.imageRepo.create({
+          product: { id: savedProduct.id },
+          name: savedProduct.name,
+          // ✅ Nếu Cloudinary đã trả full URL thì dùng luôn
+          image_url: file.path.startsWith('http')
+            ? file.path
+            : `${process.env.PATH}${file.path}`,
+        }),
+      );
 
-      if (imagesToSave.length > 0) {
-        await this.imageRepo.save(imagesToSave);
-        console.log(
-          `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
-        );
-      } else {
-        console.log(
-          `⚠️ Không có ảnh hợp lệ để lưu (tất cả là file:// hoặc rỗng).`,
-        );
-      }
+      await this.imageRepo.save(imagesToSave);
+      console.log(
+        `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
+      );
     }
 
-    // Trả về dữ liệu đầy đủ
+    // 🧩 4️⃣ Trả về kết quả như cũ
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
@@ -264,9 +178,9 @@ export class ProductService {
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
           : categoryName ||
-            subCategoryName ||
-            fullProduct.dealType?.name ||
-            'Không có danh mục',
+          subCategoryName ||
+          fullProduct.dealType?.name ||
+          'Không có danh mục',
       category: categoryName,
       subCategory: {
         id: fullProduct.subCategory?.id || null,
@@ -279,6 +193,7 @@ export class ProductService {
       isFavorite: false,
     };
   }
+
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     return await this.productRepo.find({
@@ -334,8 +249,6 @@ export class ProductService {
       order: { created_at: 'DESC' },
     });
 
-    console.log('Dữ liệu thô từ DB:', JSON.stringify(products, null, 2));
-
     return products.map((p) => {
       const categoryName = p.category?.name || null;
       const subCategoryName = p.subCategory?.name || null;
@@ -375,36 +288,36 @@ export class ProductService {
           : null,
         category: p.category
           ? {
-              id: p.category.id,
-              name: p.category.name,
-              image: p.category.image,
-              hot: p.category.hot,
-            }
+            id: p.category.id,
+            name: p.category.name,
+            image: p.category.image,
+            hot: p.category.hot,
+          }
           : null,
         subCategory: p.subCategory
           ? {
-              id: p.subCategory.id,
-              name: p.subCategory.name,
-              parent_category_id: p.subCategory.parent_category_id,
-              source_table: p.subCategory.source_table,
-              source_id: p.subCategory.source_id,
-            }
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            parent_category_id: p.subCategory.parent_category_id,
+            source_table: p.subCategory.source_table,
+            source_id: p.subCategory.source_id,
+          }
           : null,
         categoryChange: p.categoryChange
           ? {
-              id: p.categoryChange.id,
-              name: p.categoryChange.name,
-              image: p.categoryChange.image,
-            }
+            id: p.categoryChange.id,
+            name: p.categoryChange.name,
+            image: p.categoryChange.image,
+          }
           : null,
         subCategoryChange: p.subCategoryChange
           ? {
-              id: p.subCategoryChange.id,
-              name: p.subCategoryChange.name,
-              parent_category_id: p.subCategoryChange.parent_category_id,
-              source_table: p.subCategoryChange.source_table,
-              source_id: p.subCategoryChange.source_id,
-            }
+            id: p.subCategoryChange.id,
+            name: p.subCategoryChange.name,
+            parent_category_id: p.subCategoryChange.parent_category_id,
+            source_table: p.subCategoryChange.source_table,
+            source_id: p.subCategoryChange.source_id,
+          }
           : null,
 
         images:
@@ -423,9 +336,9 @@ export class ProductService {
           categoryName && subCategoryName
             ? `${categoryName} - ${subCategoryName}`
             : categoryName ||
-              subCategoryName ||
-              p.dealType?.name ||
-              'Không có danh mục',
+            subCategoryName ||
+            p.dealType?.name ||
+            'Không có danh mục',
       };
     });
   }
@@ -458,45 +371,45 @@ export class ProductService {
         : null,
       category: p.category
         ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
+          id: p.category.id,
+          name: p.category.name,
+          image: p.category.image,
+          hot: p.category.hot,
+        }
         : null,
       subCategory: p.subCategory
         ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
+          id: p.subCategory.id,
+          name: p.subCategory.name,
+          parent_category_id: p.subCategory.parent_category_id,
+          source_table: p.subCategory.source_table,
+          source_id: p.subCategory.source_id,
+        }
         : null,
       categoryChange: p.categoryChange
         ? {
-            id: p.categoryChange.id,
-            name: p.categoryChange.name,
-            image: p.categoryChange.image,
-          }
+          id: p.categoryChange.id,
+          name: p.categoryChange.name,
+          image: p.categoryChange.image,
+        }
         : null,
       subCategoryChange: p.subCategoryChange
         ? {
-            id: p.subCategoryChange.id,
-            name: p.subCategoryChange.name,
-            parent_category_id: p.subCategoryChange.parent_category_id,
-            source_table: p.subCategoryChange.source_table,
-            source_id: p.subCategoryChange.source_id,
-          }
+          id: p.subCategoryChange.id,
+          name: p.subCategoryChange.name,
+          parent_category_id: p.subCategoryChange.parent_category_id,
+          source_table: p.subCategoryChange.source_table,
+          source_id: p.subCategoryChange.source_id,
+        }
         : null,
       images: p.images
         ? p.images.map((img) => ({
-            id: img.id,
-            product_id: img.product_id,
-            name: img.name,
-            image_url: img.image_url,
-            created_at: img.created_at,
-          }))
+          id: img.id,
+          product_id: img.product_id,
+          name: img.name,
+          image_url: img.image_url,
+          created_at: img.created_at,
+        }))
         : [],
     }));
   }
