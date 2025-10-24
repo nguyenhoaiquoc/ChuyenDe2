@@ -7,6 +7,8 @@ import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";  
+import axios from "axios";
+import { path } from "../../config";
 
 export default function UserScreen() {
   const navigation =
@@ -18,6 +20,36 @@ export default function UserScreen() {
       if (value) setName(value);
     });
   }, []);
+  const [avatar, setAvatar] = useState<string | null>(null);
+
+useEffect(() => {
+  const fetchUser = async () => {
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId) return;
+
+    try {
+      const res = await axios.get(`${path}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data) {
+        setName(res.data.fullName || res.data.name || "");
+        setAvatar(res.data.image || null); // <-- dùng URL từ server
+        await AsyncStorage.setItem("userName", res.data.fullName || res.data.name || "");
+        if (res.data.image) await AsyncStorage.setItem("userAvatar", res.data.image);
+      }
+    } catch (err) {
+      console.log("Lấy user error:", err);
+      const localName = await AsyncStorage.getItem("userName");
+      const localAvatar = await AsyncStorage.getItem("userAvatar");
+      if (localName) setName(localName);
+      if (localAvatar) setAvatar(localAvatar);
+    }
+  };
+
+  fetchUser();
+}, []);
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -47,9 +79,14 @@ export default function UserScreen() {
           >
             
   <Image
-    source={require("../../assets/meo.jpg")}
-    style={{ width: "100%", height: "100%", borderRadius: 48 }}
-  />
+  source={
+    avatar
+      ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
+      : require("../../assets/meo.jpg")
+  }
+  style={{ width: "100%", height: "100%", borderRadius: 48 }}
+/>
+
 
 
           </View>

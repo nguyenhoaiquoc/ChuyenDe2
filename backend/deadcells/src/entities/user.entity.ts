@@ -12,7 +12,6 @@ export class User {
   @JoinColumn({ name: 'role_id' })
   role: Role;
 
-
   @Column({ type: 'bigint', name: 'role_id' })
   roleId: number; // 
 
@@ -30,6 +29,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 191, nullable: true })
   image: string; // avatar
+
+  @Column({ type: 'varchar', length: 191, nullable: true })
+  coverImage: string; // ảnh bìa
 
   @Column({ type: 'json', nullable: true })
   address_json: object;

@@ -108,7 +108,7 @@ if (existing && !existing.is_verified) {
   const payload = { id: user.id, email: user.email };
   const token = this.jwtService.sign(payload);
 
-  return { token, role: user.role.name, fullName: user.fullName };
+  return { token, role: user.role.name, fullName: user.fullName,id: user.id };
 }
 
   // --- Gửi OTP quên mật khẩu ---
