@@ -15,6 +15,7 @@ import { HouseCategory } from 'src/entities/categories/house-category.entity';
 import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity';
 import { DataSource } from 'typeorm';
 import { Express } from 'express';
+import { FavoritesService } from 'src/favorites/favorites.service';
 
 @Injectable()
 export class ProductService {
@@ -217,7 +218,7 @@ export class ProductService {
   }
 
   // 🧩 Lấy toàn bộ sản phẩm (cho Postman, trả full dữ liệu chi tiết)
-  async getAllProducts(user_id: number): Promise<any[]> {
+  async getAllProducts(): Promise<any[]> {
     const products = await this.productRepo.find({
       relations: [
         'images',
@@ -231,7 +232,7 @@ export class ProductService {
       order: { created_at: 'DESC' },
     });
 
-    return this.formatProducts(products, user_id);
+    return this.formatProducts(products);
   }
 
   // Format dữ liệu cho client (React Native)
