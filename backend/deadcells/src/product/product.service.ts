@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
@@ -14,16 +14,21 @@ import { ElectronicCategory } from 'src/entities/categories/electronic-category.
 import { HouseCategory } from 'src/entities/categories/house-category.entity';
 import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity';
 import { DataSource } from 'typeorm';
-import { Express } from 'express';
+import { PostType } from 'src/entities/post-type.entity';
+import { User } from 'src/entities/user.entity';
 
 @Injectable()
 export class ProductService {
+  
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
 
     @InjectRepository(ProductImage)
     private readonly imageRepo: Repository<ProductImage>,
+
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
 
     @InjectRepository(DealType)
     private readonly dealTypeRepo: Repository<DealType>,
@@ -33,6 +38,9 @@ export class ProductService {
 
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
+
+    @InjectRepository(PostType)
+    private readonly postTypeRepo: Repository<PostType>,
 
     @InjectRepository(FashionCategory)
     private readonly fashionRepo: Repository<FashionCategory>,
@@ -63,13 +71,26 @@ export class ProductService {
     const dealType = await this.dealTypeRepo.findOne({
       where: { id: Number(data.deal_type_id) },
     });
+    if (!dealType) {
+      throw new NotFoundException(`Không tìm thấy dealType với ID ${data.deal_type_id}`);
+    }
+
     const condition = await this.conditionRepo.findOne({
       where: { id: Number(data.condition_id) },
     });
+    if (!condition) {
+      throw new NotFoundException(`Không tìm thấy condition với ID ${data.condition_id}`);
+    }
+
+    const postType = await this.postTypeRepo.findOne({
+      where: { id: Number(data.post_type_id) },
+    });
+    if (!postType) {
+      throw new NotFoundException(`Không tìm thấy postType với ID ${data.post_type_id}`);
+    }
 
     let subCategoryId: number | null = null;
 
-    // 🧩 1️⃣ Kiểm tra / tạo SubCategory nếu cần (giữ nguyên logic cũ)
     if (data.category_id && data.sub_category && data.sub_category.name) {
       const existingSub = await this.subCategoryRepo.findOne({
         where: {
@@ -105,7 +126,6 @@ export class ProductService {
       subCategoryId = data.sub_category_id;
     }
 
-    // 🧩 2️⃣ Tạo sản phẩm
     const product = this.productRepo.create({
       name: data.name,
       description: data.description || '',
@@ -118,44 +138,41 @@ export class ProductService {
       subCategoryChange_id: data.subCategoryChange_id || null,
       address_json: data.address_json || {},
       is_approved: false,
-      // 🖼️ Thumbnail: lấy ảnh đầu tiên từ Cloudinary
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
-      dealType: dealType!,
-      condition: condition!,
+      dealType: dealType,
+      condition: condition,
+      postType: postType,
+      product_type_id: data.product_type_id ? Number(data.product_type_id) : null,
     });
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🧩 3️⃣ Lưu ảnh vào bảng ProductImage
     if (files && files.length > 0) {
       const imagesToSave = files.map((file) =>
         this.imageRepo.create({
           product: { id: savedProduct.id },
           name: savedProduct.name,
-          // ✅ Nếu Cloudinary đã trả full URL thì dùng luôn
-          image_url: file.path.startsWith('http')
-            ? file.path
-            : `${process.env.PATH}${file.path}`,
+          image_url: file.path,
         }),
       );
 
       await this.imageRepo.save(imagesToSave);
-      console.log(
-        `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
-      );
+      console.log(`🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`);
     }
 
-    // 🧩 4️⃣ Trả về kết quả như cũ
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
         'images',
+        'user',
         'dealType',
         'condition',
         'category',
         'subCategory',
         'categoryChange',
         'subCategoryChange',
+        'postType',
+        'productType',
       ],
     });
 
@@ -173,7 +190,7 @@ export class ProductService {
       name: fullProduct.name || 'Không có tên',
       price: fullProduct.price.toLocaleString('vi-VN'),
       location: this.formatAddress(fullProduct.address_json),
-      time: this.formatTime(fullProduct.created_at),
+      created_at: fullProduct.created_at,
       tag:
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
@@ -188,12 +205,21 @@ export class ProductService {
         source_table: fullProduct.subCategory?.source_table || null,
         source_detail: sourceDetail,
       },
-      condition: fullProduct.condition?.name || 'Không rõ tình trạng',
+      condition: fullProduct.condition
+        ? { id: fullProduct.condition.id, name: fullProduct.condition.name } // Sửa lại thành object
+        : null,
+      // SỬA: Trả về object { id, name }
+      postType: fullProduct.postType
+        ? { id: fullProduct.postType.id, name: fullProduct.postType.name } // <<< ĐÃ SỬA
+        : null,
+      // SỬA: Trả về object { id, name }
+      productType: fullProduct.productType
+        ? { id: fullProduct.productType.id, name: fullProduct.productType.name } // <<< ĐÃ SỬA
+        : null,
       imageCount: fullProduct.images?.length || 0,
       isFavorite: false,
     };
   }
-
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     return await this.productRepo.find({
@@ -203,12 +229,15 @@ export class ProductService {
       ],
       relations: [
         'images',
+        'user',
         'dealType',
         'condition',
         'category',
         'subCategory',
         'categoryChange',
         'subCategoryChange',
+        'postType',
+        'productType',
       ],
       order: { created_at: 'DESC' },
     });
@@ -219,12 +248,15 @@ export class ProductService {
     const products = await this.productRepo.find({
       relations: [
         'images',
+        'user',
         'dealType',
         'condition',
         'category',
         'subCategory',
         'categoryChange',
         'subCategoryChange',
+        'postType',
+        'productType',
       ],
       order: { created_at: 'DESC' },
     });
@@ -245,6 +277,8 @@ export class ProductService {
         'subCategory',
         'categoryChange',
         'subCategoryChange',
+        'postType',
+        'productType',
       ],
       order: { created_at: 'DESC' },
     });
@@ -258,14 +292,22 @@ export class ProductService {
 
       return {
         id: p.id,
-        author_name: p.author_name,
         name: p.name,
         description: p.description,
         price: Number(p.price),
         thumbnail_url: p.images?.[0]?.image_url || null,
         phone: p.user?.phone || null,
         user_id: p.user_id,
+        user: p.user ? {
+          id: p.user.id,
+          name: p.user.fullName,
+          email: p.user.email,
+          phone: p.user.phone,
+        } : null,
         post_type_id: p.post_type_id,
+        postType: p.postType
+          ? { id: p.postType.id, name: p.postType.name } // <<< THÊM VÀO ĐÂY
+          : null,
         deal_type_id: p.deal_type_id,
         category_id: p.category_id,
         sub_category_id: p.sub_category_id,
@@ -276,9 +318,10 @@ export class ProductService {
         group_id: p.group_id,
         is_approved: p.is_approved,
         address_json: p.address_json,
-        created_at: p.created_at,
-        updated_at: p.updated_at,
 
+        productType: p.productType
+          ? { id: p.productType.id, name: p.productType.name }
+          : null,
         // quan hệ chi tiết
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
@@ -331,7 +374,6 @@ export class ProductService {
         imageCount: p.images?.length || 0,
         isFavorite: false,
         location: this.formatAddress(p.address_json),
-        time: this.formatTime(p.created_at),
         tag:
           categoryName && subCategoryName
             ? `${categoryName} - ${subCategoryName}`
@@ -339,6 +381,9 @@ export class ProductService {
             subCategoryName ||
             p.dealType?.name ||
             'Không có danh mục',
+        created_at: p.created_at,
+        updated_at: p.updated_at,
+
       };
     });
   }
@@ -346,13 +391,17 @@ export class ProductService {
   async formatProducts(products: Product[]): Promise<any[]> {
     return products.map((p) => ({
       id: p.id,
-      author_name: p.author_name,
       name: p.name,
       description: p.description,
       price: Number(p.price),
       thumbnail_url: p.images?.[0]?.image_url || null,
-
       user_id: p.user_id,
+      user: p.user ? {
+        id: p.user.id,
+        name: p.user.fullName,
+        email: p.user.email,
+        phone: p.user.phone,
+      } : null,
       deal_type_id: p.deal_type_id,
       category_id: p.category_id,
       sub_category_id: p.sub_category_id,
@@ -362,7 +411,9 @@ export class ProductService {
       address_json: p.address_json,
       created_at: p.created_at,
       updated_at: p.updated_at,
-
+      postType: p.postType
+        ? { id: p.postType.id, name: p.postType.name } // <<< THÊM VÀO ĐÂY
+        : null,
       dealType: p.dealType
         ? { id: p.dealType.id, name: p.dealType.name }
         : null,
@@ -427,19 +478,6 @@ export class ProductService {
     }
   }
 
-  // 🔧 Format thời gian
-  private formatTime(createdAt: Date): string {
-    const now = new Date();
-    const created = new Date(createdAt);
-    const diffMs = now.getTime() - created.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays >= 1) return `${diffDays} ngày trước`;
-    if (diffHours >= 1) return `${diffHours} giờ trước`;
-    return 'Vừa đăng';
-  }
-
   async getSourceDetail(subCategory: SubCategory): Promise<any> {
     if (!subCategory.source_table || !subCategory.source_id) {
       return null; // ✅ nếu thiếu thông tin thì bỏ qua
@@ -478,25 +516,5 @@ export class ProductService {
         return null;
     }
   }
-
-  private getRepoByTable(tableName: string) {
-    switch (tableName) {
-      case 'fashion_categories':
-        return this.dataSource.getRepository(FashionCategory);
-      case 'game_categories':
-        return this.dataSource.getRepository(GameCategory);
-      case 'academic_categories':
-        return this.dataSource.getRepository(AcademicCategory);
-      case 'animal_categories':
-        return this.dataSource.getRepository(AnimalCategory);
-      case 'electronic_categories':
-        return this.dataSource.getRepository(ElectronicCategory);
-      case 'house_categories':
-        return this.dataSource.getRepository(HouseCategory);
-      case 'vehicle_categories':
-        return this.dataSource.getRepository(VehicleCategory);
-      default:
-        throw new Error(`❌ Unknown source table: ${tableName}`);
-    }
-  }
 }
+

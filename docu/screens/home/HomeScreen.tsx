@@ -41,6 +41,7 @@ interface Product {
   location: string;
   time: string;
   tag: string;
+  authorName: string;
   category: string | undefined;
   subCategory?: {
     id?: number;
@@ -63,7 +64,6 @@ interface Product {
   dealType?: { id: string; name: string };
   categoryObj?: { id: string; name: string }; // Để dùng category.name
   created_at?: string;
-  author_name?: string;
 }
 
 interface Category {
@@ -102,7 +102,7 @@ export default function HomeScreen({ navigation }: Props) {
     axios
       .get(`${path}/products`)
       .then((res) => {
-        // Đảm bảo dữ liệu là mảng
+        // dữ liệu là mảng
         const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
         const mapped = rawData.map((item: any) => {
@@ -112,11 +112,10 @@ export default function HomeScreen({ navigation }: Props) {
               return item.images[0].image_url;
 
             const url = item.thumbnail_url || "";
-            if (url.startsWith("http")) return url; // ✅ Cloudinary hoặc CDN
+            if (url.startsWith("http")) return url;
 
             return `${path}${url}`;
           })();
-          // FIX: Location dùng addr.full nếu có, fallback string an toàn
           let locationText = "Chưa rõ địa chỉ";
           if (item.address_json) {
             try {
@@ -124,33 +123,32 @@ export default function HomeScreen({ navigation }: Props) {
                 typeof item.address_json === "string"
                   ? JSON.parse(item.address_json)
                   : item.address_json;
-              // Ưu tiên full nếu có, fallback join ward/district/province
               if (addr.full) {
                 locationText = addr.full;
               } else {
                 const parts = [addr.ward, addr.district, addr.province]
                   .filter(Boolean)
-                  .slice(-2); // Chỉ 2 phần cuối để ngắn
+                  .slice(-2);
                 locationText =
                   parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
               }
             } catch (e) {
               console.log("Lỗi parse address cho product", item.id, ":", e);
-              locationText = "Chưa rõ địa chỉ"; // Fallback string
+              locationText = "Chưa rõ địa chỉ";
             }
           }
 
-          // Thời gian đăng (nếu có)
+          // Thời gian đăng
           const createdAt = item.created_at
-            ? new Date(item.created_at)
+            ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
             : new Date();
+
 
           const timeDisplay = timeSince(createdAt);
 
           // Danh mục
           let tagText = "Không có danh mục";
 
-          // LƯU Ý: Đảm bảo backend đã JOIN cả Category và SubCategory vào item
           const categoryName = item.category?.name || null; // Tên danh mục cha
           const subCategoryName = item.subCategory?.name || null; // Tên danh mục con
 
@@ -161,10 +159,10 @@ export default function HomeScreen({ navigation }: Props) {
             // Chỉ có tên cha
             tagText = categoryName;
           } else if (subCategoryName) {
-            // Chỉ có tên con (ít xảy ra)
+            // Chỉ có tên con
             tagText = subCategoryName;
           }
-
+          const authorName = item.user?.name || "Ẩn danh";
           return {
             id: item.id.toString(),
             image: imageUrl,
@@ -179,6 +177,7 @@ export default function HomeScreen({ navigation }: Props) {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
+            authorName: authorName,
             category: categoryName || null,
             subCategory: item.subCategory
               ? {
@@ -207,7 +206,6 @@ export default function HomeScreen({ navigation }: Props) {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
-            author_name: item.author_name || "Người bán",
           };
         });
         setProducts(mapped);
@@ -227,6 +225,11 @@ export default function HomeScreen({ navigation }: Props) {
   const timeSince = (date: Date): string => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
 
+    // Nếu khoảng thời gian < 60 giây, trả về "Vừa đăng" (hoặc "vài giây trước")
+    if (seconds < 60) {
+      return seconds < 5 ? "vừa xong" : `${seconds} giây trước`;
+    }
+
     let interval = seconds / 31536000;
     if (interval >= 1) {
       return Math.floor(interval) + " năm trước";
@@ -244,13 +247,7 @@ export default function HomeScreen({ navigation }: Props) {
       return Math.floor(interval) + " giờ trước";
     }
     interval = seconds / 60;
-    if (interval >= 1) {
-      return Math.floor(interval) + " phút trước";
-    }
-    // Mặc định cho dưới 1 phút
-    return Math.floor(seconds) > 5
-      ? Math.floor(seconds) + " giây trước"
-      : "vừa xong";
+    return Math.floor(interval) + " phút trước";
   };
   return (
     <View className="flex-1 bg-[#f5f6fa] mt-6">
@@ -352,8 +349,8 @@ export default function HomeScreen({ navigation }: Props) {
             renderItem={({ item }) => (
               <TouchableOpacity
                 className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
-                    ? "bg-blue-500 border-blue-500"
-                    : "bg-white border-gray-300"
+                  ? "bg-blue-500 border-blue-500"
+                  : "bg-white border-gray-300"
                   }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
@@ -398,6 +395,7 @@ export default function HomeScreen({ navigation }: Props) {
                 location={item.location}
                 time={item.time}
                 tag={item.tag}
+                authorName={item.authorName}
                 category={item.category}
                 subCategory={item.subCategory}
                 imageCount={item.imageCount}

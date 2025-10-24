@@ -8,6 +8,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
@@ -38,50 +39,62 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [conditionId, setConditionId] = useState<number | null>(null);
+  const [productTypeId, setProductTypeId] = useState<number | null>(null);
   const [dealTypeId, setDealTypeId] = useState<number | null>(null);
   const [address, setAddress] = useState("");
 
+  // STATE ĐANG TẢI
+  const [isLoading, setIsLoading] = useState(false);
+
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [conditions, setConditions] = useState<{ id: number; name: string }[]>([]);
+  const [selectedConditionId, setSelectedConditionId] = useState<number | null>(null);
 
-
-  const handleSelectCondition = (index: number) => {
-    setConditionId(index + 1);
+  const handleSelectCondition = (id: number) => {
+    setSelectedConditionId(id);
+    setConditionId(id);
     setShowConditionModal(false);
+  };
+
+  const [postTypeId, setPostTypeId] = useState<number | null>(null);
+  const [showPostTypeModal, setShowPostTypeModal] = useState(false);
+  const [postTypes, setPostTypes] = useState<{ id: number; name: string }[]>([]);
+
+  const handleSelectPostType = (id: number) => {
+    setPostTypeId(id);
+    setShowPostTypeModal(false);
   };
 
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [productTypes, setProductTypes] = useState<{ id: number; name: string }[]>([]);
   const [selectedProductTypeId, setSelectedProductTypeId] = useState<number | null>(null);
 
-  useEffect(() => {
-    const fetchProductTypes = async () => {
-      try {
-        const res = await axios.get(`${path}/product-types`);
-        if (res.status === 200) {
-          setProductTypes(res.data);
-        }
-      } catch (err) {
-        console.error("Lỗi tải product types:", err);
-      }
-    };
-    fetchProductTypes();
-  }, []);
+  // useEffect(() => {
+  //   const fetchProductTypes = async () => {
+  //     try {
+  //       const res = await axios.get(`${path}/product-types`);
+  //       if (res.status === 200) {
+  //         setProductTypes(res.data);
+  //       }
+  //     } catch (err) {
+  //       console.error("Lỗi tải product types:", err);
+  //     }
+  //   };
+  //   fetchProductTypes();
+  // }, []);
 
 
   const handleSelectProductType = (id: number) => {
     setSelectedProductTypeId(id);
+    setProductTypeId(id);
     setShowTypeModal(false);
-  }
-
-  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>([]);
-  const [showDealTypeModal, setShowDealTypeModal] = useState(false);
-
+  };
 
   const [exchangeCategory, setExchangeCategory] = useState<{ id: string, name: string } | null>(null);
   const [exchangeSubCategory, setExchangeSubCategory] = useState<{ id: string, name: string } | null>(null);
 
-
+  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>([]);
+  const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   // Hàm chọn hình thức giao dịch
   const handleSelectDealType = (id: number) => {
     setDealTypeId(id);
@@ -116,7 +129,6 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         return;
       }
 
-      // ✅ Viết tường minh
       setImages((prevImages) => {
         const updatedImages = prevImages.concat(selected);
         return updatedImages;
@@ -133,18 +145,20 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
 
   // Hàm đăng bài
   const handlePost = async () => {
-    // dùng fallback nếu bạn không muốn bắt buộc nhập `title`
+    if (isLoading) return;
+
     const finalTitle = title && title.trim() !== "" ? title.trim() : (name && name.trim() !== "" ? name.trim() : "");
 
-    // Validation đầy đủ: thu thập danh sách thiếu
+    // Validation
     const missingFields: string[] = [];
-
     if (!category) missingFields.push("Danh mục cha");
     if (!subCategory) missingFields.push("Danh mục con");
     if (!finalTitle) missingFields.push("Tên sản phẩm");
     if (!description || description.trim() === "") missingFields.push("Mô tả sản phẩm");
     if (!conditionId) missingFields.push("Tình trạng sản phẩm");
+    if (!productTypeId) missingFields.push("Loại sản phẩm");
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
+    if (!postTypeId) missingFields.push("Loại bài đăng");
     if (images.length === 0) missingFields.push("Hình ảnh sản phẩm (ít nhất 1 ảnh)");
     if (!address || address.trim() === "") missingFields.push("Địa chỉ giao dịch");
     if (dealTypeId === 1 && (!price || parseFloat(price) <= 0)) missingFields.push("Giá bán (phải > 0 nếu bán có giá)");
@@ -152,25 +166,24 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     if (missingFields.length > 0) {
       Alert.alert(
         "Thiếu thông tin",
-        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(', ')}.`,
+        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(", ")}.`,
         [{ text: "OK" }]
       );
       return;
     }
 
+    setIsLoading(true);
     try {
-      // 🧩 Tạo FormData để gửi dạng multipart
       const formData = new FormData();
-
       formData.append("name", name || finalTitle);
       formData.append("title", finalTitle);
-      formData.append("product_type_id", String(selectedProductTypeId || ""));
+      formData.append("product_type_id", String(productTypeId));
       formData.append("description", description);
       formData.append("price", dealTypeId === 1 ? String(price) : "0");
       formData.append("user_id", "1");
       formData.append("category_id", String((category as any)?.id || ""));
       formData.append("sub_category_id", String(subCategory?.id || ""));
-      formData.append("post_type_id", String(selectedProductTypeId || 1));
+      formData.append("post_type_id", String(postTypeId)); // Sử dụng postTypeId từ state
       formData.append("deal_type_id", String(dealTypeId));
       formData.append("condition_id", String(conditionId));
       formData.append("status_id", "1");
@@ -182,12 +195,10 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         formData.append("subCategoryChange_id", String(exchangeSubCategory.id));
       }
 
-      // 🧩 Gửi từng file ảnh
       images.forEach((uri, index) => {
         const filename = uri.split("/").pop();
         const ext = filename?.split(".").pop();
         const type = ext ? `image/${ext}` : "image";
-
         formData.append("files", {
           uri,
           name: filename || `photo_${index}.jpg`,
@@ -195,7 +206,8 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         } as any);
       });
 
-      // 🧩 Gửi request với header đúng kiểu multipart/form-data
+      console.log("formData:", formData);
+
       const response = await axios.post(`${path}/products`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -211,19 +223,31 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     } catch (err: any) {
       console.error("Lỗi khi đăng tin:", err);
       Alert.alert("Lỗi", "Không thể kết nối đến server.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [conditionRes, dealTypeRes] = await Promise.all([
+        const [conditionRes, dealTypeRes, productTypeRes, postTypeRes] = await Promise.all([
           axios.get(`${path}/conditions`),
           axios.get(`${path}/deal-types`),
+          axios.get(`${path}/product-types`),
+          axios.get(`${path}/post-types`),
         ]);
+        // console.log("Conditions:", conditionRes.data);
+        // console.log("DealTypes:", dealTypeRes.data);
+        // console.log("ProductTypes:", productTypeRes.data);
+        // console.log("PostTypes:", postTypeRes.data);
+
         if (conditionRes.status === 200) setConditions(conditionRes.data);
         if (dealTypeRes.status === 200) setDealTypes(dealTypeRes.data);
+        if (productTypeRes.status === 200) setProductTypes(productTypeRes.data);
+        if (postTypeRes.status === 200) setPostTypes(postTypeRes.data);
       } catch (err) {
-        console.error("Lỗi tải điều kiện / hình thức giao dịch:", err);
+        console.error("Lỗi tải dữ liệu:", err);
       }
     };
     fetchOptions();
@@ -242,6 +266,8 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+
+
         {/* Danh mục */}
         <View style={styles.section}>
           <TouchableOpacity style={styles.dropdown} onPress={() => navigation.navigate("ChooseCategoryScreen")}>
@@ -336,6 +362,7 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
           </TouchableOpacity>
           <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
         </View>
+
         {/* Hình thức giao dịch */}
         <View style={styles.section}>
           <TouchableOpacity
@@ -414,10 +441,57 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
           <AddressPicker onChange={(fullAddress) => setAddress(fullAddress)} />
         </View>
 
+        {/* Loại bài đăng */}
+        <View style={styles.section}>
+          <Text style={styles.dropdownLabel}>Loại bài đăng *</Text>
+          <View style={styles.radioContainer}>
+            {postTypes.map((type) => (
+              <TouchableOpacity
+                key={type.id}
+                style={[
+                  styles.radioOption,
+                  Number(postTypeId) === Number(type.id) && styles.radioOptionSelected,
+                ]}
+                onPress={() => handleSelectPostType(Number(type.id))}
+              >
+                <Text
+                  style={[
+                    styles.radioOptionText,
+                    Number(postTypeId) === Number(type.id) && styles.radioOptionTextSelected,
+                  ]}
+                >
+                  {type.name}
+                </Text>
+                {Number(postTypeId) === Number(type.id) && (
+                  <MaterialCommunityIcons name="check-circle" size={20} color="#8c7ae6" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+          <Text style={styles.helperText}>Chọn loại bài đăng (Đăng bán hoặc Đăng mua)</Text>
+        </View>
+
         {/* Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.postButton} onPress={handlePost}>
-            <Text style={styles.postButtonText}>Đăng tin</Text>
+          <TouchableOpacity
+            style={[
+              styles.postButton,
+              // 💡 Thay đổi opacity khi đang tải để người dùng nhận biết
+              isLoading && { opacity: 0.7 }
+            ]}
+            onPress={handlePost}
+            disabled={isLoading} // 💡 KHÔNG CHO PHÉP NHẤN NÚT KHI ĐANG TẢI
+          >
+            {isLoading ? (
+              // 💡 HIỂN THỊ ICON TẢI VÀ TEXT
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.postButtonText}>Đang đăng tin...</Text>
+              </View>
+            ) : (
+              // 💡 HIỂN THỊ TEXT BÌNH THƯỜNG
+              <Text style={styles.postButtonText}>Đăng tin</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -427,19 +501,16 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.dropdownLabel}>Chọn tình trạng sản phẩm</Text>
-            {conditions.map((option) => (
+            {conditions.map((type) => (
               <TouchableOpacity
-                key={option.id}
+                key={type.id}
                 style={[
                   styles.modalOption,
-                  conditionId === option.id && styles.modalOptionSelected
+                  conditionId === type.id && styles.modalOptionSelected
                 ]}
-                onPress={() => {
-                  setConditionId(option.id);
-                  setShowConditionModal(false);
-                }}
+                onPress={() => handleSelectCondition(type.id)}
               >
-                <Text style={styles.modalOptionText}>{option.name}</Text>
+                <Text style={styles.modalOptionText}>{type.name}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity onPress={() => setShowConditionModal(false)} style={styles.modalCancelButton}>
@@ -725,5 +796,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#ef4444",
     fontWeight: "500",
+  },
+  radioContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 8,
+  },
+  radioOption: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+  },
+  radioOptionSelected: {
+    borderColor: "#8c7ae6",
+    backgroundColor: "#f0f9ff",
+  },
+  radioOptionText: {
+    fontSize: 15,
+    color: "#334155",
+    fontWeight: "500",
+  },
+  radioOptionTextSelected: {
+    color: "#8c7ae6",
   },
 });
