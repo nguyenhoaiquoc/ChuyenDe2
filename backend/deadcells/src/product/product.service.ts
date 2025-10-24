@@ -13,6 +13,8 @@ import { AnimalCategory } from 'src/entities/categories/animal-category.entity';
 import { ElectronicCategory } from 'src/entities/categories/electronic-category.entity';
 import { HouseCategory } from 'src/entities/categories/house-category.entity';
 import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity';
+import { ProductResponseDto } from './dto/product-response.dto';
+import path from 'path';
 import { DataSource } from 'typeorm';
 import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
@@ -64,10 +66,10 @@ export class ProductService {
     private readonly vehicleRepo: Repository<VehicleCategory>,
 
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
-  async create(data: any, files?: Express.Multer.File[]) {
+  async create(data: any) {
     const dealType = await this.dealTypeRepo.findOne({
       where: { id: Number(data.deal_type_id) },
     });
@@ -101,16 +103,36 @@ export class ProductService {
 
       if (existingSub) {
         subCategoryId = existingSub.id;
+        console.log(
+          `✅ Sử dụng sub_category tồn tại: ${data.sub_category.name} (id=${subCategoryId})`,
+        );
       } else {
+        // Xác định source_table theo category cha
         let sourceTable: string | null = null;
         switch (data.category_id) {
-          case 1: sourceTable = 'fashion_categories'; break;
-          case 2: sourceTable = 'game_categories'; break;
-          case 3: sourceTable = 'academic_categories'; break;
-          case 4: sourceTable = 'animal_categories'; break;
-          case 5: sourceTable = 'electronic_categories'; break;
-          case 6: sourceTable = 'house_categories'; break;
-          case 7: sourceTable = 'vehicle_categories'; break;
+          case 1:
+            sourceTable = 'fashion_categories';
+            break;
+          case 2:
+            sourceTable = 'game_categories';
+            break;
+          case 3:
+            sourceTable = 'academic_categories';
+            break;
+          case 4:
+            sourceTable = 'animal_categories';
+            break;
+          case 5:
+            sourceTable = 'electronic_categories';
+            break;
+          case 6:
+            sourceTable = 'house_categories';
+            break;
+          case 7:
+            sourceTable = 'vehicle_categories';
+            break;
+          default:
+            sourceTable = null;
         }
 
         const newSub = this.subCategoryRepo.create({
@@ -121,6 +143,9 @@ export class ProductService {
         });
         const savedSub = await this.subCategoryRepo.save(newSub);
         subCategoryId = savedSub.id;
+        console.log(
+          `✅ Tạo sub_category mới: ${data.sub_category.name} (${sourceTable})`,
+        );
       }
     } else if (data.sub_category_id) {
       subCategoryId = data.sub_category_id;
@@ -195,9 +220,9 @@ export class ProductService {
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
           : categoryName ||
-          subCategoryName ||
-          fullProduct.dealType?.name ||
-          'Không có danh mục',
+            subCategoryName ||
+            fullProduct.dealType?.name ||
+            'Không có danh mục',
       category: categoryName,
       subCategory: {
         id: fullProduct.subCategory?.id || null,
@@ -283,6 +308,8 @@ export class ProductService {
       order: { created_at: 'DESC' },
     });
 
+    console.log('Dữ liệu thô từ DB:', JSON.stringify(products, null, 2));
+
     return products.map((p) => {
       const categoryName = p.category?.name || null;
       const subCategoryName = p.subCategory?.name || null;
@@ -331,36 +358,36 @@ export class ProductService {
           : null,
         category: p.category
           ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
+              id: p.category.id,
+              name: p.category.name,
+              image: p.category.image,
+              hot: p.category.hot,
+            }
           : null,
         subCategory: p.subCategory
           ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
+              id: p.subCategory.id,
+              name: p.subCategory.name,
+              parent_category_id: p.subCategory.parent_category_id,
+              source_table: p.subCategory.source_table,
+              source_id: p.subCategory.source_id,
+            }
           : null,
         categoryChange: p.categoryChange
           ? {
-            id: p.categoryChange.id,
-            name: p.categoryChange.name,
-            image: p.categoryChange.image,
-          }
+              id: p.categoryChange.id,
+              name: p.categoryChange.name,
+              image: p.categoryChange.image,
+            }
           : null,
         subCategoryChange: p.subCategoryChange
           ? {
-            id: p.subCategoryChange.id,
-            name: p.subCategoryChange.name,
-            parent_category_id: p.subCategoryChange.parent_category_id,
-            source_table: p.subCategoryChange.source_table,
-            source_id: p.subCategoryChange.source_id,
-          }
+              id: p.subCategoryChange.id,
+              name: p.subCategoryChange.name,
+              parent_category_id: p.subCategoryChange.parent_category_id,
+              source_table: p.subCategoryChange.source_table,
+              source_id: p.subCategoryChange.source_id,
+            }
           : null,
 
         images:
@@ -422,45 +449,45 @@ export class ProductService {
         : null,
       category: p.category
         ? {
-          id: p.category.id,
-          name: p.category.name,
-          image: p.category.image,
-          hot: p.category.hot,
-        }
+            id: p.category.id,
+            name: p.category.name,
+            image: p.category.image,
+            hot: p.category.hot,
+          }
         : null,
       subCategory: p.subCategory
         ? {
-          id: p.subCategory.id,
-          name: p.subCategory.name,
-          parent_category_id: p.subCategory.parent_category_id,
-          source_table: p.subCategory.source_table,
-          source_id: p.subCategory.source_id,
-        }
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            parent_category_id: p.subCategory.parent_category_id,
+            source_table: p.subCategory.source_table,
+            source_id: p.subCategory.source_id,
+          }
         : null,
       categoryChange: p.categoryChange
         ? {
-          id: p.categoryChange.id,
-          name: p.categoryChange.name,
-          image: p.categoryChange.image,
-        }
+            id: p.categoryChange.id,
+            name: p.categoryChange.name,
+            image: p.categoryChange.image,
+          }
         : null,
       subCategoryChange: p.subCategoryChange
         ? {
-          id: p.subCategoryChange.id,
-          name: p.subCategoryChange.name,
-          parent_category_id: p.subCategoryChange.parent_category_id,
-          source_table: p.subCategoryChange.source_table,
-          source_id: p.subCategoryChange.source_id,
-        }
+            id: p.subCategoryChange.id,
+            name: p.subCategoryChange.name,
+            parent_category_id: p.subCategoryChange.parent_category_id,
+            source_table: p.subCategoryChange.source_table,
+            source_id: p.subCategoryChange.source_id,
+          }
         : null,
       images: p.images
         ? p.images.map((img) => ({
-          id: img.id,
-          product_id: img.product_id,
-          name: img.name,
-          image_url: img.image_url,
-          created_at: img.created_at,
-        }))
+            id: img.id,
+            product_id: img.product_id,
+            name: img.name,
+            image_url: img.image_url,
+            created_at: img.created_at,
+          }))
         : [],
     }));
   }

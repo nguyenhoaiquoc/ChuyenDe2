@@ -4,7 +4,7 @@ import { Category } from 'src/entities/category.entity';
 
 @Controller('categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) { }
+  constructor(private readonly categoryService: CategoryService) {}
 
   @Get()
   async getAllCategories() {
@@ -16,7 +16,7 @@ export class CategoryController {
   async createCategory(@Body() data: Partial<Category>): Promise<Category> {
     return this.categoryService.create(data);
   }
-
+  
 
   @Get('search')
   async search(@Query('name') name: string): Promise<Category[]> {
@@ -30,5 +30,5 @@ export class CategoryController {
     return await this.categoryService.findAllWithChildren();
   }
 
-
+  
 }

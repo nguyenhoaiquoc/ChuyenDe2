@@ -1,16 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm';
-import { Role } from './role.entity';
-import { Status } from './status.entity';
-import { Report } from './report.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Role } from './role.entity';       // Entity roles
+import { Status } from './status.entity';   // Entity statuses
+import { Report } from "./report.entity";
 
 @Entity('users')
 export class User {
@@ -21,8 +12,9 @@ export class User {
   @JoinColumn({ name: 'role_id' })
   role: Role;
 
+
   @Column({ type: 'bigint', name: 'role_id' })
-  roleId: number;
+  roleId: number; // 
 
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
@@ -42,9 +34,10 @@ export class User {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  // ⚙️ Sửa tinyint → smallint cho PostgreSQL
+
   @Column({ type: 'smallint', default: 0 })
-  gender: number; // 0 = không xác định, 1 = Nam, 2 = Nữ
+  gender: number; // 0 = không xác định
+
 
   @ManyToOne(() => Status)
   @JoinColumn({ name: 'status_id' })
@@ -56,12 +49,12 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resetToken?: string | null;
 
-  // ⚙️ Sửa datetime → timestamp (Postgres)
   @Column({ type: 'timestamp', nullable: true })
   resetTokenExpires?: Date;
 
   @OneToMany(() => Report, (report) => report.reporter)
   reports: Report[];
+
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

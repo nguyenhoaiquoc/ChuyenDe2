@@ -17,13 +17,12 @@ export class OtpVerification {
   @Column({ type: 'timestamp' })
   expires_at: Date;
 
-
   @CreateDateColumn()
   created_at: Date;
 
   @Column({ default: false })
   used: boolean;
-
+  
   @Column({ type: 'enum', enum: ['register', 'reset'], default: 'register' })
-  type: 'register' | 'reset';
+type: 'register' | 'reset';
 }
