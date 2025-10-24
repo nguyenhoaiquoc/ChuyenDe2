@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { FontAwesome, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 
 type ProductCardProps = {
   image?: string;
@@ -16,9 +16,9 @@ type ProductCardProps = {
     source_detail?: any;
   };
   imageCount?: number;
-  isFavorite: boolean; //  Prop mới: cho biết sản phẩm có được yêu thích không
-  onPress: () => void; // Hàm xử lý khi nhấn vào cả card
-  onToggleFavorite: () => void; //  Prop mới: hàm xử lý khi nhấn vào trái tim
+  isFavorite?: boolean;
+  onPress?: () => void;
+  onToggleFavorite?: () => void;
 };
 
 export default function ProductCard({
@@ -59,16 +59,14 @@ export default function ProductCard({
 
           {/* Icon tim */}
           <TouchableOpacity
-            onPress={onToggleFavorite} // ✅ Khi nhấn, gọi hàm onToggleFavorite
-            className="absolute top-2 right-2 bg-black/40 p-2 rounded-full"
+            className="absolute top-2 right-2 bg-white rounded-full w-[28px] h-[28px] justify-center items-center"
+            onPress={onToggleFavorite}
           >
-            {isFavorite ? (
-              // Nếu isFavorite là true, hiển thị trái tim màu đỏ
-              <FontAwesome name="heart" size={16} color="#ef4444" />
-            ) : (
-              // Nếu là false, hiển thị trái tim rỗng
-              <FontAwesome name="heart-o" size={16} color="white" />
-            )}
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={16}
+              color={isFavorite ? "red" : "#666"}
+            />
           </TouchableOpacity>
 
           {/* Overlay thời gian + số ảnh */}
@@ -92,10 +90,8 @@ export default function ProductCard({
         </TouchableOpacity>
 
         <View className="flex-row justify-between items-center mb-1.5">
-          <Text>
-            {category}
-            {subCategory?.name ? ` - ${subCategory.name}` : "dqq"}
-          </Text>
+          
+          <Text>{category}{subCategory?.name ? ` - ${subCategory.name}` : "dqq"}</Text>
         </View>
 
         <TouchableOpacity onPress={onPress}>

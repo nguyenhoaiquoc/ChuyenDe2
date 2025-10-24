@@ -1,16 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-} from 'typeorm';
-import { Role } from './role.entity';
-import { Status } from './status.entity';
-import { Report } from './report.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Role } from './role.entity';       // Entity roles
+import { Status } from './status.entity';   // Entity statuses
+import { Report } from "./report.entity";
 
 @Entity('users')
 export class User {
@@ -21,8 +12,9 @@ export class User {
   @JoinColumn({ name: 'role_id' })
   role: Role;
 
+
   @Column({ type: 'bigint', name: 'role_id' })
-  roleId: number;
+  roleId: number; // 
 
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
@@ -47,7 +39,6 @@ export class User {
   gender: number; // 0 = không xác định
 
 
-
   @ManyToOne(() => Status)
   @JoinColumn({ name: 'status_id' })
   status: Status;
@@ -63,6 +54,7 @@ export class User {
 
   @OneToMany(() => Report, (report) => report.reporter)
   reports: Report[];
+
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

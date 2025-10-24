@@ -11,10 +11,10 @@ export class SubCategory {
   name: string;
 
   @Column()
-  category_id: number;
+  categoryId: number;
 
   @ManyToOne(() => Category, (category) => category.subCategories, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'category_id' })
+  @JoinColumn({ name: 'categoryId' })
   category: Category;
 
   @Column({ type: 'bigint' })

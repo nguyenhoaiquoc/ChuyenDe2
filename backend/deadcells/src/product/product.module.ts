@@ -15,11 +15,9 @@ import { AnimalCategory } from "src/entities/categories/animal-category.entity";
 import { ElectronicCategory } from "src/entities/categories/electronic-category.entity";
 import { HouseCategory } from "src/entities/categories/house-category.entity";
 import { VehicleCategory } from "src/entities/categories/vehicle-category.entity";
-import { FavoritesModule } from "src/favorites/favorites.module";
 
 @Module({
   imports: [
-    FavoritesModule,
     TypeOrmModule.forFeature([
       Product,
       ProductImage,

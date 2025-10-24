@@ -17,7 +17,6 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
-import axios from "axios";
 
 const { width } = Dimensions.get("window");
 
@@ -113,7 +112,7 @@ interface Product {
 }
 
 type RootStackParamList = {
-  ProductDetail: { product: Product };
+    ProductDetail: { product: Product,  };
 };
 
 type ProductDetailScreenRouteProp = RouteProp<
@@ -132,6 +131,13 @@ export default function ProductDetailScreen() {
   const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
   const tagText = product.tag || "Chưa có tag";
 
+  useEffect(() => {
+    console.log(
+      "Product nhận được ở màn hình Detail:",
+      JSON.stringify(product, null, 2)
+    );
+  }, [product]);
+
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
   const handleCall = async () => {
@@ -143,51 +149,6 @@ export default function ProductDetailScreen() {
         Alert.alert("Lỗi", "Không thể thực hiện cuộc gọi.");
       }
     }
-  };
-
-  // State để quản lý trạng thái yêu thích ngay tại màn hình này
-  const [isFavorited, setIsFavorited] = useState(product.isFavorite || false);
-
-  // State để lưu số lượt yêu thích
-  const [favoriteCount, setFavoriteCount] = useState(0);
-
-  // MỚI: useEffect để gọi API lấy số lượt yêu thích khi màn hình được mở
-  useEffect(() => {
-    if (product.id) {
-      axios
-        .get(`${path}/favorites/${product.id}/count`)
-        .then((res) => {
-          setFavoriteCount(res.data.count);
-        })
-        .catch((err) => {
-          console.error("Lỗi khi lấy số lượt yêu thích:", err.message);
-        });
-    }
-  }, [product.id]);
-
-  const handleToggleFavorite = () => {
-    if (!product.id) return;
-
-    // Cập nhật giao diện ngay lập tức
-    const newFavoriteStatus = !isFavorited;
-    setIsFavorited(newFavoriteStatus);
-    setFavoriteCount((prevCount) =>
-      newFavoriteStatus ? prevCount + 1 : prevCount - 1
-    );
-
-    // Gọi API
-    axios
-      .post(`${path}/favorites/toggle/${product.id}`)
-      .then((res) => console.log(res.data.message))
-      .catch((err) => {
-        // Nếu lỗi, khôi phục lại trạng thái cũ
-        console.error("Lỗi khi toggle favorite:", err);
-        setIsFavorited(!newFavoriteStatus);
-        setFavoriteCount((prevCount) =>
-          newFavoriteStatus ? prevCount - 1 : prevCount + 1
-        );
-        Alert.alert("Lỗi", "Không thể cập nhật trạng thái yêu thích.");
-      });
   };
 
   const [comment, setComment] = useState("");
@@ -321,6 +282,11 @@ export default function ProductDetailScreen() {
           </View>
           {/* Nút Lưu */}
           <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
+            <Ionicons
+              name={product.isFavorite ? "heart" : "heart-outline"}
+              size={16}
+              color={product.isFavorite ? "red" : "black"}
+            />
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
@@ -331,33 +297,16 @@ export default function ProductDetailScreen() {
             {product.name || "Sản phẩm mặc định"}
           </Text>
 
-          <View className="flex-row justify-between items-center mb-2">
-            {/* Giá */}
-            <Text className="text-red-600 text-xl font-bold mb-2">
-              {product.dealType?.name === "Miễn phí"
-                ? "Miễn phí"
-                : product.dealType?.name === "Trao đổi"
-                  ? "Trao đổi"
-                  : parseFloat(product.price || "0") > 0
-                    ? `${parseFloat(product.price).toLocaleString()} đ`
-                    : null}
-            </Text>
-
-            {/* Yêu thích */}
-            <TouchableOpacity
-              onPress={handleToggleFavorite}
-              className="flex-row items-center bg-gray-100 px-3 py-2 rounded-full"
-            >
-              <Ionicons
-                name={isFavorited ? "heart" : "heart-outline"}
-                size={20}
-                color={isFavorited ? "red" : "black"}
-              />
-              <Text className="text-gray-700 text-sm ml-2 font-semibold">
-                {favoriteCount}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Giá */}
+          <Text className="text-red-600 text-xl font-bold mb-2">
+            {product.dealType?.name === "Miễn phí"
+              ? "Miễn phí"
+              : product.dealType?.name === "Trao đổi"
+                ? "Trao đổi"
+                : parseFloat(product.price || "0") > 0
+                  ? `${parseFloat(product.price).toLocaleString()} đ`
+                  : null}
+          </Text>
 
           {/* Địa chỉ */}
           <Text className="text-gray-500 text-sm mb-1">

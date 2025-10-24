@@ -19,7 +19,7 @@ import { ProductType } from './product_types.entity';
 
 @Entity('products')
 export class Product {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
   @Column({ type: 'varchar', length: 191, nullable: true, default: '' })
@@ -35,15 +35,15 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   product_type_id: number | null;
 
+
   @Column({ type: 'text', nullable: false })
   description: string;
 
-  // ⚙️ decimal Postgres vẫn hỗ trợ, nhưng nên thêm default rõ ràng
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   price: number;
 
   @Column({ type: 'varchar', length: 191, nullable: true })
-  thumbnail_url?: string | null;
+  thumbnail_url: string;
 
   @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
   images: ProductImage[];
@@ -53,7 +53,7 @@ export class Product {
   user_id: number;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'user_id' }) // Nối bằng cột user_id
   user: User;
 
   // ===== Phân loại =====
@@ -85,6 +85,7 @@ export class Product {
   subCategory: SubCategory;
 
   // ==================== TRAO ĐỔI ====================
+  // Danh mục cha người dùng muốn trao đổi
   @Column({ type: 'bigint', nullable: true })
   categoryChange_id: number | null;
 
@@ -92,6 +93,7 @@ export class Product {
   @JoinColumn({ name: 'categoryChange_id' })
   categoryChange: Category | null;
 
+  // Danh mục con người dùng muốn trao đổi
   @Column({ type: 'bigint', nullable: true })
   subCategoryChange_id: number | null;
 
