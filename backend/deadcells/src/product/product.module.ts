@@ -15,12 +15,15 @@ import { AnimalCategory } from "src/entities/categories/animal-category.entity";
 import { ElectronicCategory } from "src/entities/categories/electronic-category.entity";
 import { HouseCategory } from "src/entities/categories/house-category.entity";
 import { VehicleCategory } from "src/entities/categories/vehicle-category.entity";
+import { PostType } from "src/entities/post-type.entity";
+import { User } from "src/entities/user.entity";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Product,
       ProductImage,
+      User,
       DealType,
       Condition,
       SubCategory,
@@ -32,6 +35,7 @@ import { VehicleCategory } from "src/entities/categories/vehicle-category.entity
       ElectronicCategory,
       HouseCategory,
       VehicleCategory,
+      PostType,
     ]),
   ],
   providers: [ProductService],

@@ -16,14 +16,12 @@ import { SubCategory } from './sub-category.entity';
 import { Report } from './report.entity';
 import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
+import { PostType } from './post-type.entity';
 
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
-
-  @Column({ type: 'varchar', length: 191, nullable: true, default: '' })
-  author_name: string;
 
   @Column({ type: 'varchar', length: 191, default: '' })
   name: string;
@@ -57,8 +55,12 @@ export class Product {
   user: User;
 
   // ===== Phân loại =====
-  @Column({ type: 'bigint', nullable: true })
-  post_type_id: number;
+  @ManyToOne(() => PostType)
+  @JoinColumn({ name: 'post_type_id' })
+  postType: PostType;
+
+  @Column({ type: 'bigint', nullable: true})
+  post_type_id: number | null;
 
   @Column({ type: 'bigint', nullable: true })
   deal_type_id: number | null;

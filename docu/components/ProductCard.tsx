@@ -8,6 +8,7 @@ type ProductCardProps = {
   location: string;
   time: string;
   tag: string;
+  authorName: string;
   category?: string;
   subCategory?: {
     id?: number;
@@ -27,7 +28,7 @@ export default function ProductCard({
   price,
   location,
   time,
-  tag,
+  authorName,
   category,
   subCategory,
   imageCount = 0,
@@ -35,7 +36,7 @@ export default function ProductCard({
   onPress,
   onToggleFavorite,
 }: ProductCardProps) {
-  console.log("🖼️ Image prop nhận vào:", image);
+  // console.log("🖼️ Image prop nhận vào:", image);
   const placeholder =
     "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
 
@@ -81,6 +82,7 @@ export default function ProductCard({
       {/* Nội dung */}
       <View className="p-3">
         <TouchableOpacity onPress={onPress}>
+          {/* Tên sản phẩm */}
           <Text
             className="text-[13px] font-medium text-[#333] leading-[17px] mb-1.5"
             numberOfLines={2}
@@ -89,24 +91,33 @@ export default function ProductCard({
           </Text>
         </TouchableOpacity>
 
+        {/* Danh mục */}
         <View className="flex-row justify-between items-center mb-1.5">
-          
-          <Text>{category}{subCategory?.name ? ` - ${subCategory.name}` : "dqq"}</Text>
+          <Text>{category}{subCategory?.name ? ` - ${subCategory.name}` : "Chưa rõ"}</Text>
         </View>
 
+        {/* Giá */}
         <TouchableOpacity onPress={onPress}>
           <Text className="text-[15px] text-red-500 font-bold mb-1.5">
             {price}
           </Text>
         </TouchableOpacity>
 
-        {/* FIX: Location luôn string, truncate nếu dài */}
+        {/* Địa chỉ */}
         <Text
           className="text-[11px] text-[#666]"
           numberOfLines={1}
           ellipsizeMode="tail"
         >
           {location || "Chưa rõ địa chỉ"}
+        </Text>
+        {/* Tên người dùng */}
+        <Text
+          className="text-[11px] text-blue-600 font-semibold mb-0.5"
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
+          {authorName || "Ẩn danh"}
         </Text>
       </View>
     </View>
