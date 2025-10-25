@@ -29,6 +29,8 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   UserDetail: undefined;
   ManagerGroupsScreen : undefined;
+  UserInforScreen : undefined;
+  EditProfileScreen: undefined;
   // TestApi: undefined;
 };
 

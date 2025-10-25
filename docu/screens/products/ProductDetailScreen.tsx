@@ -131,6 +131,13 @@ export default function ProductDetailScreen() {
   const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
   const tagText = product.tag || "Chưa có tag";
 
+  useEffect(() => {
+    console.log(
+      "Product nhận được ở màn hình Detail:",
+      JSON.stringify(product, null, 2)
+    );
+  }, [product]);
+
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
   const handleCall = async () => {

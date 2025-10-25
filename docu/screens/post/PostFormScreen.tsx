@@ -136,6 +136,7 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     }
   };
 
+
   // Hàm xóa ảnh
   const removeImage = (index: number) => {
     const updatedImages = [...images];

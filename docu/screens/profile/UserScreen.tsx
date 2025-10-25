@@ -26,6 +26,7 @@ export default function UserScreen() {
         {/* --- Phần thông tin cá nhân --- */}
         <View style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}>
           {/* Avatar */}
+ <TouchableOpacity  onPress={() => navigation.navigate("UserInforScreen")}>
           <View
             style={{
               width: 96,
@@ -42,12 +43,17 @@ export default function UserScreen() {
               shadowRadius: 4,
               elevation: 3,
             }}
+           
           >
-            <Image
-              source={require("../../assets/meo.jpg")}
-              style={{ width: "100%", height: "100%", borderRadius: 48 }}
-            />
+            
+  <Image
+    source={require("../../assets/meo.jpg")}
+    style={{ width: "100%", height: "100%", borderRadius: 48 }}
+  />
+
+
           </View>
+          </TouchableOpacity>
           {/* Tên và thông tin theo dõi */}
           <Text
             style={{

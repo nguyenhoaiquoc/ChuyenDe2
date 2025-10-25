@@ -28,8 +28,15 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
-    if (existing) throw new BadRequestException('Email đã tồn tại');
+   const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+if (existing && existing.is_verified) {
+  throw new BadRequestException('Email đã tồn tại');
+}
+if (existing && !existing.is_verified) {
+  // Xóa hoặc ghi đè lại tài khoản chưa xác thực
+  await this.userRepository.remove(existing);
+}
+
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
