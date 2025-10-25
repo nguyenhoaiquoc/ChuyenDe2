@@ -1,34 +1,43 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
+} from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "src/entities/product.entity";
+import { FilesInterceptor } from "@nestjs/platform-express";
+import { CloudinaryMulter } from "src/cloudinary/cloudinary.config";
 
-@Controller('products')
+@Controller("products")
 export class ProductController {
   constructor(private readonly productService: ProductService) { }
 
-  // 🧩 Tạo sản phẩm mới
+  // Upload ảnh lên Cloudinary và tạo sản phẩm
   @Post()
-  async create(@Body() body: Partial<Product>) {
+  @UseInterceptors(FilesInterceptor("files", 4, CloudinaryMulter))
+  async create(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: Partial<Product>
+  ) {
     console.log("🔥 Body nhận từ frontend:", body);
-    return await this.productService.create(body);
+    console.log("📸 Files nhận:", files?.length || 0);
+
+    // Cloudinary trả về URL trong file.path
+    const imageUrls = files.map((file) => file.path);
+
+    return await this.productService.create(body, files);
   }
 
-  // 🧩 Lấy danh sách sản phẩm (có thể lọc theo category_id)
   @Get()
-  async findAll(@Query('category_id') categoryId?: string) {
-    console.log(
-      "Đang gọi GET /products",
-      categoryId ? `with category_id=${categoryId}` : ''
-    );
-
-    // ⚡ Gọi hàm đã format dữ liệu (đã có subCategory, category, tag, v.v.)
+  async findAll(@Query("category_id") categoryId?: string) {
     if (categoryId) {
-      // Nếu có category_id → lọc theo danh mục cha
       const products = await this.productService.findByCategoryId(+categoryId);
-      return await this.productService.formatProducts(products); // Format riêng cho kết quả lọc
+      return await this.productService.formatProducts(products);
     }
-
-    // Nếu không có filter → lấy tất cả, đã format sẵn
     return await this.productService.findAllFormatted();
   }
 }

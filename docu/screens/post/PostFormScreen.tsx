@@ -19,8 +19,13 @@ import { Alert } from "react-native";
 import { path } from "../../config";
 
 const { width } = Dimensions.get("window");
-const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-
+const PostFormScreen = ({
+  navigation,
+  route,
+}: {
+  navigation: any;
+  route: any;
+}) => {
   interface Category {
     id: string;
     name: string;
@@ -47,8 +52,12 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   const [isLoading, setIsLoading] = useState(false);
 
   const [showConditionModal, setShowConditionModal] = useState(false);
-  const [conditions, setConditions] = useState<{ id: number; name: string }[]>([]);
-  const [selectedConditionId, setSelectedConditionId] = useState<number | null>(null);
+  const [conditions, setConditions] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedConditionId, setSelectedConditionId] = useState<number | null>(
+    null
+  );
 
   const handleSelectCondition = (id: number) => {
     setSelectedConditionId(id);
@@ -58,7 +67,9 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
 
   const [postTypeId, setPostTypeId] = useState<number | null>(null);
   const [showPostTypeModal, setShowPostTypeModal] = useState(false);
-  const [postTypes, setPostTypes] = useState<{ id: number; name: string }[]>([]);
+  const [postTypes, setPostTypes] = useState<{ id: number; name: string }[]>(
+    []
+  );
 
   const handleSelectPostType = (id: number) => {
     setPostTypeId(id);
@@ -66,8 +77,12 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   };
 
   const [showTypeModal, setShowTypeModal] = useState(false);
-  const [productTypes, setProductTypes] = useState<{ id: number; name: string }[]>([]);
-  const [selectedProductTypeId, setSelectedProductTypeId] = useState<number | null>(null);
+  const [productTypes, setProductTypes] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedProductTypeId, setSelectedProductTypeId] = useState<
+    number | null
+  >(null);
 
   // useEffect(() => {
   //   const fetchProductTypes = async () => {
@@ -83,17 +98,24 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   //   fetchProductTypes();
   // }, []);
 
-
   const handleSelectProductType = (id: number) => {
     setSelectedProductTypeId(id);
     setProductTypeId(id);
     setShowTypeModal(false);
   };
 
-  const [exchangeCategory, setExchangeCategory] = useState<{ id: string, name: string } | null>(null);
-  const [exchangeSubCategory, setExchangeSubCategory] = useState<{ id: string, name: string } | null>(null);
+  const [exchangeCategory, setExchangeCategory] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [exchangeSubCategory, setExchangeSubCategory] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
-  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>([]);
+  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>(
+    []
+  );
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
   // Hàm chọn hình thức giao dịch
   const handleSelectDealType = (id: number) => {
@@ -136,7 +158,6 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
     }
   };
 
-
   // Hàm xóa ảnh
   const removeImage = (index: number) => {
     const updatedImages = [...images];
@@ -148,21 +169,30 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   const handlePost = async () => {
     if (isLoading) return;
 
-    const finalTitle = title && title.trim() !== "" ? title.trim() : (name && name.trim() !== "" ? name.trim() : "");
+    const finalTitle =
+      title && title.trim() !== ""
+        ? title.trim()
+        : name && name.trim() !== ""
+          ? name.trim()
+          : "";
 
     // Validation
     const missingFields: string[] = [];
     if (!category) missingFields.push("Danh mục cha");
     if (!subCategory) missingFields.push("Danh mục con");
     if (!finalTitle) missingFields.push("Tên sản phẩm");
-    if (!description || description.trim() === "") missingFields.push("Mô tả sản phẩm");
+    if (!description || description.trim() === "")
+      missingFields.push("Mô tả sản phẩm");
     if (!conditionId) missingFields.push("Tình trạng sản phẩm");
     if (!productTypeId) missingFields.push("Loại sản phẩm");
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
     if (!postTypeId) missingFields.push("Loại bài đăng");
-    if (images.length === 0) missingFields.push("Hình ảnh sản phẩm (ít nhất 1 ảnh)");
-    if (!address || address.trim() === "") missingFields.push("Địa chỉ giao dịch");
-    if (dealTypeId === 1 && (!price || parseFloat(price) <= 0)) missingFields.push("Giá bán (phải > 0 nếu bán có giá)");
+    if (images.length === 0)
+      missingFields.push("Hình ảnh sản phẩm (ít nhất 1 ảnh)");
+    if (!address || address.trim() === "")
+      missingFields.push("Địa chỉ giao dịch");
+    if (dealTypeId === 1 && (!price || parseFloat(price) <= 0))
+      missingFields.push("Giá bán (phải > 0 nếu bán có giá)");
 
     if (missingFields.length > 0) {
       Alert.alert(
@@ -232,12 +262,13 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [conditionRes, dealTypeRes, productTypeRes, postTypeRes] = await Promise.all([
-          axios.get(`${path}/conditions`),
-          axios.get(`${path}/deal-types`),
-          axios.get(`${path}/product-types`),
-          axios.get(`${path}/post-types`),
-        ]);
+        const [conditionRes, dealTypeRes, productTypeRes, postTypeRes] =
+          await Promise.all([
+            axios.get(`${path}/conditions`),
+            axios.get(`${path}/deal-types`),
+            axios.get(`${path}/product-types`),
+            axios.get(`${path}/post-types`),
+          ]);
         // console.log("Conditions:", conditionRes.data);
         // console.log("DealTypes:", dealTypeRes.data);
         // console.log("ProductTypes:", productTypeRes.data);
@@ -255,26 +286,36 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
   }, []);
 
   return (
-
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("Home")} style={styles.headerIcon}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("Home")}
+          style={styles.headerIcon}
+        >
           <MaterialCommunityIcons name="close" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Đăng tin</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-
-
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Danh mục */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.dropdown} onPress={() => navigation.navigate("ChooseCategoryScreen")}>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => navigation.navigate("ChooseCategoryScreen")}
+          >
             <Text style={styles.dropdownLabel}>Danh mục sản phẩm</Text>
             <View style={styles.dropdownContent}>
-              <Text style={styles.dropdownText} numberOfLines={1} ellipsizeMode="tail">
+              <Text
+                style={styles.dropdownText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {category
                   ? `${category.name}${subCategory ? ` - ${subCategory.name || subCategory}` : ""}`
                   : "Chọn danh mục"}
@@ -288,11 +329,22 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
         {/* Upload hình ảnh */}
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Hình ảnh sản phẩm</Text>
-          <TouchableOpacity style={styles.uploadBox} onPress={handleUploadImage}>
-            <MaterialCommunityIcons name="camera-plus" size={28} color="#f59e0b" />
-            <Text style={styles.uploadText}>Thêm 1-4 ảnh (ảnh đầu là ảnh chính)</Text>
+          <TouchableOpacity
+            style={styles.uploadBox}
+            onPress={handleUploadImage}
+          >
+            <MaterialCommunityIcons
+              name="camera-plus"
+              size={28}
+              color="#f59e0b"
+            />
+            <Text style={styles.uploadText}>
+              Thêm 1-4 ảnh (ảnh đầu là ảnh chính)
+            </Text>
           </TouchableOpacity>
-          <Text style={styles.helperText}>Ảnh đầu tiên sẽ là ảnh chính của sản phẩm</Text>
+          <Text style={styles.helperText}>
+            Ảnh đầu tiên sẽ là ảnh chính của sản phẩm
+          </Text>
 
           <View style={styles.imageRow}>
             {images.map((uri, idx) => (
@@ -308,7 +360,11 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                     borderRadius: 10,
                   }}
                 >
-                  <MaterialCommunityIcons name="close-circle" size={20} color="red" />
+                  <MaterialCommunityIcons
+                    name="close-circle"
+                    size={20}
+                    color="red"
+                  />
                 </TouchableOpacity>
               </View>
             ))}
@@ -336,13 +392,16 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
             <View style={styles.dropdownContent}>
               <Text style={styles.dropdownText}>
                 {conditionId
-                  ? conditions.find((item) => item.id === conditionId)?.name || "Không xác định"
+                  ? conditions.find((item) => item.id === conditionId)?.name ||
+                    "Không xác định"
                   : "Chọn tình trạng"}
               </Text>
               <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.helperText}>Chọn tình trạng sản phẩm của bạn</Text>
+          <Text style={styles.helperText}>
+            Chọn tình trạng sản phẩm của bạn
+          </Text>
         </View>
 
         {/* Loại sản phẩm */}
@@ -355,7 +414,8 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
             <View style={styles.dropdownContent}>
               <Text style={styles.dropdownText}>
                 {selectedProductTypeId
-                  ? (productTypes.find((t) => t.id === selectedProductTypeId)?.name ?? "Không xác định")
+                  ? (productTypes.find((t) => t.id === selectedProductTypeId)
+                      ?.name ?? "Không xác định")
                   : "Chọn loại sản phẩm"}
               </Text>
               <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -374,8 +434,9 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
             <View style={styles.dropdownContent}>
               <Text style={styles.dropdownText}>
                 {dealTypeId
-                  ? dealTypes.find((opt) => Number(opt.id) === Number(dealTypeId))?.name
-                  || "Không xác định"
+                  ? dealTypes.find(
+                      (opt) => Number(opt.id) === Number(dealTypeId)
+                    )?.name || "Không xác định"
                   : "Chọn hình thức"}
               </Text>
 
@@ -387,7 +448,9 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
           {/* Nếu chọn "Giá bán" (id = 1) thì hiện input giá */}
           {dealTypeId === 1 && (
             <View style={{ marginTop: 8 }}>
-              <Text style={[styles.dropdownLabel, { marginBottom: 4 }]}>Giá bán (VNĐ)</Text>
+              <Text style={[styles.dropdownLabel, { marginBottom: 4 }]}>
+                Giá bán (VNĐ)
+              </Text>
               <TextInput
                 style={styles.input}
                 placeholder="Nhập giá bán mong muốn"
@@ -404,7 +467,10 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
               <TouchableOpacity
                 onPress={() => {
                   navigation.navigate("ChooseExchangeCategoryScreen", {
-                    onSelectCategory: (category: Category, subCategory: SubCategory) => {
+                    onSelectCategory: (
+                      category: Category,
+                      subCategory: SubCategory
+                    ) => {
                       // Cập nhật state để hiển thị trên PostFormScreen
                       setExchangeCategory(category);
                       setExchangeSubCategory(subCategory);
@@ -418,7 +484,9 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                     : "Chọn danh mục trao đổi"}
                 </Text>
               </TouchableOpacity>
-              <Text style={styles.helperText}>Chọn danh mục cha và con bạn muốn đổi</Text>
+              <Text style={styles.helperText}>
+                Chọn danh mục cha và con bạn muốn đổi
+              </Text>
             </View>
           )}
         </View>
@@ -451,25 +519,33 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                 key={type.id}
                 style={[
                   styles.radioOption,
-                  Number(postTypeId) === Number(type.id) && styles.radioOptionSelected,
+                  Number(postTypeId) === Number(type.id) &&
+                    styles.radioOptionSelected,
                 ]}
                 onPress={() => handleSelectPostType(Number(type.id))}
               >
                 <Text
                   style={[
                     styles.radioOptionText,
-                    Number(postTypeId) === Number(type.id) && styles.radioOptionTextSelected,
+                    Number(postTypeId) === Number(type.id) &&
+                      styles.radioOptionTextSelected,
                   ]}
                 >
                   {type.name}
                 </Text>
                 {Number(postTypeId) === Number(type.id) && (
-                  <MaterialCommunityIcons name="check-circle" size={20} color="#8c7ae6" />
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={20}
+                    color="#8c7ae6"
+                  />
                 )}
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={styles.helperText}>Chọn loại bài đăng (Đăng bán hoặc Đăng mua)</Text>
+          <Text style={styles.helperText}>
+            Chọn loại bài đăng (Đăng bán hoặc Đăng mua)
+          </Text>
         </View>
 
         {/* Buttons */}
@@ -478,14 +554,14 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
             style={[
               styles.postButton,
               // 💡 Thay đổi opacity khi đang tải để người dùng nhận biết
-              isLoading && { opacity: 0.7 }
+              isLoading && { opacity: 0.7 },
             ]}
             onPress={handlePost}
             disabled={isLoading} // 💡 KHÔNG CHO PHÉP NHẤN NÚT KHI ĐANG TẢI
           >
             {isLoading ? (
               // 💡 HIỂN THỊ ICON TẢI VÀ TEXT
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.postButtonText}>Đang đăng tin...</Text>
               </View>
@@ -507,14 +583,17 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                 key={type.id}
                 style={[
                   styles.modalOption,
-                  conditionId === type.id && styles.modalOptionSelected
+                  conditionId === type.id && styles.modalOptionSelected,
                 ]}
                 onPress={() => handleSelectCondition(type.id)}
               >
                 <Text style={styles.modalOptionText}>{type.name}</Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity onPress={() => setShowConditionModal(false)} style={styles.modalCancelButton}>
+            <TouchableOpacity
+              onPress={() => setShowConditionModal(false)}
+              style={styles.modalCancelButton}
+            >
               <Text style={styles.modalCancelText}>Hủy</Text>
             </TouchableOpacity>
           </View>
@@ -531,14 +610,18 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                 key={type.id}
                 style={[
                   styles.modalOption,
-                  selectedProductTypeId === type.id && styles.modalOptionSelected
+                  selectedProductTypeId === type.id &&
+                    styles.modalOptionSelected,
                 ]}
                 onPress={() => handleSelectProductType(type.id)}
               >
                 <Text style={styles.modalOptionText}>{type.name}</Text>
               </TouchableOpacity>
             ))}
-            <TouchableOpacity onPress={() => setShowTypeModal(false)} style={styles.modalCancelButton}>
+            <TouchableOpacity
+              onPress={() => setShowTypeModal(false)}
+              style={styles.modalCancelButton}
+            >
               <Text style={styles.modalCancelText}>Hủy</Text>
             </TouchableOpacity>
           </View>
@@ -555,7 +638,7 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
                 key={option.id}
                 style={[
                   styles.modalOption,
-                  dealTypeId === option.id && styles.modalOptionSelected
+                  dealTypeId === option.id && styles.modalOptionSelected,
                 ]}
                 onPress={() => handleSelectDealType(Number(option.id))}
               >
@@ -563,7 +646,10 @@ const PostFormScreen = ({ navigation, route }: { navigation: any; route: any }) 
               </TouchableOpacity>
             ))}
 
-            <TouchableOpacity onPress={() => setShowDealTypeModal(false)} style={styles.modalCancelButton}>
+            <TouchableOpacity
+              onPress={() => setShowDealTypeModal(false)}
+              style={styles.modalCancelButton}
+            >
               <Text style={styles.modalCancelText}>Hủy</Text>
             </TouchableOpacity>
           </View>
@@ -592,7 +678,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    marginTop: 20
+    marginTop: 20,
   },
   headerIcon: {
     padding: 8,
