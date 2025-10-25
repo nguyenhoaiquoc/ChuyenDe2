@@ -65,7 +65,7 @@ interface DealType {
 
 interface Product {
   id: string;
-  author_name: string;
+  authorName: string;
   name: string;
   description: string;
   phone?: string;
@@ -112,7 +112,7 @@ interface Product {
 }
 
 type RootStackParamList = {
-    ProductDetail: { product: Product,  };
+  ProductDetail: { product: Product };
 };
 
 type ProductDetailScreenRouteProp = RouteProp<
@@ -289,7 +289,12 @@ export default function ProductDetailScreen() {
           <Text className=" text-xl font-bold mb-2">
             {product.name || "Sản phẩm mặc định"}
           </Text>
-
+          <Text
+            className="text-gray-800 text-sm font-medium mb-2"
+            style={{ flexShrink: 1, flexWrap: "wrap" }}
+          >
+            {product.tag || "Chưa rõ"}
+          </Text>
           {/* Giá */}
           <Text className="text-red-600 text-xl font-bold mb-2">
             {product.dealType?.name === "Miễn phí"
@@ -345,12 +350,15 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
 
           {/* Mô tả chi tiết */}
-          <View className="mb-6">
+          <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
             <Text className="text-gray-700 leading-6 text-sm">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
+          </View>
 
+          {/* Số điện thoại */}
+          <View className="mb-6">
             {product.phone && (
               <View className="flex-row items-center justify-between bg-gray-100 px-4 py-2 rounded-full mt-4 border border-gray-200">
                 <Text className="text-sm font-semibold text-gray-800">
@@ -374,11 +382,23 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Thông tin chi tiết */}
-          <View className="mb-6">
-            <Text className="text-lg font-bold mb-2">Thông tin chi tiết</Text>
-            <View className="border border-gray-200 rounded-lg">
+          <View className="mb-6 px-4">
+            <Text className="text-xl font-bold mb-4">Thông tin chi tiết</Text>
+
+            <View className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              {/* Tên sản phẩm */}
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                <Text className="text-gray-600 text-sm">Tên sản phẩm</Text>
+                <Text
+                  className="text-gray-800 text-sm font-medium"
+                  style={{ flexShrink: 1, flexWrap: "wrap" }}
+                >
+                  {product.name || "Chưa rõ"}
+                </Text>
+              </View>
+
               {/* Loại giao dịch */}
-              <View className="flex-row justify-between px-3 py-2 border-b border-gray-200">
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Loại giao dịch</Text>
                 <Text
                   className="text-gray-800 text-sm font-medium"
@@ -388,22 +408,11 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              {/* Danh mục */}
-              <View className="flex-row justify-between px-3 py-2 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Danh mục</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.tag || "Chưa rõ"}
-                </Text>
-              </View>
-
               {/* Danh mục trao đổi */}
               {product.dealType?.name === "Trao đổi" &&
                 product.categoryChange &&
                 product.subCategoryChange && (
-                  <View className="flex-row justify-between px-3 py-2 border-b border-gray-200">
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">
                       Danh mục trao đổi
                     </Text>
@@ -418,7 +427,7 @@ export default function ProductDetailScreen() {
                 )}
 
               {/* Tình trạng */}
-              <View className="flex-row justify-between px-3 py-2 border-b border-gray-200">
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Tình trạng</Text>
                 <Text
                   className="text-gray-800 text-sm font-medium"
@@ -429,7 +438,7 @@ export default function ProductDetailScreen() {
               </View>
 
               {/* Số lượng ảnh */}
-              <View className="flex-row justify-between px-3 py-2 border-b border-gray-200">
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Số lượng ảnh</Text>
                 <Text
                   className="text-gray-800 text-sm font-medium"
@@ -438,6 +447,32 @@ export default function ProductDetailScreen() {
                   {product.images?.length || product.imageCount || 0} ảnh
                 </Text>
               </View>
+
+              {/* Địa chỉ */}
+              {product.address_json?.full && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Địa chỉ</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.address_json.full}
+                  </Text>
+                </View>
+              )}
+
+              {/* Người đăng */}
+              {product.authorName && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Người đăng</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.authorName}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
