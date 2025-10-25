@@ -17,6 +17,7 @@ import AddressPicker from "../../components/AddressPicker";
 import axios from "axios";
 import { Alert } from "react-native";
 import { path } from "../../config";
+import * as ImageManipulator from "expo-image-manipulator";
 
 const { width } = Dimensions.get("window");
 const PostFormScreen = ({
@@ -133,30 +134,66 @@ const PostFormScreen = ({
     }
   };
 
-  // Hàm xử lý tải ảnh lên
-  const handleUploadImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      selectionLimit: 4,
-      quality: 1,
-    });
+  const handleUploadImage = async (useCamera: boolean) => {
+    let result;
+    if (useCamera) {
+      result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 4,
+        quality: 1,
+      });
+    }
 
-    if (!result.canceled) {
-      const selected = result.assets.map((asset) => asset.uri);
-      const total = images.length + selected.length;
+    if (!result.canceled && result.assets) {
+      const selected: string[] = [];
+      for (const asset of result.assets) {
+        // Convert HEIC sang JPEG nếu cần
+        const uri = await convertToJpgIfNeeded(asset.uri);
+        selected.push(uri);
+      }
 
-      if (total > 4) {
+      if (images.length + selected.length > 4) {
         alert("Bạn chỉ được chọn tối đa 4 ảnh.");
         return;
       }
 
-      setImages((prevImages) => {
-        const updatedImages = prevImages.concat(selected);
-        return updatedImages;
-      });
+      setImages((prev) => [...prev, ...selected]);
     }
   };
+
+  // Hàm chuyển HEIC sang JPG nếu cần
+  const convertToJpgIfNeeded = async (uri: string) => {
+    const ext = uri.split(".").pop()?.toLowerCase();
+
+    if (ext === "heic" || ext === "heif") {
+      try {
+        const manipResult = await ImageManipulator.manipulateAsync(uri, [], {
+          format: ImageManipulator.SaveFormat.JPEG,
+          compress: 0.8,
+        });
+        return manipResult.uri;
+      } catch (error) {
+        console.error("Lỗi convert HEIC/HEIF:", error);
+        return uri; // fallback
+      }
+    }
+    return uri;
+  };
+
+  useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        alert("Cần quyền truy cập camera để chụp ảnh");
+      }
+    })();
+  }, []);
 
   // Hàm xóa ảnh
   const removeImage = (index: number) => {
@@ -229,7 +266,7 @@ const PostFormScreen = ({
       images.forEach((uri, index) => {
         const filename = uri.split("/").pop();
         const ext = filename?.split(".").pop();
-        const type = ext ? `image/${ext}` : "image";
+        const type = ext ? `image/${ext}` : "image/jpeg";
         formData.append("files", {
           uri,
           name: filename || `photo_${index}.jpg`,
@@ -329,19 +366,27 @@ const PostFormScreen = ({
         {/* Upload hình ảnh */}
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Hình ảnh sản phẩm</Text>
-          <TouchableOpacity
-            style={styles.uploadBox}
-            onPress={handleUploadImage}
-          >
-            <MaterialCommunityIcons
-              name="camera-plus"
-              size={28}
-              color="#f59e0b"
-            />
-            <Text style={styles.uploadText}>
-              Thêm 1-4 ảnh (ảnh đầu là ảnh chính)
-            </Text>
-          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", gap: 12, marginVertical: 8 }}>
+            {/* Nút chọn từ thư viện */}
+            <TouchableOpacity
+              style={styles.uploadBox}
+              onPress={() => handleUploadImage(false)}
+            >
+              <MaterialCommunityIcons name="image" size={28} color="#f59e0b" />
+              <Text style={styles.uploadText}>Chọn từ thư viện</Text>
+            </TouchableOpacity>
+
+            {/* Nút chụp ảnh */}
+            <TouchableOpacity
+              style={styles.uploadBox}
+              onPress={() => handleUploadImage(true)} // true = chụp ảnh
+            >
+              <MaterialCommunityIcons name="camera" size={28} color="#f59e0b" />
+              <Text style={styles.uploadText}>Chụp ảnh</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.helperText}>
             Ảnh đầu tiên sẽ là ảnh chính của sản phẩm
           </Text>
@@ -463,31 +508,29 @@ const PostFormScreen = ({
 
           {/* Danh mục trao đổi - Chỉ hiển thị nếu chọn "Trao đổi" */}
           {dealTypeId === 3 && (
-            <View style={styles.section}>
-              <TouchableOpacity
-                onPress={() => {
-                  navigation.navigate("ChooseExchangeCategoryScreen", {
-                    onSelectCategory: (
-                      category: Category,
-                      subCategory: SubCategory
-                    ) => {
-                      // Cập nhật state để hiển thị trên PostFormScreen
-                      setExchangeCategory(category);
-                      setExchangeSubCategory(subCategory);
-                    },
-                  });
-                }}
-              >
-                <Text>
-                  {exchangeCategory && exchangeSubCategory
-                    ? `${exchangeCategory.name} - ${exchangeSubCategory.name}`
-                    : "Chọn danh mục trao đổi"}
-                </Text>
-              </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.section} // để giữ style hiện tại
+              onPress={() => {
+                navigation.navigate("ChooseExchangeCategoryScreen", {
+                  onSelectCategory: (
+                    category: Category,
+                    subCategory: SubCategory
+                  ) => {
+                    setExchangeCategory(category);
+                    setExchangeSubCategory(subCategory);
+                  },
+                });
+              }}
+            >
+              <Text>
+                {exchangeCategory && exchangeSubCategory
+                  ? `${exchangeCategory.name} - ${exchangeSubCategory.name}`
+                  : "Chọn danh mục trao đổi"}
+              </Text>
               <Text style={styles.helperText}>
                 Chọn danh mục cha và con bạn muốn đổi
               </Text>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -738,20 +781,21 @@ const styles = StyleSheet.create({
   uploadBox: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     backgroundColor: "#fef3c7",
-    borderRadius: 12,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#fcd34d",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   uploadText: {
-    fontSize: 16,
+    fontSize: 14,
     color: "#92400e",
-    marginLeft: 12,
+    marginLeft: 6,
     fontWeight: "500",
   },
+
   imageRow: { flexDirection: "row", marginLeft: 10, marginTop: 10 },
   imagePreview: { width: 60, height: 60, marginRight: 8, borderRadius: 5 },
   removeButton: {

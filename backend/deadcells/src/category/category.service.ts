@@ -12,7 +12,7 @@ export class CategoryService {
 
     @InjectRepository(SubCategory)
     private subCategoryRepo: Repository<SubCategory>,
-  ) { }
+  ) {}
 
   // Lấy danh mục
   async findAll(): Promise<Category[]> {
@@ -22,28 +22,31 @@ export class CategoryService {
   // Thêm danh mục
   async create(data: Partial<Category>): Promise<Category> {
     const category = this.categoryRepo.create(data);
-    return await this.categoryRepo.save(category)
+    return await this.categoryRepo.save(category);
   }
 
   // Tìm kiếm danh mục
   async searchByName(name: string): Promise<Category[]> {
     return await this.categoryRepo
-      .createQueryBuilder("category")
-      .where("category.name LIKE :name", { name: `%${name}%` })
+      .createQueryBuilder('category')
+      .where('category.name LIKE :name', { name: `%${name}%` })
       .getMany();
   }
-  
+
   // 🧩 Lấy danh mục cha và danh mục con
   async findAllWithChildren(): Promise<any[]> {
     const categories = await this.categoryRepo.find();
     const subCategories = await this.subCategoryRepo.find();
 
-    const grouped = subCategories.reduce((acc, sub) => {
-      const parentId = sub.parent_category_id;
-      if (!acc[parentId]) acc[parentId] = [];
-      acc[parentId].push(sub);
-      return acc;
-    }, {} as Record<number, SubCategory[]>);
+    const grouped = subCategories.reduce(
+      (acc, sub) => {
+        const parentId = sub.parent_category_id;
+        if (!acc[parentId]) acc[parentId] = [];
+        acc[parentId].push(sub);
+        return acc;
+      },
+      {} as Record<number, SubCategory[]>,
+    );
 
     return categories.map((cat) => ({
       id: cat.id,
