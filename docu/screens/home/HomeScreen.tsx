@@ -178,6 +178,8 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
+              user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
+
             category: categoryName || null,
             subCategory: item.subCategory
               ? {

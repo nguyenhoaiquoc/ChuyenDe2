@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, NotFoundException, Param, Post, Query } from "@nestjs/common";
 import { ProductService } from "./product.service";
 import { Product } from "src/entities/product.entity";
 
@@ -12,6 +12,13 @@ export class ProductController {
     console.log("🔥 Body nhận từ frontend:", body);
     return await this.productService.create(body);
   }
+  @Get(':id')
+async getProductById(@Param('id') id: string) {
+  const product = await this.productService.findById(+id);
+  if (!product) throw new NotFoundException(`Không tìm thấy sản phẩm với ID ${id}`);
+  return product;
+}
+
 
   // 🧩 Lấy danh sách sản phẩm (có thể lọc theo category_id)
   @Get()

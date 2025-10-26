@@ -20,6 +20,7 @@ import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductTypeModule } from './product-types/product-type.module';
 import { UsersModule } from './users/users.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { UsersModule } from './users/users.module';
     ReportModule,
     ProductTypeModule,
     UsersModule,
+    ChatModule,
 
   ],
   controllers: [AppController],

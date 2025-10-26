@@ -65,7 +65,7 @@ export default function UserInforScreen({ navigation }: Props) {
       }
     } catch (err) {
       console.log("Lấy user error:", err);
-
+      
       // fallback nếu request fail
       const localName = await AsyncStorage.getItem("userName");
       if (localName) setName(localName);

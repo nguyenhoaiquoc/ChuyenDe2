@@ -7,8 +7,8 @@ export type RootStackParamList = {
   ForgotPasswordScreen: undefined;
   NewPasswordScreen: { token: string };
   ChatListScreen: undefined;
-  ChatRoomScreen: undefined;
-  OTPVerifyScreen: { email: string };
+  ChatRoomScreen: { product: ProductType; otherUserId: number; otherUserName?: string; currentUserId: number; currentUserName: string; token: string;  };  OTPVerifyScreen: { email: string,
+ };
   ProductDetail: { product?: ProductType } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
