@@ -69,9 +69,6 @@ export default function App() {
         <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
         <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
         <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
-
-
-
       </Stack.Navigator>
     </NavigationContainer>
   );
