@@ -37,9 +37,9 @@ export class SubCategoryService {
     return this.subCategoryRepo.delete(id);
   }
 
-  async findByCategory(categoryId: number) {
+  async findByCategory(category_id: number) {
     return this.subCategoryRepo.find({
-      where: { categoryId },
+      where: { category_id },
       relations: ['category']
     });
 

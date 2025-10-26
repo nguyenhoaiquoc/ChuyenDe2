@@ -17,15 +17,19 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
+import axios from "axios";
 
 const { width } = Dimensions.get("window");
 
 interface Comment {
   id: number;
-  name: string;
-  image: any;
-  time: string;
   content: string;
+  created_at: string;
+  user: {
+    id: number;
+    fullName: string;
+    image?: string;
+  };
 }
 
 interface ProductImage {
@@ -37,6 +41,11 @@ interface ProductImage {
 }
 
 interface Condition {
+  id: string;
+  name: string;
+}
+
+interface ProductType {
   id: string;
   name: string;
 }
@@ -95,6 +104,7 @@ interface Product {
     source_id?: string;
   };
 
+  productType: ProductType;
   condition: Condition;
   address_json: AddressJson;
   status_id: string;
@@ -131,6 +141,28 @@ export default function ProductDetailScreen() {
   const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
   const tagText = product.tag || "Chưa có tag";
 
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [comment, setComment] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        setLoadingComments(true);
+        const res = await axios.get(`${path}/comments/${product.id}`);
+        // API trả về mảng comments
+        setComments(res.data);
+      } catch (error) {
+        console.error("Lỗi khi tải bình luận:", error);
+      } finally {
+        setLoadingComments(false);
+      }
+    };
+
+    if (product.id) fetchComments();
+  }, [product.id]);
+
   useEffect(() => {
     console.log(
       "Product nhận được ở màn hình Detail:",
@@ -150,17 +182,11 @@ export default function ProductDetailScreen() {
       }
     }
   };
-
-  const [comment, setComment] = useState("");
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 1,
-      name: "Nguyễn hoài quắc",
-      image: require("../../assets/khi.png"),
-      time: "2 tháng trước",
-      content: "Rẻ nhưng máy zin màn zin thì cửa hàng mua có bán kg",
-    },
-  ]);
+  console.log({
+    product_id: Number(product.id),
+    user_id: 1,
+    content: comment.trim(),
+  });
 
   // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
@@ -189,17 +215,29 @@ export default function ProductDetailScreen() {
         ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const handleSend = () => {
-    if (comment.trim() !== "") {
-      const newComment = {
-        id: comments.length + 1,
-        name: "Bạn",
-        image: require("../../assets/khi.png"),
-        time: "Vừa xong",
-        content: comment,
-      };
-      setComments([...comments, newComment]);
+  const handleSend = async () => {
+    if (isSending || comment.trim() === "") return;
+
+    if (!product?.id) {
+      Alert.alert("Lỗi", "Không xác định được sản phẩm để bình luận.");
+      return;
+    }
+
+    try {
+      setIsSending(true); // 🟡 Bắt đầu gửi
+      const res = await axios.post(`${path}/comments`, {
+        product_id: Number(product.id),
+        user_id: 1,
+        content: comment.trim(),
+      });
+
+      setComments((prev) => [...prev, res.data]);
       setComment("");
+    } catch (error) {
+      Alert.alert("Lỗi", "Không gửi được bình luận. Vui lòng thử lại!");
+      console.error("Gửi bình luận lỗi:", error);
+    } finally {
+      setIsSending(false); // 🟢 Cho phép gửi lại
     }
   };
 
@@ -218,6 +256,11 @@ export default function ProductDetailScreen() {
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
     const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
+    // console.log(
+    //   "Product nhận được ở màn hình Detail:",
+    //   JSON.stringify(product, null, 2)
+    // );
+console.log(">>> productType:", product.productType);
 
     return (
       <View style={{ width, height: 280 }}>
@@ -433,6 +476,17 @@ export default function ProductDetailScreen() {
                   </View>
                 )}
 
+              {/* Loại sản phẩm */}
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
+                <Text
+                  className="text-gray-800 text-sm font-medium"
+                  style={{ flexShrink: 1, flexWrap: "wrap" }}
+                >
+                  {product.productType?.name || "Chưa rõ"}
+                </Text>
+              </View>
+
               {/* Tình trạng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Tình trạng</Text>
@@ -486,18 +540,38 @@ export default function ProductDetailScreen() {
           {/* Bình luận */}
           <View className="mb-6">
             <Text className="text-lg font-bold mb-3">Bình luận</Text>
-            {comments.map((c) => (
-              <View key={c.id} className="flex-row items-start mb-4">
-                <Image source={c.image} className="w-10 h-10 rounded-full" />
-                <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
-                  <Text className="font-semibold text-sm">{c.name}</Text>
-                  <Text className="text-gray-600 text-sm mt-1">
-                    {c.content}
-                  </Text>
-                  <Text className="text-gray-400 text-xs mt-1">{c.time}</Text>
+
+            {loadingComments ? (
+              <Text>Đang tải bình luận...</Text>
+            ) : comments.length > 0 ? (
+              comments.map((c) => (
+                <View key={c.id} className="flex-row items-start mb-4">
+                  <Image
+                    source={{
+                      uri: c.user?.image
+                        ? `${path}${c.user.image}`
+                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                    }}
+                    className="w-10 h-10 rounded-full"
+                  />
+                  <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
+                    <Text className="font-semibold text-sm">
+                      {c.user?.fullName || "Người dùng"}
+                    </Text>
+                    <Text className="text-gray-600 text-sm mt-1">
+                      {c.content}
+                    </Text>
+                    <Text className="text-gray-400 text-xs mt-1">
+                      {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))
+            ) : (
+              <Text className="text-gray-500 text-sm mb-4">
+                Chưa có bình luận nào. Hãy là người đầu tiên!
+              </Text>
+            )}
 
             {/* Ô nhập + nút gửi */}
             <View className="flex-row items-center border border-gray-300 rounded-full px-3 py-2 bg-white">
@@ -505,13 +579,24 @@ export default function ProductDetailScreen() {
                 value={comment}
                 onChangeText={setComment}
                 placeholder="Bình luận..."
+                editable={!isSending}
                 className="flex-1 px-2 text-sm"
               />
+
               <TouchableOpacity
                 onPress={handleSend}
-                className="ml-2 bg-blue-500 px-4 py-2 rounded-full"
+                disabled={isSending}
+                className={`ml-2 px-4 py-2 rounded-full ${
+                  isSending ? "bg-gray-400" : "bg-blue-500"
+                }`}
               >
-                <Text className="text-white font-semibold text-sm">Gửi</Text>
+                {isSending ? (
+                  <Text className="text-white font-semibold text-sm">
+                    Đang gửi...
+                  </Text>
+                ) : (
+                  <Text className="text-white font-semibold text-sm">Gửi</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>

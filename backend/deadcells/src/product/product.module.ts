@@ -17,6 +17,7 @@ import { HouseCategory } from "src/entities/categories/house-category.entity";
 import { VehicleCategory } from "src/entities/categories/vehicle-category.entity";
 import { PostType } from "src/entities/post-type.entity";
 import { User } from "src/entities/user.entity";
+import { ProductType } from "src/entities/product_types.entity";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { User } from "src/entities/user.entity";
       HouseCategory,
       VehicleCategory,
       PostType,
+      ProductType
     ]),
   ],
   providers: [ProductService],
