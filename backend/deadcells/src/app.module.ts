@@ -21,6 +21,8 @@ import { ConfigModule } from '@nestjs/config';
 import { ProductTypeModule } from './product-types/product-type.module';
 import { PostTypeModule } from './post-type/post-type.module';
 import { CommentModule } from './comment/comment.module';
+import { UsersModule } from './users/users.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -53,6 +55,9 @@ import { CommentModule } from './comment/comment.module';
     ProductTypeModule,
     PostTypeModule,
     CommentModule
+    UsersModule,
+    ChatModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

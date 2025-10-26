@@ -123,7 +123,15 @@ interface Product {
 
 type RootStackParamList = {
   ProductDetail: { product: Product };
+  ChatRoomScreen: {
+    product: Product;
+    otherUserId: number;
+    otherUserName?: string;
+    currentUserId: number;
+    currentUserName: string;
+  };
 };
+
 
 type ProductDetailScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -134,7 +142,21 @@ type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
   "ProductDetail"
 >;
 
+
+
+
 export default function ProductDetailScreen() {
+  const [currentUser, setCurrentUser] = useState<{ id: number; name: string } | null>(null);
+
+useEffect(() => {
+  (async () => {
+    const id = await AsyncStorage.getItem("userId");
+    const name = await AsyncStorage.getItem("userName");
+    if (id && name) {
+      setCurrentUser({ id: Number(id), name });
+    }
+  })();
+}, []);
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
@@ -164,10 +186,7 @@ export default function ProductDetailScreen() {
   }, [product.id]);
 
   useEffect(() => {
-    console.log(
-      "Product nhận được ở màn hình Detail:",
-      JSON.stringify(product, null, 2)
-    );
+  
   }, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
@@ -253,6 +272,27 @@ export default function ProductDetailScreen() {
     </View>
   );
 
+  const handleChatPress = async () => {
+  if (!currentUser) return;
+
+  try {
+    const res = await fetch(`${path}/products/${product.id}`);
+    const data = await res.json();
+
+      
+    navigation.navigate("ChatRoomScreen", {
+      product: product,
+      otherUserId: Number(data.user_id),
+      otherUserName: data.author_name || "Người bán",
+      currentUserId: Number(currentUser.id),
+      currentUserName: currentUser.name,
+    });
+  } catch (error) {
+    Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
+  }
+};
+
+
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
     const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
@@ -261,6 +301,10 @@ export default function ProductDetailScreen() {
     //   JSON.stringify(product, null, 2)
     // );
 console.log(">>> productType:", product.productType);
+
+
+
+
 
     return (
       <View style={{ width, height: 280 }}>
@@ -333,7 +377,19 @@ console.log(">>> productType:", product.productType);
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
+          <View className="bg-green-500 self-end rounded-md ">
+        
+<TouchableOpacity
 
+onPress={handleChatPress}
+
+  className="bg-green-500 self-end rounded-md"
+>
+  <Text className="text-white px-4 py-1 font-bold">Chat</Text>
+</TouchableOpacity>
+
+
+          </View>
         <View className="px-4 py-3 pb-12">
           {/* Tiêu đề */}
           <Text className=" text-xl font-bold mb-2">
