@@ -21,6 +21,7 @@
     "class-validator": "^0.14.2",
     "expo": "~54.0.9",
     "expo-clipboard": "~8.0.7",
+    "expo-image-manipulator": "~14.0.7",
     "expo-image-picker": "~17.0.8",
     "expo-status-bar": "~3.0.8",
     "lucide-react": "^0.544.0",

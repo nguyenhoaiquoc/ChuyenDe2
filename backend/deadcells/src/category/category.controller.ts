@@ -8,7 +8,7 @@ export class CategoryController {
 
   @Get()
   async getAllCategories() {
-    console.log("Đang gọi GET /categories");
+    console.log('Đang gọi GET /categories');
     return this.categoryService.findAll();
   }
 
@@ -16,7 +16,6 @@ export class CategoryController {
   async createCategory(@Body() data: Partial<Category>): Promise<Category> {
     return this.categoryService.create(data);
   }
-  
 
   @Get('search')
   async search(@Query('name') name: string): Promise<Category[]> {
@@ -29,6 +28,4 @@ export class CategoryController {
     console.log('Đang gọi GET /categories/with-children');
     return await this.categoryService.findAllWithChildren();
   }
-
-  
 }

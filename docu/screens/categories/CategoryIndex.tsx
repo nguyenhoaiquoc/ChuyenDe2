@@ -1,18 +1,25 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { RootStackParamList, ProductType } from '../../types';
-import { Feather } from '@expo/vector-icons';
-import ProductCard from '../../components/ProductCard';
-import Menu from '../../components/Menu';
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  ActivityIndicator,
+} from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { RootStackParamList, ProductType } from "../../types";
+import { Feather } from "@expo/vector-icons";
+import ProductCard from "../../components/ProductCard";
+import Menu from "../../components/Menu";
 import axios from "axios";
 import { path } from "../../config";
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CategoryIndex'>;
+type Props = NativeStackScreenProps<RootStackParamList, "CategoryIndex">;
 
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,55 +36,66 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
     setError(null);
 
     // Fetch từ backend với query param category_id
-    axios.get(`${path}/products?category_id=${categoryId}`)
+    axios
+      .get(`${path}/products?category_id=${categoryId}`)
       .then((res) => {
         // Đảm bảo dữ liệu là mảng
         const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
         // Map dữ liệu backend sang format ProductType
+        // Trong useEffect fetch products ở CategoryIndex
         const mapped = rawData.map((item: any) => {
-          // Lấy URL ảnh chính
-          const imageUrl =
-            item.thumbnail_url
-              ? item.thumbnail_url.startsWith('file://')
-                ? item.thumbnail_url
-                : `${path}${item.thumbnail_url}`
-              : item.images?.length
+          const imageUrl = item.thumbnail_url?.startsWith("http")
+            ? item.thumbnail_url
+            : item.thumbnail_url
+              ? `${path}${item.thumbnail_url}`
+              : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`
                 : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
 
-          // Location từ address_json
           let locationText = "Chưa rõ địa chỉ";
           if (item.address_json) {
             try {
-              const addr = typeof item.address_json === "string" ? JSON.parse(item.address_json) : item.address_json;
-              if (addr.full) {
-                locationText = addr.full;
-              } else {
-                const parts = [addr.ward, addr.district, addr.province].filter(Boolean).slice(-2);
-                locationText = parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
-              }
+              const addr =
+                typeof item.address_json === "string"
+                  ? JSON.parse(item.address_json)
+                  : item.address_json;
+              locationText = addr.full
+                ? addr.full
+                : [addr.ward, addr.district, addr.province]
+                    .filter(Boolean)
+                    .slice(-2)
+                    .join(", ") || "Chưa rõ địa chỉ";
             } catch (e) {
-              console.log("Lỗi parse address:", e);
               locationText = "Chưa rõ địa chỉ";
             }
           }
 
-          // Thời gian
-          const createdAt = item.created_at ? new Date(item.created_at) : new Date();
+          const createdAt = item.created_at
+            ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
+            : new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
           const timeDisplay = timeSince(createdAt);
 
-          // Danh mục (tag)
+          const categoryNameItem = item.category?.name || undefined;
+          const subCategoryObj = item.subCategory
+            ? {
+                id: item.subCategory.id
+                  ? parseInt(item.subCategory.id)
+                  : undefined,
+                name: item.subCategory.name,
+                source_table: item.subCategory.source_table,
+                source_detail: item.subCategory.source_detail,
+              }
+            : undefined;
+
+          const authorName = item.user?.name || "Ẩn danh";
+
+          // tag hiển thị
           let tagText = "Không có danh mục";
-          const categoryNameItem = item.category?.name || null;
-          const subCategoryName = item.subCategory?.name || null;
-          if (categoryNameItem && subCategoryName) {
-            tagText = `${categoryNameItem} - ${subCategoryName}`;
-          } else if (categoryNameItem) {
-            tagText = categoryNameItem;
-          } else if (subCategoryName) {
-            tagText = subCategoryName;
-          }
+          if (categoryNameItem && subCategoryObj?.name)
+            tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
+          else if (categoryNameItem) tagText = categoryNameItem;
+          else if (subCategoryObj?.name) tagText = subCategoryObj.name;
 
           return {
             id: item.id.toString(),
@@ -86,15 +104,20 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             price: (() => {
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-              return item.price ? `${item.price.toLocaleString("vi-VN")} đ` : "Liên hệ";
+              return item.price
+                ? `${item.price.toLocaleString("vi-VN")} đ`
+                : "Liên hệ";
             })(),
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            category: categoryNameItem || null,
-            subCategory: subCategoryName || null,
+            authorName: authorName,
+            category: categoryNameItem,
+            subCategory: subCategoryObj,
             imageCount: item.images?.length || 1,
             isFavorite: false,
+            images: item.images || [],
+            description: item.description || "",
           };
         });
         setProducts(mapped);
@@ -108,7 +131,10 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
 
   // Filter theo query
   const filtered = useMemo(
-    () => products.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())),
+    () =>
+      products.filter((p) =>
+        p.name.toLowerCase().includes(query.trim().toLowerCase())
+      ),
     [products, query]
   );
 
@@ -125,7 +151,9 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
     if (interval >= 1) return Math.floor(interval) + " giờ trước";
     interval = seconds / 60;
     if (interval >= 1) return Math.floor(interval) + " phút trước";
-    return Math.floor(seconds) > 5 ? Math.floor(seconds) + " giây trước" : "vừa xong";
+    return Math.floor(seconds) > 5
+      ? Math.floor(seconds) + " giây trước"
+      : "vừa xong";
   };
 
   if (error) {
@@ -155,16 +183,16 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder={`Tìm trong ${categoryName ?? 'danh mục'}`}
+            placeholder={`Tìm trong ${categoryName ?? "danh mục"}`}
             returnKeyType="search"
-            onSubmitEditing={() => { }}
+            onSubmitEditing={() => {}}
             className="ml-3 flex-1 text-sm text-slate-800 p-0"
             clearButtonMode="while-editing"
           />
           {query.length > 0 && (
             <TouchableOpacity
               className="p-2 rounded-full bg-slate-100 ml-2"
-              onPress={() => setQuery('')}
+              onPress={() => setQuery("")}
               accessibilityLabel="Xóa"
             >
               <Feather name="x" size={16} color="#6b7280" />
@@ -188,11 +216,15 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 12, paddingBottom: 120 }}
           numColumns={2}
-          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          columnWrapperStyle={{ justifyContent: "space-between" }}
           ListEmptyComponent={
             <View className="flex-1 justify-center items-center p-8">
-              <Text className="text-center text-slate-500 text-lg mb-2">Không tìm thấy sản phẩm</Text>
-              <Text className="text-center text-slate-400 text-sm">Thử tìm kiếm khác hoặc quay lại danh mục chính</Text>
+              <Text className="text-center text-slate-500 text-lg mb-2">
+                Không tìm thấy sản phẩm
+              </Text>
+              <Text className="text-center text-slate-400 text-sm">
+                Thử tìm kiếm khác hoặc quay lại danh mục chính
+              </Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -203,12 +235,15 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
               location={item.location}
               time={item.time}
               tag={item.tag}
+              authorName={item.authorName}
               category={item.category}
               subCategory={item.subCategory}
               imageCount={item.imageCount}
               isFavorite={item.isFavorite}
-              onPress={() => navigation.navigate('ProductDetail', { product: item })}
-              onToggleFavorite={() => { }}
+              onPress={() =>
+                navigation.navigate("ProductDetail", { product: item })
+              }
+              onToggleFavorite={() => console.log("Yêu thích:", item.name)}
             />
           )}
         />

@@ -8,7 +8,7 @@ type ProductCardProps = {
   location: string;
   time: string;
   tag: string;
-  authorName: string;
+  authorName?: string;
   category?: string;
   subCategory?: {
     id?: number;

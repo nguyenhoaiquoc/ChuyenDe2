@@ -17,6 +17,7 @@ import { Report } from './report.entity';
 import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
 import { PostType } from './post-type.entity';
+import { Comment } from './comment.entity';
 
 @Entity('products')
 export class Product {
@@ -60,7 +61,7 @@ export class Product {
   @JoinColumn({ name: 'post_type_id' })
   postType: PostType;
 
-  @Column({ type: 'bigint', nullable: true})
+  @Column({ type: 'bigint', nullable: true })
   post_type_id: number | null;
 
   @Column({ type: 'bigint', nullable: true })
@@ -113,6 +114,8 @@ export class Product {
   @OneToMany(() => Report, (report) => report.product)
   reports: Report[];
 
+  @OneToMany(() => Comment, (comment) => comment.product)
+  comments: Comment[];
   // ===== Trạng thái bài đăng =====
   @Column({ type: 'bigint', default: 1 })
   status_id: number;

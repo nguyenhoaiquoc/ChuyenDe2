@@ -38,6 +38,7 @@ export type ProductType = {
   id: string;
   image: any;
   name: string;
+  authorName?: string; 
   price: string;
   location: string;
   time: string;

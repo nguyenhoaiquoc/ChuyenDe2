@@ -59,6 +59,7 @@ interface Product {
     created_at: string;
   }[]; // ✅ Thêm: Full array images từ backend
   description?: string;
+  productType?: { id: string; name: string };
   condition?: { id: string; name: string };
   address_json?: { full: string };
   dealType?: { id: string; name: string };
@@ -143,7 +144,6 @@ export default function HomeScreen({ navigation }: Props) {
             ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
             : new Date();
 
-
           const timeDisplay = timeSince(createdAt);
 
           // Danh mục
@@ -183,13 +183,13 @@ export default function HomeScreen({ navigation }: Props) {
             category: categoryName || null,
             subCategory: item.subCategory
               ? {
-                id: item.subCategory.id
-                  ? parseInt(item.subCategory.id)
-                  : undefined,
-                name: item.subCategory.name,
-                source_table: item.subCategory.source_table,
-                source_detail: item.subCategory.source_detail,
-              }
+                  id: item.subCategory.id
+                    ? parseInt(item.subCategory.id)
+                    : undefined,
+                  name: item.subCategory.name,
+                  source_table: item.subCategory.source_table,
+                  source_detail: item.subCategory.source_detail,
+                }
               : undefined,
             categoryChange_id: item.categoryChange_id || null,
             subCategoryChange_id: item.subCategoryChange_id || null,
@@ -200,6 +200,8 @@ export default function HomeScreen({ navigation }: Props) {
             isFavorite: false,
             images: item.images || [], // ✅ Thêm: Pass full array để Detail swipe
             description: item.description || "",
+            productType: item.productType ||
+              item.product_type || { id: "1", name: "Ch" },
             condition: item.condition || { id: "1", name: "Chưa rõ" },
             address_json: item.address_json || { full: locationText },
             dealType: item.dealType || { id: "1", name: "Bán" },
@@ -350,10 +352,11 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
-                  ? "bg-blue-500 border-blue-500"
-                  : "bg-white border-gray-300"
-                  }`}
+                className={`px-4 py-2 mr-3 rounded-full border ${
+                  selectedFilter === item.label
+                    ? "bg-blue-500 border-blue-500"
+                    : "bg-white border-gray-300"
+                }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);

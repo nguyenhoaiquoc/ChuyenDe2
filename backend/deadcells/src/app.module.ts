@@ -19,6 +19,8 @@ import { AuthModule } from './auth/auth.module';
 import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductTypeModule } from './product-types/product-type.module';
+import { PostTypeModule } from './post-type/post-type.module';
+import { CommentModule } from './comment/comment.module';
 import { UsersModule } from './users/users.module';
 import { ChatModule } from './chat/chat.module';
 
@@ -51,6 +53,8 @@ import { ChatModule } from './chat/chat.module';
     AuthModule,
     ReportModule,
     ProductTypeModule,
+    PostTypeModule,
+    CommentModule
     UsersModule,
     ChatModule,
 
