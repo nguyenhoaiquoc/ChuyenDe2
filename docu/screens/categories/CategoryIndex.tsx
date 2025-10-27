@@ -126,6 +126,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             time: timeDisplay,
             tag: tagText,
             authorName: item.user?.name || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
             category: categoryName,
             subCategory: item.subCategory
               ? {
@@ -180,6 +181,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
+            
           };
         });
 
