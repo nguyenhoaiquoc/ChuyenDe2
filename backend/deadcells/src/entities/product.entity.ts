@@ -121,10 +121,10 @@ export class Product {
   status_id: number;
 
   @Column({ type: 'bigint', default: 0 })
-  visibility_type: number;   //0 toàn trường, 1 trong nhóm
+  visibility_type: number; //0 toàn trường, 1 trong nhóm
 
   @Column({ type: 'bigint', nullable: true })
-  group_id: number;  
+  group_id: number;
 
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;

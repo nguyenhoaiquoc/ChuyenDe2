@@ -11,7 +11,7 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState } from "react";
@@ -31,48 +31,6 @@ const filters = [
   { id: "5", label: "Trao đổi" },
   { id: "6", label: "Gợi ý cho bạn " },
 ];
-
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[];
-  description?: string;
-  postType?: { id: string; name: string };
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string }; // Để dùng category.name
-  created_at?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-}
 
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -401,33 +359,22 @@ export default function HomeScreen({ navigation }: Props) {
             scrollEnabled={false}
             renderItem={({ item }) => (
               <ProductCard
-                image={item.image}
-                name={item.name}
-                price={item.price}
-                postType={item.postType}
+                product={item}
+                onPress={() =>
+                  navigation.navigate("ProductDetail", { product: item })
+                }
+                onToggleFavorite={() => console.log("Yêu thích:", item.name)}
                 onPressPostType={(pt) => {
                   if (pt.id == "1") navigation.navigate("SellProductScreen");
                   else if (pt.id == "2")
                     navigation.navigate("PurchaseRequestScreen");
                 }}
-                location={item.location}
-                time={item.time}
-                tag={item.tag}
-                authorName={item.authorName}
-                category={item.category}
-                subCategory={item.subCategory}
-                imageCount={item.imageCount}
-                isFavorite={item.isFavorite}
-                onPress={() =>
-                  navigation.navigate("ProductDetail", { product: item })
-                }
-                onToggleFavorite={() => console.log("Yêu thích:", item.name)}
               />
             )}
           />
         </View>
       </ScrollView>
-      {/* Menu dưới */} 
+      {/* Menu dưới */}
       <Menu />
     </View>
   );

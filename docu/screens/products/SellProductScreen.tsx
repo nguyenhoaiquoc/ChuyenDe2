@@ -7,55 +7,15 @@ import {
   ScrollView,
 } from "react-native";
 import ProductCard from "../../components/ProductCard";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
-import { useEffect, useState } from "react";
+import { Product, SellProductScreenNavigationProp } from "../../types";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
 import { Feather } from "@expo/vector-icons";
 
 type Props = {
-  navigation: NativeStackNavigationProp<
-    RootStackParamList,
-    "SellProductScreen"
-  >;
+  navigation: SellProductScreenNavigationProp;
 };
-
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[];
-  description?: string;
-  postType?: { id: string; name: string };
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string };
-  created_at?: string;
-}
 
 export default function SellProductScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
@@ -201,30 +161,19 @@ export default function SellProductScreen({ navigation }: Props) {
           numColumns={2}
           keyExtractor={(item) => item.id}
           columnWrapperStyle={{ justifyContent: "space-between" }}
-          scrollEnabled={false} // FlatList bên trong ScrollView, FlatList tự không cuộn
+          scrollEnabled={false}
           renderItem={({ item }) => (
             <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              postType={item.postType}
-              onPressPostType={(pt) => {
-                if (pt.id == "1") navigation.navigate("SellProductScreen");
-                else if (pt.id == "2")
-                  navigation.navigate("SellProductScreen");
-              }}
-              location={item.location}
-              time={item.time}
-              tag={item.tag}
-              authorName={item.authorName}
-              category={item.category}
-              subCategory={item.subCategory}
-              imageCount={item.imageCount}
-              isFavorite={item.isFavorite}
+              product={item}
               onPress={() =>
                 navigation.navigate("ProductDetail", { product: item })
               }
               onToggleFavorite={() => console.log("Yêu thích:", item.name)}
+              onPressPostType={(pt) => {
+                if (pt.id == "1") navigation.navigate("SellProductScreen");
+                else if (pt.id == "2")
+                  navigation.navigate("PurchaseRequestScreen");
+              }}
             />
           )}
         />

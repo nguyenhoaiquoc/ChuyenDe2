@@ -67,6 +67,17 @@ export type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ProductDetail"
 >;
+
+export type PurchaseRequestScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "PurchaseRequestScreen"
+>;
+
+export type SellProductScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "SellProductScreen"
+>;
+
 export type ChatRoomRouteProp = RouteProp<RootStackParamList, "ChatRoomScreen">;
 
 export type ChatRoomNavigationProp = NativeStackNavigationProp<
@@ -104,7 +115,7 @@ export type Product = {
   thumbnail_url?: string;
   images: ProductImage[];
   dealType: DealType;
-  category: Category;
+  category: Category | string | undefined;
   sub_category_id?: string | null;
   category_change?: Category;
   sub_category_change?: { id: string; name: string };
@@ -116,14 +127,14 @@ export type Product = {
   visibility_type?: string;
   group_id?: string | null;
   is_approved?: boolean;
-  created_at: string;
-  updated_at: string;
   image?: any;
   location?: string;
   time?: string;
   tag?: string;
   imageCount?: number;
   isFavorite?: boolean;
+  created_at: string;
+  updated_at?: string;
   user_id: string | number;
 };
 
