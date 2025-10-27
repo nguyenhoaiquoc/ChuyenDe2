@@ -19,6 +19,7 @@ import axios from "axios";
 import { path } from "../../config";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage"; 
+import { RootStackParamList, Product } from "../../types";
 
 type InfoRowProps = {
   icon: React.ReactNode;
@@ -45,7 +46,7 @@ interface MenuItem {
 export default function UserProfile({ navigation }: any) {  
   // ✅ BƯỚC 1: LẤY PARAMS
   const route = useRoute<RouteProp<{ params: { userId: number | string; productId: string } }>>();
-  const { userId, productId } = route.params; // Lấy userId và productId từ trang trước
+  const { userId, productId } = route.params;
 
   // ✅ BƯỚC 2: TẠO STATE VÀ GỌI API
   const [user, setUser] = useState<UserProfileData | null>(null); // State để lưu info user
@@ -362,14 +363,13 @@ const handleSubmitReport = async () => {
         <View className="flex-row items-center">
           <Ionicons name="location-outline" size={18} color="gray" />
           <Text className="text-gray-700 text-base ml-2">Địa chỉ:</Text>
-          <Text className="text-gray-700 text-base ml-2">Địa chỉ:</Text>
           {/* ✅ SỬA ĐỊA CHỈ THẬT */}
           <Text
             className="text-gray-500 text-base ml-1 flex-shrink"
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {user?.address_json?.full || "Chưa rõ địa chỉ"}
+            { "Chưa rõ địa chỉ"}
           </Text>
         </View>
       </View>

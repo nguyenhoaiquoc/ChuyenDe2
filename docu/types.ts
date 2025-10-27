@@ -29,12 +29,12 @@ export type RootStackParamList = {
   ChooseExchangeCategoryScreen: undefined;
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
-  UserDetail: undefined;
   ManagerGroupsScreen : undefined;
   UserInforScreen : undefined;
   EditProfileScreen: undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
+  NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   // Trong types.ts, thêm vào cuối RootStackParamList:
 ChatRoomScreen: {
@@ -46,6 +46,12 @@ ChatRoomScreen: {
   currentUserName: string;
   token: string;
 };
+
+UserDetail: {
+    userId: number | string; 
+    productId: string;
+    product: Product;
+  };
 
   // TestApi: undefined;
 };
