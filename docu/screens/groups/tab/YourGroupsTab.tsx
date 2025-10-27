@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,90 +9,45 @@ import {
   TouchableOpacity,
   TextInput,
 } from "react-native";
-import { GroupType, RootStackParamList } from "../../../types";
+import { RootStackParamList } from "../../../types";
+import axios from "axios";
+import { path } from "../../../config";
 
-const groups = [
-  {
-    id: 1,
-    name: "Hội những người yêu chó",
-    members: "72.203 thành viên",
-    posts: "12 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 2,
-    name: "Hội những người nuôi mèo",
-    members: "58.441 thành viên",
-    posts: "8 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 3,
-    name: "Hội thú cưng dễ thương",
-    members: "40.310 thành viên",
-    posts: "5 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 4,
-    name: "Hội chim cảnh",
-    members: "21.332 thành viên",
-    posts: "4 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 5,
-    name: "Cộng đồng yêu động vật Việt Nam",
-    members: "18.202 thành viên",
-    posts: "9 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 6,
-    name: "Hội những người yêu chó",
-    members: "72.203 thành viên",
-    posts: "12 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 7,
-    name: "Hội những người nuôi mèo",
-    members: "58.441 thành viên",
-    posts: "8 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 8,
-    name: "Hội thú cưng dễ thương",
-    members: "40.310 thành viên",
-    posts: "5 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 9,
-    name: "Hội chim cảnh",
-    members: "21.332 thành viên",
-    posts: "4 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-  {
-    id: 10,
-    name: "Cộng đồng yêu động vật Việt Nam",
-    members: "18.202 thành viên",
-    posts: "9 bài viết mới hôm nay",
-    image: require("../../../assets/khi.png"),
-  },
-];
+// const groups = [
+//   {
+//     id: 1,
+//     name: "Hội những người yêu chó",
+//     members: "72.203 thành viên",
+//     posts: "12 bài viết mới hôm nay",
+//     image: require("../../../assets/khi.png"),
+//   },
+// ];
 
 type YourGroupsTabProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
 export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
-  // 4. State để lưu nội dung tìm kiếm
   const [searchQuery, setSearchQuery] = useState("");
+  const [groups, setGroups] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // 5. Lọc danh sách nhóm dựa trên searchQuery
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const res = await axios.get(`${path}/groups`);
+        setGroups(res.data); // ✅ Không cần xử lý ảnh nữa
+      } catch (err) {
+        console.error("❌ Lỗi khi lấy nhóm:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroups();
+  }, []);
+
+  //  Lọc danh sách nhóm dựa trên searchQuery
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) {
       return groups;
@@ -126,11 +81,18 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
             <TouchableOpacity
               key={g.id}
               className="flex-row items-center mb-4 p-2 bg-gray-50 rounded-lg"
-              onPress={() =>
-                navigation.navigate("GroupDetailScreen", { group: g })
-              }
+              // onPress={() =>
+              //   navigation.navigate("GroupDetailScreen", { group: g })
+              // }
             >
-              <Image source={g.image} className="w-14 h-14 rounded-lg" />
+              <Image
+                source={
+                  g.image
+                    ? { uri: g.image }
+                    : require("../../../assets/khi.png")
+                }
+                className="w-14 h-14 rounded-lg"
+              />
               <View className="ml-3 flex-1">
                 <Text className="font-semibold text-base">{g.name}</Text>
                 <Text className="text-gray-500 text-sm">{g.members}</Text>

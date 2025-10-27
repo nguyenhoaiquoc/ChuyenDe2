@@ -61,7 +61,7 @@ export default function ManagerGroupsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             // Chức năng TẠO NHÓM, điều hướng tới màn hình mới
-            /* onPress={() => navigation.navigate("CreateGroupScreen")} */
+            onPress={() => navigation.navigate("CreateGroupScreen")}
             className="bg-gray-100 p-2 rounded-full ml-3"
           >
             <Feather name="plus" size={20} color="black" />

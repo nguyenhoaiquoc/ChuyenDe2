@@ -23,6 +23,7 @@ import { PostTypeModule } from './post-type/post-type.module';
 import { CommentModule } from './comment/comment.module';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
+import { GroupModule } from './groups/group.module';
 
 @Module({
   imports: [
@@ -57,9 +58,9 @@ import { UsersModule } from './users/users.module';
     CommentModule,
     UsersModule,
     ChatModule,
-
+    GroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

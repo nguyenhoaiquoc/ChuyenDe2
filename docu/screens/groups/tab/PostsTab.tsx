@@ -77,3 +77,80 @@ export default function PostsTab() {
     </ScrollView>
   );
 }
+
+// import React from "react";
+// import { View, FlatList, ScrollView, Text, Image } from "react-native";
+
+// const posts = [
+//   {
+//     id: "1",
+//     groupName: "Hội yêu chó",
+//     groupImage: require("../../../assets/hoa.png"),
+//     userName: "Nguyễn Văn A",
+//     title: "Chia sẻ kinh nghiệm nuôi chó",
+//     postImage: require("../../../assets/hoa.png"),
+//   },
+//   {
+//     id: "2",
+//     groupName: "Hội yêu mèo",
+//     groupImage: require("../../../assets/hoa.png"),
+//     userName: "Trần Thị B",
+//     title: "Mèo nhà mình dễ thương quá 😻",
+//     postImage: require("../../../assets/hoa.png"),
+//   },
+//   {
+//     id: "3",
+//     groupName: "Đồ cũ sinh viên",
+//     groupImage: require("../../../assets/hoa.png"),
+//     userName: "Lê Văn C",
+//     title: "Thanh lý bàn học giá rẻ",
+//     postImage: require("../../../assets/hoa.png"),
+//   },
+//   {
+//     id: "4",
+//     groupName: "Ẩm thực Việt",
+//     groupImage: require("../../../assets/hoa.png"),
+//     userName: "Phạm Thị D",
+//     title: "Cơm tấm ngon ở Sài Gòn",
+//     postImage: require("../../../assets/hoa.png"),
+//   },
+// ];
+
+// export default function PostsTab() {
+//   return (
+//     <ScrollView className="flex-1 px-4">
+//       <View className="my-10">
+//         <FlatList
+//           data={posts}
+//           keyExtractor={(item) => item.id}
+//           numColumns={1} // 👉 mỗi bài viết chiếm full width
+//           renderItem={({ item }) => (
+//             <View className="mb-6 p-3 bg-white rounded-lg shadow">
+//               {/* Nhóm */}
+//               <View className="flex-row items-center mb-2">
+//                 <Image
+//                   source={item.groupImage}
+//                   className="w-8 h-8 rounded-full"
+//                 />
+//                 <Text className="ml-2 font-semibold">{item.groupName}</Text>
+//               </View>
+
+//               {/* User + Title */}
+//               <Text className="text-gray-600 text-sm">
+//                 Đăng bởi {item.userName}
+//               </Text>
+//               <Text className="font-bold text-base mt-1">{item.title}</Text>
+
+//               {/* Ảnh bài viết */}
+//               <Image
+//                 source={item.postImage}
+//                 className="w-full h-40 mt-2 rounded-lg"
+//                 resizeMode="cover"
+//               />
+//             </View>
+//           )}
+//         />
+//       </View>
+//     </ScrollView>
+//   );
+// }

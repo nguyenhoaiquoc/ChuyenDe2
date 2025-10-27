@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,30 +7,85 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useState } from "react";
+import axios from "axios";
+import * as ImagePicker from "expo-image-picker";
+import { path } from "../../config";
 
 export default function CreateGroupScreen() {
   const navigation = useNavigation();
   const [groupName, setGroupName] = useState("");
-  const [privacy, setPrivacy] = useState("public"); // 'public' hoặc 'private'
+  const [privacy, setPrivacy] = useState("public");
+  const [images, setImages] = useState<string[]>([]);
 
-  const handleCreateGroup = () => {
-    // Logic xử lý tạo nhóm sẽ ở đây
-    // 1. Kiểm tra dữ liệu (tên nhóm không được rỗng)
+  const handleUploadImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsMultipleSelection: false,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const selected = result.assets.map((asset) => asset.uri);
+      setImages(selected);
+    }
+  };
+
+  const removeImage = () => setImages([]);
+
+  const uploadGroupImage = async (uri: string) => {
+    const data = new FormData();
+    const filename = uri.split("/").pop();
+    const ext = filename?.split(".").pop();
+    const type = ext ? `image/${ext}` : "image";
+
+    data.append("file", {
+      uri,
+      name: filename || "photo.jpg",
+      type,
+    } as any);
+
+    const res = await fetch(`${path}/groups/upload-image`, {
+      method: "POST",
+      headers: { "Content-Type": "multipart/form-data" },
+      body: data,
+    });
+
+    const result = await res.json();
+    return result.url; // ✅ đường dẫn Cloudinary
+  };
+
+  const handleCreateGroup = async () => {
     if (!groupName.trim()) {
-      alert("Vui lòng nhập tên nhóm.");
+      Alert.alert("Thiếu tên nhóm", "Vui lòng nhập tên nhóm.");
       return;
     }
 
-    // 2. Gọi API để tạo nhóm với groupName và privacy
-    console.log("Đang tạo nhóm:", { name: groupName, privacy: privacy });
+    try {
+      let thumbnail_url = "";
 
-    // 3. Sau khi tạo thành công, quay lại màn hình trước
-    // navigation.goBack();
+      if (images[0]) {
+        thumbnail_url = await uploadGroupImage(images[0]); // ✅ upload ảnh trước
+      }
+
+      const res = await axios.post(`${path}/groups`, {
+        name: groupName,
+        isPublic: privacy === "public",
+        thumbnail_url,
+      });
+
+      console.log("✅ Nhóm đã tạo:", res.data);
+      Alert.alert("Thành công", "Nhóm đã được tạo.");
+      navigation.goBack();
+    } catch (err) {
+      console.error("❌ Lỗi tạo nhóm:", err);
+      Alert.alert("Lỗi", "Không thể tạo nhóm. Vui lòng thử lại.");
+    }
   };
 
   return (
@@ -63,7 +118,6 @@ export default function CreateGroupScreen() {
           <View className="mt-6">
             <Text className="text-base font-medium mb-3">Quyền riêng tư</Text>
 
-            {/* Lựa chọn Công khai */}
             <TouchableOpacity
               onPress={() => setPrivacy("public")}
               className="flex-row items-center p-3 border border-gray-300 rounded-lg"
@@ -81,7 +135,6 @@ export default function CreateGroupScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Lựa chọn Riêng tư */}
             <TouchableOpacity
               onPress={() => setPrivacy("private")}
               className="flex-row items-center p-3 border border-gray-300 rounded-lg mt-3"
@@ -98,6 +151,51 @@ export default function CreateGroupScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
+          </View>
+
+          {/* Ảnh nhóm */}
+          <View className="mt-6">
+            <Text className="text-base font-medium mb-2">
+              Ảnh nhóm (tùy chọn)
+            </Text>
+            <TouchableOpacity
+              onPress={handleUploadImage}
+              className="flex-row items-center p-3 border border-gray-300 rounded-lg"
+            >
+              <MaterialCommunityIcons
+                name="camera-plus"
+                size={24}
+                color="#f59e0b"
+              />
+              <Text className="ml-3 text-base text-blue-500 font-medium">
+                Chọn ảnh từ thư viện
+              </Text>
+            </TouchableOpacity>
+
+            {images.length > 0 && (
+              <View className="mt-4">
+                <Image
+                  source={{ uri: images[0] }}
+                  style={{ width: "100%", height: 180, borderRadius: 12 }}
+                />
+                <TouchableOpacity
+                  onPress={removeImage}
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    backgroundColor: "#fff",
+                    borderRadius: 20,
+                  }}
+                >
+                  <MaterialCommunityIcons
+                    name="close-circle"
+                    size={24}
+                    color="red"
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
