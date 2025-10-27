@@ -121,7 +121,7 @@ export class Product {
   status_id: number;
 
   @Column({ type: 'bigint', default: 0 })
-  visibility_type: number;   //0 toàn trường, 1 trong nhóm
+  visibility_type: number;
 
   @Column({ type: 'bigint', nullable: true })
   group_id: number;  

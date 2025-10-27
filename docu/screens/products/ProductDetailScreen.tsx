@@ -14,11 +14,18 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Comment,
+  Product,
+  ProductDetailScreenNavigationProp,
+  ProductDetailScreenRouteProp,
+  ProductImage,
+  User,
+} from "../../types";
 
 const { width } = Dimensions.get("window");
 
@@ -51,10 +58,6 @@ interface ProductType {
   name: string;
 }
 
-interface PostType {
-  id: string;
-  name: string;
-}
 interface AddressJson {
   full: string;
   province?: string;
@@ -92,23 +95,23 @@ interface Product {
   category_id: string;
   category: Category;
   sub_category_id: string | null;
-  category_change_id?: string | null;
-  sub_category_change_id?: string | null;
+  categoryChange_id?: string | null;
+  subCategoryChange_id?: string | null;
 
   // Thêm đây
-  category_change?: {
+  categoryChange?: {
     id: string;
     name: string;
     image?: string;
   };
-  sub_category_change?: {
+  subCategoryChange?: {
     id: string;
     name: string;
     parent_category_id?: string;
     source_table?: string;
     source_id?: string;
   };
-  postType: PostType;
+
   productType: ProductType;
   condition: Condition;
   address_json: AddressJson;
@@ -147,10 +150,7 @@ type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
 >;
 
 export default function ProductDetailScreen() {
-  const [currentUser, setCurrentUser] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -161,10 +161,11 @@ export default function ProductDetailScreen() {
       }
     })();
   }, []);
+
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product = route.params?.product || {};
+  const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
   const tagText = product.tag || "Chưa có tag";
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -189,7 +190,7 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => {}, [product]);
+  useEffect(() => { }, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
@@ -203,37 +204,32 @@ export default function ProductDetailScreen() {
       }
     }
   };
-  console.log({
-    product_id: Number(product.id),
-    user_id: 1,
-    content: comment.trim(),
-  });
 
   // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-          ...img,
-          id: img.id.toString(),
-          product_id: img.product_id.toString(),
-          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-          image_url:
-            img.image_url.startsWith("file://") ||
+        ...img,
+        id: img.id.toString(),
+        product_id: img.product_id.toString(),
+        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
+        image_url:
+          img.image_url.startsWith("file://") ||
             img.image_url.startsWith("http")
-              ? img.image_url
-              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-        })) // Cast string nếu cần
+            ? img.image_url
+            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+      })) // Cast string nếu cần
       : [
-          {
-            id: "1",
-            product_id: product.id || "1",
-            name: "Default",
-            image_url:
-              product.image ||
-              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
-            created_at: new Date().toISOString(),
-          },
-        ];
+        {
+          id: "1",
+          product_id: product.id || "1",
+          name: "Default",
+          image_url:
+            product.image ||
+            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+          created_at: new Date().toISOString(),
+        },
+      ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -246,9 +242,19 @@ export default function ProductDetailScreen() {
 
     try {
       setIsSending(true); // 🟡 Bắt đầu gửi
+
+      // Lấy user_id từ AsyncStorage
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) {
+        Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
+        setIsSending(false);
+        return;
+      }
+      const userId = Number(userIdStr);
+
       const res = await axios.post(`${path}/comments`, {
         product_id: Number(product.id),
-        user_id: 1,
+        user_id: userId, // dùng user thật
         content: comment.trim(),
       });
 
@@ -278,23 +284,53 @@ export default function ProductDetailScreen() {
   }, []);
 
   const handleChatPress = async () => {
-    if (!currentUser) return;
-
     try {
-      const res = await fetch(`${path}/products/${product.id}`);
-      const data = await res.json();
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      const sellerId = String(product.user_id);
+      const buyerId = String(currentUser.id);
+
+      const response = await openOrCreateRoom(token, {
+        seller_id: sellerId,
+        buyer_id: buyerId,
+        room_type: "PAIR",
+        product_id: String(product.id),
+      });
+
+      // ✅ Tùy theo backend trả về
+      const room = response.room ?? response;
+      console.log("🟢 Room nhận được:", room);
+      const headerValue = token.startsWith("Bearer ")
+        ? token
+        : `Bearer ${token}`;
+      console.log("🧾 Authorization header gửi đi:", headerValue);
+      const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserName = product.authorName || "Người dùng";
 
       navigation.navigate("ChatRoomScreen", {
-        product: product,
-        otherUserId: Number(data.user_id),
-        otherUserName: data.author_name || "Người bán",
-        currentUserId: Number(currentUser.id),
+        roomId: room.id,
+        product,
+        otherUserId,
+        otherUserName,
+        currentUserId: currentUser.id,
         currentUserName: currentUser.name,
+        token,
       });
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
     }
   };
+
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -314,10 +350,6 @@ export default function ProductDetailScreen() {
     offset: width * index,
     index,
   });
-  console.log(">>> dealType:", product.dealType);
-  console.log(">>> category_change:", product.category_change);
-  console.log(">>> sub_category_change:", product.sub_category_change);
-  console.log(">>> product_type:", product.productType);
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -414,19 +446,29 @@ export default function ProductDetailScreen() {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                  "vi-VN",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}`
+                "vi-VN",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}`
               : product.time || "1 tuần trước"}
           </Text>
 
           {/* Thông tin shop */}
-          <TouchableOpacity /* onPress={() => navigation.navigate("UserDetail")} */
-          >
+          <TouchableOpacity
+            onPress={() => {
+              if (product.user_id) {
+                navigation.navigate("UserDetail", {
+                  userId: product.user_id,
+                  productId: product.id, // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
+                });
+              } else {
+                Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
+              }
+            }}
+>
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
@@ -435,14 +477,12 @@ export default function ProductDetailScreen() {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">Người dùng</Text>
+                <Text className="font-semibold">{product.authorName || "Người dùng"}</Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="ml-1 text-gray-500 text-xs">
-                  (14 đánh giá)
-                </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -619,7 +659,16 @@ export default function ProductDetailScreen() {
                       {c.content}
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                      {new Date(
+                        new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
+                      ).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -643,9 +692,8 @@ export default function ProductDetailScreen() {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${
-                  isSending ? "bg-gray-400" : "bg-blue-500"
-                }`}
+                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
+                  }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">

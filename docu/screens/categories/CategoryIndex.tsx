@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { RootStackParamList, ProductType } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -146,6 +146,8 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
+          console.log("item.user", item.user);
+          console.log("item.user_id", item.user_id);
 
           return {
             id: item.id.toString(),
@@ -161,34 +163,9 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: item.user?.name || "Ẩn danh",
-            category: categoryName,
-            subCategory: item.subCategory
-              ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
-                  name: item.subCategory.name,
-                  source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
-                }
-              : undefined,
-            category_change: item.category_change
-              ? {
-                  id: item.category_change.id,
-                  name: item.category_change.name,
-                  image: item.category_change.image,
-                }
-              : undefined,
-            sub_category_change: item.sub_category_change
-              ? {
-                  id: item.sub_category_change.id,
-                  name: item.sub_category_change.name,
-                  parent_category_id:
-                    item.sub_category_change.parent_category_id || null,
-                  source_table: item.sub_category_change.source_table || null,
-                }
-              : undefined,
+            authorName: authorName,
+            category: categoryNameItem,
+            subCategory: subCategoryObj,
             imageCount: item.images?.length || 1,
             isFavorite: false,
             images: item.images || [],
@@ -307,21 +284,16 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           }
           renderItem={({ item }) => (
             <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              location={item.location}
-              time={item.time}
-              tag={item.tag}
-              authorName={item.authorName}
-              category={item.category}
-              subCategory={item.subCategory}
-              imageCount={item.imageCount}
-              isFavorite={item.isFavorite}
+              product={item}
               onPress={() =>
                 navigation.navigate("ProductDetail", { product: item })
               }
               onToggleFavorite={() => console.log("Yêu thích:", item.name)}
+              onPressPostType={(pt) => {
+                if (pt.id == "1") navigation.navigate("SellProductScreen");
+                else if (pt.id == "2")
+                  navigation.navigate("PurchaseRequestScreen");
+              }}
             />
           )}
         />

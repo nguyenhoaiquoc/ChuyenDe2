@@ -11,7 +11,7 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState } from "react";
@@ -57,9 +57,8 @@ interface Product {
     name: string;
     image_url: string;
     created_at: string;
-  }[];
+  }[]; // ✅ Thêm: Full array images từ backend
   description?: string;
-  postType?: { id: string; name: string };
   productType?: { id: string; name: string };
   condition?: { id: string; name: string };
   address_json?: { full: string };
@@ -179,7 +178,7 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
-            user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
+              user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
 
             category: categoryName || null,
             subCategory: item.subCategory
@@ -213,6 +212,7 @@ export default function HomeScreen({ navigation }: Props) {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
+            user_id: item.user_id ?? 0,
           };
         });
         setProducts(mapped);
@@ -404,12 +404,6 @@ export default function HomeScreen({ navigation }: Props) {
                 image={item.image}
                 name={item.name}
                 price={item.price}
-                postType={item.postType}
-                onPressPostType={(pt) => {
-                  if (pt.id == "1") navigation.navigate("SellProductScreen");
-                  else if (pt.id == "2")
-                    navigation.navigate("PurchaseRequestScreen");
-                }}
                 location={item.location}
                 time={item.time}
                 tag={item.tag}
@@ -422,6 +416,11 @@ export default function HomeScreen({ navigation }: Props) {
                   navigation.navigate("ProductDetail", { product: item })
                 }
                 onToggleFavorite={() => console.log("Yêu thích:", item.name)}
+                onPressPostType={(pt) => {
+                  if (pt.id == "1") navigation.navigate("SellProductScreen");
+                  else if (pt.id == "2")
+                    navigation.navigate("PurchaseRequestScreen");
+                }}
               />
             )}
           />

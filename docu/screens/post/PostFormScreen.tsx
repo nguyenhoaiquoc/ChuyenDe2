@@ -18,6 +18,7 @@ import axios from "axios";
 import { Alert } from "react-native";
 import { path } from "../../config";
 import * as ImageManipulator from "expo-image-manipulator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const PostFormScreen = ({
@@ -44,11 +45,6 @@ const PostFormScreen = ({
   const [images, setImages] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [user, setUser] = useState<{ id: number; name: string } | null>({
-    id: 1, // user id cố định
-    name: "Test User", // tên tùy ý
-  });
-
   const [conditionId, setConditionId] = useState<number | null>(null);
   const [productTypeId, setProductTypeId] = useState<number | null>(null);
   const [dealTypeId, setDealTypeId] = useState<number | null>(null);
@@ -252,11 +248,10 @@ const PostFormScreen = ({
       formData.append("title", finalTitle);
       formData.append("product_type_id", String(productTypeId));
       formData.append("description", description);
-      formData.append("user_id", user?.id ? String(user.id) : ""); 
       formData.append("price", dealTypeId === 1 ? String(price) : "0");
       formData.append("category_id", String((category as any)?.id || ""));
       formData.append("sub_category_id", String(subCategory?.id || ""));
-      formData.append("post_type_id", String(postTypeId)); 
+      formData.append("post_type_id", String(postTypeId)); // Sử dụng postTypeId từ state
       formData.append("deal_type_id", String(dealTypeId));
       formData.append("condition_id", String(conditionId));
       formData.append("status_id", "1");
@@ -264,8 +259,8 @@ const PostFormScreen = ({
       formData.append("address_json", JSON.stringify({ full: address }));
 
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
-        formData.append("category_change_id", String(exchangeCategory.id));
-        formData.append("sub_category_change_id", String(exchangeSubCategory.id));
+        formData.append("categoryChange_id", String(exchangeCategory.id));
+        formData.append("subCategoryChange_id", String(exchangeSubCategory.id));
       }
 
       images.forEach((uri, index) => {

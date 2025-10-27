@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { PostType, Product } from "../types";
 
 type ProductCardProps = {
   image?: string;
@@ -7,12 +8,7 @@ type ProductCardProps = {
   price: string;
   location: string;
   time: string;
-  tag: string | React.ReactNode; // cho phép truyền cả text hoặc element
-  postType?: {
-    id?: string | number;
-    name?: string;
-  };
-  onPressPostType?: (postType: { id?: string | number; name?: string }) => void;
+  tag: string;
   authorName?: string;
   category?: string;
   subCategory?: {
@@ -23,16 +19,16 @@ type ProductCardProps = {
   };
   imageCount?: number;
   isFavorite?: boolean;
-  onPressCategory?: () => void;
   onPress?: () => void;
   onToggleFavorite?: () => void;
+  onPressPostType?: (postType: PostType) => void;
+  onPressCategory?: () => void;
 };
 
 export default function ProductCard({
   image,
   name,
   price,
-  postType,
   location,
   time,
   authorName,
@@ -40,13 +36,12 @@ export default function ProductCard({
   subCategory,
   imageCount = 0,
   isFavorite = false,
-  onPressCategory,
   onPress,
   onToggleFavorite,
-  onPressPostType,
 }: ProductCardProps) {
   // console.log("🖼️ Image prop nhận vào:", image);
-  const placeholder = "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
+  const placeholder =
+    "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
 
   return (
     <View

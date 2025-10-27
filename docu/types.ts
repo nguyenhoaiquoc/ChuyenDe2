@@ -14,15 +14,11 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
-  ChooseSubCategoryScreen:
-    | { category: { id: string; name: string } }
-    | undefined;
-  PostFormScreen:
-    | {
-        category: { id: string; name: string };
-        subCategory: { id: string; name: string };
-      }
-    | undefined;
+  ChooseSubCategoryScreen: { category: { id: string; name: string } } | undefined;
+  PostFormScreen: {
+    category: { id: string; name: string };
+    subCategory: { id: string; name: string };
+  } | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -34,8 +30,8 @@ export type RootStackParamList = {
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
   UserDetail: undefined;
-  ManagerGroupsScreen: undefined;
-  UserInforScreen: undefined;
+  ManagerGroupsScreen : undefined;
+  UserInforScreen : undefined;
   EditProfileScreen: undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
