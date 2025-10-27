@@ -116,6 +116,7 @@ export default function SellProductScreen({ navigation }: Props) {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
+            user_id: item.user_id ?? 0,
           };
         });
 

@@ -94,13 +94,13 @@ export default function PurchaseRequestScreen({ navigation }: Props) {
             category: categoryName,
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
-                  name: item.subCategory.name,
-                  source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
-                }
+                id: item.subCategory.id
+                  ? parseInt(item.subCategory.id)
+                  : undefined,
+                name: item.subCategory.name,
+                source_table: item.subCategory.source_table,
+                source_detail: item.subCategory.source_detail,
+              }
               : undefined,
             imageCount: item.images?.length || 1,
             isFavorite: false,
@@ -116,6 +116,8 @@ export default function PurchaseRequestScreen({ navigation }: Props) {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
+
+            user_id: item.user_id ?? 0,
           };
         });
 

@@ -137,7 +137,7 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
-            user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
+         
 
             category: categoryName || null,
             subCategory: item.subCategory
@@ -171,6 +171,7 @@ export default function HomeScreen({ navigation }: Props) {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
+            user_id: item.user_id ?? 0,
           };
         });
         setProducts(mapped);
