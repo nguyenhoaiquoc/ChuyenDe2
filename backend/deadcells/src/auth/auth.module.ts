@@ -9,16 +9,24 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { RoleSeedService } from './seed/role.seed.service';
+import { ConfigModule, ConfigService } from '@nestjs/config'; // ✅ để đọc biến môi trường
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Role, Status,OtpVerification]),
-    JwtModule.register({
-      secret: '********', // đổi thành key riêng của bạn
-      signOptions: { expiresIn: '1d' },
+    ConfigModule.forRoot({ isGlobal: true }), // ✅ load .env (chỉ cần 1 lần ở app chính, nhưng để đây cũng ok)
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret:
+          configService.get<string>('JWT_ACCESS_SECRET') || 'supersecretkey',
+        signOptions: { expiresIn: '1d' }, // ⚡ nên để 10–15 phút thay vì 1d
+      }),
+      inject: [ConfigService],
     }),
   ],
-  providers: [AuthService,MailService,RoleSeedService],
   controllers: [AuthController],
+  providers: [AuthService, MailService, RoleSeedService],
+  exports: [AuthService],
 })
 export class AuthModule {}

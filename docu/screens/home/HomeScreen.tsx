@@ -57,8 +57,9 @@ interface Product {
     name: string;
     image_url: string;
     created_at: string;
-  }[]; // ✅ Thêm: Full array images từ backend
+  }[];
   description?: string;
+  postType?: { id: string; name: string };
   productType?: { id: string; name: string };
   condition?: { id: string; name: string };
   address_json?: { full: string };
@@ -178,7 +179,7 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
-              user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
+            user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
 
             category: categoryName || null,
             subCategory: item.subCategory
@@ -191,17 +192,19 @@ export default function HomeScreen({ navigation }: Props) {
                   source_detail: item.subCategory.source_detail,
                 }
               : undefined,
-            categoryChange_id: item.categoryChange_id || null,
-            subCategoryChange_id: item.subCategoryChange_id || null,
-            categoryChange: item.categoryChange || null,
-            subCategoryChange: item.subCategoryChange || null,
+            category_change_id: item.category_change_id || null,
+            sub_category_change_id: item.sub_category_change_id || null,
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
             imageCount: item.images?.length || 1,
             phone: item.phone || null,
             isFavorite: false,
-            images: item.images || [], // ✅ Thêm: Pass full array để Detail swipe
+            images: item.images || [],
             description: item.description || "",
+            postType: item.postType ||
+              item.post_type || { id: "1", name: "Chưa rõ" },
             productType: item.productType ||
-              item.product_type || { id: "1", name: "Ch" },
+              item.product_type || { id: "1", name: "Chưa rõ" },
             condition: item.condition || { id: "1", name: "Chưa rõ" },
             address_json: item.address_json || { full: locationText },
             dealType: item.dealType || { id: "1", name: "Bán" },
@@ -369,6 +372,10 @@ export default function HomeScreen({ navigation }: Props) {
                     setFilteredProducts(
                       products.filter((p) => p.price === "Trao đổi")
                     );
+                  } else if (item.label == "Đang tìm mua") {
+                    setFilteredProducts(
+                      products.filter((p) => p.postType?.id == "2")
+                    );
                   } else {
                     setFilteredProducts(products); // các filter khác hiển thị tất cả
                   }
@@ -397,6 +404,12 @@ export default function HomeScreen({ navigation }: Props) {
                 image={item.image}
                 name={item.name}
                 price={item.price}
+                postType={item.postType}
+                onPressPostType={(pt) => {
+                  if (pt.id == "1") navigation.navigate("SellProductScreen");
+                  else if (pt.id == "2")
+                    navigation.navigate("PurchaseRequestScreen");
+                }}
                 location={item.location}
                 time={item.time}
                 tag={item.tag}
@@ -414,7 +427,7 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
       </ScrollView>
-      {/* Menu dưới */}
+      {/* Menu dưới */} 
       <Menu />
     </View>
   );

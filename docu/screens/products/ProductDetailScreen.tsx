@@ -51,6 +51,10 @@ interface ProductType {
   name: string;
 }
 
+interface PostType {
+  id: string;
+  name: string;
+}
 interface AddressJson {
   full: string;
   province?: string;
@@ -88,23 +92,23 @@ interface Product {
   category_id: string;
   category: Category;
   sub_category_id: string | null;
-  categoryChange_id?: string | null;
-  subCategoryChange_id?: string | null;
+  category_change_id?: string | null;
+  sub_category_change_id?: string | null;
 
   // Thêm đây
-  categoryChange?: {
+  category_change?: {
     id: string;
     name: string;
     image?: string;
   };
-  subCategoryChange?: {
+  sub_category_change?: {
     id: string;
     name: string;
     parent_category_id?: string;
     source_table?: string;
     source_id?: string;
   };
-
+  postType: PostType;
   productType: ProductType;
   condition: Condition;
   address_json: AddressJson;
@@ -160,7 +164,7 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
+  const product = route.params?.product || {};
   const tagText = product.tag || "Chưa có tag";
 
   const [comments, setComments] = useState<Comment[]>([]);
@@ -269,6 +273,9 @@ export default function ProductDetailScreen() {
       ))}
     </View>
   );
+  useEffect(() => {
+    console.log("Product detail:", product);
+  }, []);
 
   const handleChatPress = async () => {
     if (!currentUser) return;
@@ -292,12 +299,6 @@ export default function ProductDetailScreen() {
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
     const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
-    // console.log(
-    //   "Product nhận được ở màn hình Detail:",
-    //   JSON.stringify(product, null, 2)
-    // );
-    console.log(">>> productType:", product.productType);
-
     return (
       <View style={{ width, height: 280 }}>
         <Image
@@ -313,6 +314,10 @@ export default function ProductDetailScreen() {
     offset: width * index,
     index,
   });
+  console.log(">>> dealType:", product.dealType);
+  console.log(">>> category_change:", product.category_change);
+  console.log(">>> sub_category_change:", product.sub_category_change);
+  console.log(">>> product_type:", product.productType);
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -489,7 +494,16 @@ export default function ProductDetailScreen() {
                   {product.name || "Chưa rõ"}
                 </Text>
               </View>
-
+              {/* Loại bài đăng */}
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                <Text className="text-gray-600 text-sm">Loại bài đăng</Text>
+                <Text
+                  className="text-gray-800 text-sm font-medium"
+                  style={{ flexShrink: 1, flexWrap: "wrap" }}
+                >
+                  {product.postType?.name || "Chưa rõ"}
+                </Text>
+              </View>
               {/* Loại giao dịch */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Loại giao dịch</Text>
@@ -502,9 +516,9 @@ export default function ProductDetailScreen() {
               </View>
 
               {/* Danh mục trao đổi */}
-              {product.dealType?.name === "Trao đổi" &&
-                product.categoryChange &&
-                product.subCategoryChange && (
+              {product?.dealType?.name === "Trao đổi" &&
+                !!product?.category_change?.name &&
+                !!product?.sub_category_change?.name && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">
                       Danh mục trao đổi
@@ -513,8 +527,8 @@ export default function ProductDetailScreen() {
                       className="text-gray-800 text-sm font-medium"
                       style={{ flexShrink: 1, flexWrap: "wrap" }}
                     >
-                      {product.categoryChange.name} -{" "}
-                      {product.subCategoryChange.name}
+                      {product.category_change?.name} -{" "}
+                      {product.sub_category_change?.name}
                     </Text>
                   </View>
                 )}
@@ -647,4 +661,4 @@ export default function ProductDetailScreen() {
       </ScrollView>
     </View>
   );
-}
+} 

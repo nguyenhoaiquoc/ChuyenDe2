@@ -1,3 +1,4 @@
+import { GroupService } from './../groups/group.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -29,7 +30,7 @@ export class ProductService {
 
     @InjectRepository(ProductType)
     private readonly productTypeRepo: Repository<ProductType>,
-    
+
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
 
@@ -66,8 +67,10 @@ export class ProductService {
     @InjectRepository(VehicleCategory)
     private readonly vehicleRepo: Repository<VehicleCategory>,
 
+    private readonly groupService: GroupService,
+
     private readonly dataSource: DataSource,
-  ) { }
+  ) {}
 
   // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
   async create(data: any, files?: Express.Multer.File[]) {
@@ -149,16 +152,25 @@ export class ProductService {
       subCategoryId = data.sub_category_id;
     }
 
+    let user: User | null = null;
+    if (data.user_id) {
+      user = await this.userRepo.findOne({
+        where: { id: Number(data.user_id) },
+      });
+      if (!user) {
+        console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
+      }
+    }
     const product = this.productRepo.create({
       name: data.name,
       description: data.description || '',
       price: data.price || 0,
-      user_id: data.user_id,
+      user: user || null,
       post_type_id: data.post_type_id || 1,
       category_id: data.category_id || null,
       sub_category_id: subCategoryId,
-      categoryChange_id: data.categoryChange_id || null,
-      subCategoryChange_id: data.subCategoryChange_id || null,
+      category_change_id: data.category_change_id || null,
+      sub_category_change_id: data.sub_category_change_id || null,
       address_json: data.address_json || {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
@@ -196,8 +208,8 @@ export class ProductService {
         'condition',
         'category',
         'subCategory',
-        'categoryChange',
-        'subCategoryChange',
+        'category_change',
+        'sub_category_change',
         'postType',
         'productType',
       ],
@@ -222,9 +234,9 @@ export class ProductService {
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
           : categoryName ||
-          subCategoryName ||
-          fullProduct.dealType?.name ||
-          'Không có danh mục',
+            subCategoryName ||
+            fullProduct.dealType?.name ||
+            'Không có danh mục',
       category: categoryName,
       subCategory: {
         id: fullProduct.subCategory?.id || null,
@@ -249,11 +261,8 @@ export class ProductService {
   }
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
-    return await this.productRepo.find({
-      where: [
-        { category: { id: categoryId }, status_id: 1 },
-        { categoryChange: { id: categoryId }, status_id: 1 },
-      ],
+    const products = await this.productRepo.find({
+      where: [{ category_id: categoryId, status_id: 1 }],
       relations: [
         'images',
         'user',
@@ -261,13 +270,24 @@ export class ProductService {
         'condition',
         'category',
         'subCategory',
-        'categoryChange',
-        'subCategoryChange',
+        'category_change',
+        'sub_category_change',
         'postType',
-        'productType',
+        'productType', 
       ],
+
       order: { created_at: 'DESC' },
     });
+    console.log(
+      '>>> ProductType test:',
+      products.map((p) => ({
+        id: p.id,
+        product_type: p.productType?.name,
+        product_type_id: p.productType?.id,
+      })),
+    );
+    // 👇 Thêm log để xem dữ liệu
+    return products;
   }
 
   //  Lấy toàn bộ sản phẩm (cho Postman, trả full dữ liệu chi tiết)
@@ -280,8 +300,8 @@ export class ProductService {
         'condition',
         'category',
         'subCategory',
-        'categoryChange',
-        'subCategoryChange',
+        'category_change',
+        'sub_category_change',
         'postType',
         'productType',
       ],
@@ -302,13 +322,30 @@ export class ProductService {
         'condition',
         'category',
         'subCategory',
-        'categoryChange',
-        'subCategoryChange',
+        'category_change',
+        'sub_category_change',
         'postType',
         'productType',
       ],
       order: { created_at: 'DESC' },
     });
+
+    const visibleProducts: Product[] = [];
+    const userId = 1;
+    for (const p of products) {
+      // toàn trường
+      if (p.visibility_type === 0) {
+        visibleProducts.push(p);
+      }
+
+      //  chỉ hiển thị trong nhóm user là member
+      else if (p.visibility_type === 1) {
+        const isMember = await this.groupService.isMember(p.group_id, userId);
+        if (isMember) {
+          visibleProducts.push(p);
+        }
+      }
+    }
 
     return products.map((p) => {
       const categoryName = p.category?.name || null;
@@ -340,8 +377,8 @@ export class ProductService {
         deal_type_id: p.deal_type_id,
         category_id: p.category_id,
         sub_category_id: p.sub_category_id,
-        categoryChange_id: p.categoryChange_id,
-        subCategoryChange_id: p.subCategoryChange_id,
+        category_change_id: p.category_change_id,
+        sub_category_change_id: p.sub_category_change_id,
         status_id: p.status_id,
         visibility_type: p.visibility_type,
         group_id: p.group_id,
@@ -360,36 +397,36 @@ export class ProductService {
           : null,
         category: p.category
           ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
+              id: p.category.id,
+              name: p.category.name,
+              image: p.category.image,
+              hot: p.category.hot,
+            }
           : null,
         subCategory: p.subCategory
           ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
+              id: p.subCategory.id,
+              name: p.subCategory.name,
+              parent_category_id: p.subCategory.parent_category_id,
+              source_table: p.subCategory.source_table,
+              source_id: p.subCategory.source_id,
+            }
           : null,
-        categoryChange: p.categoryChange
+        category_change: p.category_change
           ? {
-            id: p.categoryChange.id,
-            name: p.categoryChange.name,
-            image: p.categoryChange.image,
-          }
+              id: p.category_change.id,
+              name: p.category_change.name,
+              image: p.category_change.image,
+            }
           : null,
-        subCategoryChange: p.subCategoryChange
+        sub_category_change: p.sub_category_change
           ? {
-            id: p.subCategoryChange.id,
-            name: p.subCategoryChange.name,
-            parent_category_id: p.subCategoryChange.parent_category_id,
-            source_table: p.subCategoryChange.source_table,
-            source_id: p.subCategoryChange.source_id,
-          }
+              id: p.sub_category_change.id,
+              name: p.sub_category_change.name,
+              parent_category_id: p.sub_category_change.parent_category_id,
+              source_table: p.sub_category_change.source_table,
+              source_id: p.sub_category_change.source_id,
+            }
           : null,
 
         images:
@@ -435,8 +472,8 @@ export class ProductService {
       deal_type_id: p.deal_type_id,
       category_id: p.category_id,
       sub_category_id: p.sub_category_id,
-      categoryChange_id: p.categoryChange_id,
-      subCategoryChange_id: p.subCategoryChange_id,
+      category_change_id: p.category_change_id,
+      sub_category_change_id: p.sub_category_change_id,
       is_approved: p.is_approved,
       address_json: p.address_json,
       created_at: p.created_at,
@@ -452,45 +489,45 @@ export class ProductService {
         : null,
       category: p.category
         ? {
-          id: p.category.id,
-          name: p.category.name,
-          image: p.category.image,
-          hot: p.category.hot,
-        }
+            id: p.category.id,
+            name: p.category.name,
+            image: p.category.image,
+            hot: p.category.hot,
+          }
         : null,
       subCategory: p.subCategory
         ? {
-          id: p.subCategory.id,
-          name: p.subCategory.name,
-          parent_category_id: p.subCategory.parent_category_id,
-          source_table: p.subCategory.source_table,
-          source_id: p.subCategory.source_id,
-        }
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            parent_category_id: p.subCategory.parent_category_id,
+            source_table: p.subCategory.source_table,
+            source_id: p.subCategory.source_id,
+          }
         : null,
-      categoryChange: p.categoryChange
+      category_change: p.category_change
         ? {
-          id: p.categoryChange.id,
-          name: p.categoryChange.name,
-          image: p.categoryChange.image,
-        }
+            id: p.category_change.id,
+            name: p.category_change.name,
+            image: p.category_change.image,
+          }
         : null,
-      subCategoryChange: p.subCategoryChange
+      sub_category_change: p.sub_category_change
         ? {
-          id: p.subCategoryChange.id,
-          name: p.subCategoryChange.name,
-          parent_category_id: p.subCategoryChange.parent_category_id,
-          source_table: p.subCategoryChange.source_table,
-          source_id: p.subCategoryChange.source_id,
-        }
+            id: p.sub_category_change.id,
+            name: p.sub_category_change.name,
+            parent_category_id: p.sub_category_change.parent_category_id,
+            source_table: p.sub_category_change.source_table,
+            source_id: p.sub_category_change.source_id,
+          }
         : null,
       images: p.images
         ? p.images.map((img) => ({
-          id: img.id,
-          product_id: img.product_id,
-          name: img.name,
-          image_url: img.image_url,
-          created_at: img.created_at,
-        }))
+            id: img.id,
+            product_id: img.product_id,
+            name: img.name,
+            image_url: img.image_url,
+            created_at: img.created_at,
+          }))
         : [],
     }));
   }
@@ -547,45 +584,56 @@ export class ProductService {
     }
   }
   async findById(id: number): Promise<any> {
-  const product = await this.productRepo.findOne({
-    where: { id },
-    relations: [
-      'images',
-      'user',
-      'dealType',
-      'condition',
-      'category',
-      'subCategory',
-      'categoryChange',
-      'subCategoryChange',
-      'postType',
-      'productType',
-    ],
-  });
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+      ],
+    });
 
-  if (!product) return null;
+    if (!product) return null;
 
-  return {
-    id: product.id,
-    name: product.name,
-    description: product.description,
-    price: Number(product.price),
-    thumbnail_url: product.images?.[0]?.image_url || null,
-    phone: product.user?.phone || null,
-    user_id: product.user_id,
-    author_name: product.user?.fullName || 'Người bán',
-    images: product.images?.map((img) => ({
-      id: img.id,
-      product_id: img.product_id,
-      name: img.name,
-      image_url: img.image_url,
-      created_at: img.created_at,
-    })) || [],
-    dealType: product.dealType ? { id: product.dealType.id, name: product.dealType.name } : null,
-    condition: product.condition ? { id: product.condition.id, name: product.condition.name } : null,
-    category: product.category ? { id: product.category.id, name: product.category.name } : null,
-    subCategory: product.subCategory ? { id: product.subCategory.id, name: product.subCategory.name } : null,
-  };
-}
-
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      thumbnail_url: product.images?.[0]?.image_url || null,
+      phone: product.user?.phone || null,
+      user_id: product.user_id,
+      author_name: product.user?.fullName || 'Người bán',
+      images:
+        product.images?.map((img) => ({
+          id: img.id,
+          product_id: img.product_id,
+          name: img.name,
+          image_url: img.image_url,
+          created_at: img.created_at,
+        })) || [],
+      dealType: product.dealType
+        ? { id: product.dealType.id, name: product.dealType.name }
+        : null,
+      condition: product.condition
+        ? { id: product.condition.id, name: product.condition.name }
+        : null,
+      category: product.category
+        ? { id: product.category.id, name: product.category.name }
+        : null,
+      subCategory: product.subCategory
+        ? { id: product.subCategory.id, name: product.subCategory.name }
+        : null,
+      productType: product.productType
+        ? { id: product.productType.id, name: product.productType.name }
+        : null,
+    };
+  }
 }

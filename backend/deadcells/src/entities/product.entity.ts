@@ -27,12 +27,12 @@ export class Product {
   @Column({ type: 'varchar', length: 191, default: '' })
   name: string;
 
-  @ManyToOne(() => ProductType)
-  @JoinColumn({ name: 'product_type_id' })
-  productType: ProductType;
-
-  @Column({ type: 'bigint', nullable: true })
+  @Column({ name: 'product_type_id', type: 'bigint', nullable: true })
   product_type_id: number | null;
+
+  @ManyToOne(() => ProductType, { nullable: true })
+  @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
+  productType: ProductType | null;
 
   // ⚙️ Sửa longtext → text (Postgres không có longtext)
   @Column({ type: 'text', nullable: false })
@@ -49,12 +49,12 @@ export class Product {
   images: ProductImage[];
 
   // ===== Thông tin người đăng =====
-  @Column({ type: 'bigint' })
-  user_id: number;
+  @Column({ type: 'bigint', nullable: true })
+  user_id: number | null;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user: User | null;
 
   // ===== Phân loại =====
   @ManyToOne(() => PostType)
@@ -72,7 +72,7 @@ export class Product {
   dealType: DealType;
 
   @Column({ type: 'bigint', nullable: true })
-  category_id: number;
+  category_id: number | null;
 
   @ManyToOne(() => Category)
   @JoinColumn({ name: 'category_id' })
@@ -90,18 +90,18 @@ export class Product {
 
   // ==================== TRAO ĐỔI ====================
   @Column({ type: 'bigint', nullable: true })
-  categoryChange_id: number | null;
+  category_change_id: number | null;
 
   @ManyToOne(() => Category)
-  @JoinColumn({ name: 'categoryChange_id' })
-  categoryChange: Category | null;
+  @JoinColumn({ name: 'category_change_id' })
+  category_change: Category | null;
 
   @Column({ type: 'bigint', nullable: true })
-  subCategoryChange_id: number | null;
+  sub_category_change_id: number | null;
 
   @ManyToOne(() => SubCategory)
-  @JoinColumn({ name: 'subCategoryChange_id' })
-  subCategoryChange: SubCategory | null;
+  @JoinColumn({ name: 'sub_category_change_id' })
+  sub_category_change: SubCategory | null;
 
   @ManyToOne(() => Condition)
   @JoinColumn({ name: 'condition_id' })
@@ -121,10 +121,10 @@ export class Product {
   status_id: number;
 
   @Column({ type: 'bigint', default: 0 })
-  visibility_type: number;
+  visibility_type: number;   //0 toàn trường, 1 trong nhóm
 
   @Column({ type: 'bigint', nullable: true })
-  group_id: number;
+  group_id: number;  
 
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;

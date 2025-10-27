@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RegisterDto } from './dto/register-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,159 +24,217 @@ export class AuthService {
     private readonly otpRepository: Repository<OtpVerification>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-  ) { }
-
+  ) {}
 
   async getUsers() {
-    return await this.userRepository.find();
+    return this.userRepository.find();
   }
 
+  /** ---------------- Register ---------------- */
   async register(dto: RegisterDto) {
-   const existing = await this.userRepository.findOne({ where: { email: dto.email } });
-if (existing && existing.is_verified) {
-  throw new BadRequestException('Email đã tồn tại');
-}
-if (existing && !existing.is_verified) {
-  // Xóa hoặc ghi đè lại tài khoản chưa xác thực
-  await this.userRepository.remove(existing);
-}
-
-
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    const user = this.userRepository.create({
-      email: dto.email,
-      password: hashedPassword,
-      fullName: dto.fullName,
-      phone: dto.phone,
-      roleId: 2,
+    const existing = await this.userRepository.findOne({
+      where: { email: dto.email },
     });
-    await this.userRepository.save(user);
 
-    // Tạo OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 5 số
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 phút
+    if (existing && existing.is_verified) {
+      throw new BadRequestException('Email đã tồn tại');
+    }
+
+    let user: User;
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+
+    if (existing && !existing.is_verified) {
+      // ✅ KHÔNG xoá hard; chỉ cập nhật lại thông tin & regenerate OTP
+      existing.fullName = dto.fullName;
+      existing.phone = dto.phone ?? existing.phone;
+      existing.passwordHash = passwordHash;
+      user = await this.userRepository.save(existing);
+    } else {
+      user = this.userRepository.create({
+        email: dto.email,
+        passwordHash,
+        fullName: dto.fullName,
+        phone: dto.phone,
+        roleId: 2, // mặc định member
+        statusId: existing?.statusId ?? 1, // tuỳ hệ thống: 1 = active
+      });
+      user = await this.userRepository.save(user);
+    }
+
+    // 🔐 Tạo OTP xác minh: 6 chữ số, lưu HASH
+    const rawOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+    const otpHash = await bcrypt.hash(rawOtp, 10);
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 5); // 5 phút
 
     const otpEntity = this.otpRepository.create({
       user,
-      otp,
+      otp_hash: otpHash,
+      type: 'verify',
+      used: false,
       expires_at: expiresAt,
     });
     await this.otpRepository.save(otpEntity);
 
-    // Gửi mail
-    await this.mailService.sendOTP(user.email, otp);
+    // Gửi mail (gửi mã thô)
+    await this.mailService.sendOTP(user.email, rawOtp);
 
     return { message: 'Đăng ký thành công. OTP đã được gửi về email' };
   }
 
- async verifyOtp(email: string, otp: string) {
-  const user = await this.userRepository.findOne({ where: { email } });
-  if (!user) throw new BadRequestException('Email không tồn tại');
-
-  const otpRecord = await this.otpRepository.findOne({
-    where: { user: { id: user.id }, otp, used: false },
-    order: { created_at: 'DESC' },
-  });
-  if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
-  if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
-
-  otpRecord.used = true;
-  await this.otpRepository.save(otpRecord);
-
-  // ✅ Cập nhật trạng thái xác thực tài khoản
-  user.is_verified = true;
-  await this.userRepository.save(user);
-
-  return { message: 'Xác thực thành công' };
-}
-
-
-  async login(dto: LoginDto) {
-  const user = await this.userRepository.findOne({
-    where: { email: dto.email },
-    relations: ['role', 'status'],
-  });
-
-  if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
-
-  // ✅ Kiểm tra xác thực tài khoản
-  if (!user.is_verified) {
-    throw new UnauthorizedException('Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực OTP.');
-  }
-
-  const passwordValid = await bcrypt.compare(dto.password, user.password);
-  if (!passwordValid) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
-
-  const payload = { id: user.id, email: user.email };
-  const token = this.jwtService.sign(payload);
-
-  return { token, role: user.role.name, fullName: user.fullName,id: user.id };
-}
-
-  // --- Gửi OTP quên mật khẩu ---
-  async forgotPassword(email: string) {
+  /** ---------------- Verify Email OTP ---------------- */
+  async verifyOtp(email: string, otp: string) {
     const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) throw new BadRequestException('Email không tồn tại');
-
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 chữ số
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 phút
-
-    const otpEntity = this.otpRepository.create({
-      user,
-      otp,
-      expires_at: expiresAt,
-      type: 'reset', // phân biệt OTP reset mật khẩu
-    });
-
-    await this.otpRepository.save(otpEntity);
-
-    // Gửi OTP qua email
-    await this.mailService.sendOTP(user.email, otp);
-
-    return { message: 'OTP đã được gửi về email' };
-  }
-
-  // --- Verify OTP quên mật khẩu ---
-  async verifyResetOtp(email: string, otp: string) {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) throw new BadRequestException('Email không tồn tại');
+    // Để tránh enumeration, có thể trả thông điệp chung chung.
+    if (!user) throw new BadRequestException('OTP không hợp lệ');
 
     const otpRecord = await this.otpRepository.findOne({
-      where: { user: { id: user.id }, otp, used: false, type: 'reset' },
+      where: { user: { id: user.id }, type: 'verify', used: false },
       order: { created_at: 'DESC' },
     });
-
     if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
-    if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
+    if (otpRecord.expires_at < new Date()) {
+      throw new BadRequestException('OTP đã hết hạn');
+    }
+
+    const ok = await bcrypt.compare(otp, otpRecord.otp_hash);
+    if (!ok) throw new BadRequestException('OTP không hợp lệ');
 
     otpRecord.used = true;
     await this.otpRepository.save(otpRecord);
 
-    // Tạo resetToken tạm để đổi mật khẩu
-    const resetToken = uuidv4();
-    user.resetToken = resetToken;
+    // ✅ Cập nhật trạng thái xác thực tài khoản
+    user.is_verified = true;
+    user.verifiedAt = new Date();
     await this.userRepository.save(user);
 
-    return { resetToken };
+    return { message: 'Xác thực thành công' };
   }
 
-  async resetPasswordWithDto(body: ResetPasswordDto) {
-    const { token, newPassword } = body;
-    const user = await this.userRepository.findOne({ where: { resetToken: token } });
-    if (!user) throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+  /** ---------------- Login ---------------- */
+  async login(dto: LoginDto) {
+    const user = await this.userRepository.findOne({
+      where: { email: dto.email },
+      relations: ['role', 'status'],
+    });
 
-    // Kiểm tra mật khẩu mới có trùng mật khẩu cũ không
-    const isSame = await bcrypt.compare(newPassword, user.password);
-    if (isSame) {
-      throw new BadRequestException('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+    // Tránh lộ thông tin
+    if (!user)
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+
+    if (!user.is_verified) {
+      throw new UnauthorizedException(
+        'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực OTP.',
+      );
     }
 
-    // Hash và lưu mật khẩu mới
-    user.password = await bcrypt.hash(newPassword, 10);
-    user.resetToken = null;
+    // (Tuỳ chọn) kiểm tra trạng thái bị khoá/banned theo statusId hoặc status.name
+
+    const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
+    if (!passwordValid) {
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    }
+
+    const payload = { sub: user.id, email: user.email };
+    const token = this.jwtService.sign(payload); // expiresIn cấu hình tại JwtModule
+
+    return {
+      token,
+      role: user.role?.name,
+      fullName: user.fullName,
+      id: user.id,
+      tokenType: 'Bearer',
+    };
+  }
+
+  /** ---------------- Forgot Password (send OTP) ---------------- */
+  async forgotPassword(email: string) {
+    // Tránh enumeration: luôn trả về message trung tính
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (user) {
+      const rawOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+      const otpHash = await bcrypt.hash(rawOtp, 10);
+      const expiresAt = new Date(Date.now() + 1000 * 60 * 5); // 5 phút
+
+      const otpEntity = this.otpRepository.create({
+        user,
+        otp_hash: otpHash,
+        type: 'reset',
+        used: false,
+        expires_at: expiresAt,
+      });
+      await this.otpRepository.save(otpEntity);
+
+      await this.mailService.sendOTP(user.email, rawOtp);
+    }
+
+    return {
+      message:
+        'Nếu email tồn tại, chúng tôi đã gửi OTP đặt lại mật khẩu tới hộp thư của bạn.',
+    };
+  }
+
+  /** ---------------- Verify Reset OTP -> cấp reset token tạm ---------------- */
+  async verifyResetOtp(email: string, otp: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new BadRequestException('OTP không hợp lệ');
+
+    const otpRecord = await this.otpRepository.findOne({
+      where: { user: { id: user.id }, type: 'reset', used: false },
+      order: { created_at: 'DESC' },
+    });
+    if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
+    if (otpRecord.expires_at < new Date()) {
+      throw new BadRequestException('OTP đã hết hạn');
+    }
+
+    const ok = await bcrypt.compare(otp, otpRecord.otp_hash);
+    if (!ok) throw new BadRequestException('OTP không hợp lệ');
+
+    otpRecord.used = true;
+    await this.otpRepository.save(otpRecord);
+
+    // 🔐 Cấp reset token tạm: LƯU HASH + có hạn
+    const rawResetToken = uuidv4();
+    user.resetTokenHash = await bcrypt.hash(rawResetToken, 10);
+    user.resetTokenExpiresAt = new Date(Date.now() + 1000 * 60 * 15); // 15 phút
+    await this.userRepository.save(user);
+
+    return { resetToken: rawResetToken };
+  }
+
+  /** ---------------- Reset Password bằng token tạm ---------------- */
+  async resetPasswordWithDto(body: ResetPasswordDto) {
+    const { email, token, newPassword } = body as any; // cần dto có email
+
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (
+      !user ||
+      !user.resetTokenHash ||
+      !user.resetTokenExpiresAt ||
+      user.resetTokenExpiresAt < new Date()
+    ) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    const tokenOk = await bcrypt.compare(token, user.resetTokenHash);
+    if (!tokenOk) {
+      throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Không cho trùng mật khẩu cũ
+    const isSame = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSame) {
+      throw new BadRequestException(
+        'Mật khẩu mới không được trùng với mật khẩu hiện tại',
+      );
+    }
+
+    // Hash & lưu mật khẩu mới + xoá reset token + đánh dấu thời điểm đổi mật khẩu
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordChangedAt = new Date();
+    user.resetTokenHash = null;
+    user.resetTokenExpiresAt = null;
+
     await this.userRepository.save(user);
 
     return { message: 'Đặt lại mật khẩu thành công' };
