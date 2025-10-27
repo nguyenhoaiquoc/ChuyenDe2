@@ -9,15 +9,6 @@ import {
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome5 } from "@expo/vector-icons";
-<<<<<<< HEAD
-import { useState, useRef, useEffect } from 'react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
-import { useRoute, RouteProp } from "@react-navigation/native";
-import { io, Socket } from "socket.io-client";
-import { path } from '../../config';
-type ChatRoomRouteProp = RouteProp<RootStackParamList, "ChatRoomScreen">;
-=======
 import { useState, useRef, useEffect } from "react";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRoute, RouteProp } from "@react-navigation/native";
@@ -27,58 +18,12 @@ import {
   ChatRoomNavigationProp,
   ChatRoomRouteProp,
 } from "../../types";
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
 type Props = {
   navigation: ChatRoomNavigationProp;
   route: ChatRoomRouteProp;
 };
 
-<<<<<<< HEAD
-export default function ChatRoomScreen({ navigation }: Props) {
-  const route = useRoute<ChatRoomRouteProp>();
-  const { product, otherUserId, otherUserName, currentUserId, currentUserName, token } = route.params;
-
-
-  const [messages, setMessages] = useState<{ text: string; time: string; senderId: number }[]>([]);
-  const [content, setContent] = useState("");
-  const scrollViewRef = useRef<ScrollView>(null);
-
-const socketRef = useRef<Socket | null>(null);
-
-useEffect(() => {
-  socketRef.current = io(path, {
-    auth: { userId: currentUserId, token: `Bearer ${token}` },
-  });
-
-
-  // ✅ Lắng nghe tin nhắn mới
-  socketRef.current.on("receiveMessage", (msg: any) => {
-    setMessages(prev => [
-      ...prev,
-      {
-        text: msg.content ?? "",
-        time: new Date(msg.created_at).toLocaleTimeString().slice(0, 5),
-        senderId: msg.sender_id,
-      }
-    ]);
-  });
-
-  // Load tin nhắn cũ khi mở chat
-  socketRef.current.emit("getMessages", { userA: currentUserId, userB: otherUserId });
-  socketRef.current.on("loadMessages", (msgs: any[]) => {
-    setMessages(msgs.map(m => ({
-      text: m.content ?? "",
-      time: new Date(m.created_at).toLocaleTimeString().slice(0, 5),
-      senderId: m.sender_id,
-    })));
-  });
-
-  return () => {
-    socketRef.current?.disconnect();
-  };
-}, []);
-=======
 export default function ChatRoomScreen({ navigation, route  }: Props) {
 
    const {
@@ -128,8 +73,11 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
         }))
       );
     });
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, []);
 
   // ─── Tự động scroll xuống khi có tin nhắn mới ──────────────────────
   useEffect(() => {
@@ -139,12 +87,6 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
   // ─── Gửi tin nhắn ─────────────────────────────────────────────────
   const handleSend = () => {
     if (!content.trim() || !socketRef.current) return;
-<<<<<<< HEAD
-  console.log("🔥 Gửi tin nhắn:", content);
-
-    socketRef.current.emit("sendMessage", newMessage);
-
-=======
 
     const newMessage = {
       room_id: String(roomId),
@@ -155,7 +97,6 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
 
     socketRef.current.emit("sendMessage", newMessage);
 
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
     // Hiển thị ngay tin nhắn (optimistic UI)
     setMessages((prev) => [
       ...prev,
@@ -185,15 +126,11 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
           <View className="flex flex-row gap-2 items-center">
             <Image
               className="w-[46px] h-[46px] rounded-full"
-<<<<<<< HEAD
-              source={{ uri: product.image || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
-=======
               source={{
                 uri:
                   product?.image ||
                   "https://cdn-icons-png.flaticon.com/512/149/149071.png",
               }}
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
             />
             <View>
               <Text className="font-semibold">{otherUserName}</Text>
@@ -217,14 +154,6 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
           return (
             <View
               key={index}
-<<<<<<< HEAD
-              className={`flex flex-col gap-1 ${isMe ? 'self-end' : 'self-start'} mb-3`}
-            >
-              <Text className={`${isMe ? 'bg-yellow-200' : 'bg-gray-200'} px-3 py-3 rounded-xl max-w-[70%]`}>
-                {msg.text}
-              </Text>
-              <Text className={isMe ? 'self-end text-gray-400 text-xs' : 'text-gray-400 text-xs'}>
-=======
               className={`flex flex-col gap-1 ${
                 isMe ? "self-end" : "self-start"
               } mb-3`}
@@ -241,7 +170,6 @@ export default function ChatRoomScreen({ navigation, route  }: Props) {
                   isMe ? "self-end" : "self-start"
                 }`}
               >
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
                 {msg.time}
               </Text>
             </View>

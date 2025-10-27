@@ -32,50 +32,6 @@ const filters = [
   { id: "6", label: "Gợi ý cho bạn " },
 ];
 
-<<<<<<< HEAD
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[]; // ✅ Thêm: Full array images từ backend
-  description?: string;
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string }; // Để dùng category.name
-  created_at?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-}
-
-=======
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -181,11 +137,7 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
-<<<<<<< HEAD
-              user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
-=======
          
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
             category: categoryName || null,
             subCategory: item.subCategory
@@ -408,21 +360,7 @@ export default function HomeScreen({ navigation }: Props) {
             scrollEnabled={false}
             renderItem={({ item }) => (
               <ProductCard
-<<<<<<< HEAD
-                image={item.image}
-                name={item.name}
-                price={item.price}
-                location={item.location}
-                time={item.time}
-                tag={item.tag}
-                authorName={item.authorName}
-                category={item.category}
-                subCategory={item.subCategory}
-                imageCount={item.imageCount}
-                isFavorite={item.isFavorite}
-=======
                 product={item}
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
                 }

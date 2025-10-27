@@ -29,129 +29,6 @@ import {
 
 const { width } = Dimensions.get("window");
 
-<<<<<<< HEAD
-interface Comment {
-  id: number;
-  content: string;
-  created_at: string;
-  user: {
-    id: number;
-    fullName: string;
-    image?: string;
-  };
-}
-
-interface ProductImage {
-  id: string;
-  product_id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-}
-
-interface Condition {
-  id: string;
-  name: string;
-}
-
-interface ProductType {
-  id: string;
-  name: string;
-}
-
-interface AddressJson {
-  full: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  village?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-  hot?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface DealType {
-  id: string;
-  name: string;
-}
-
-interface Product {
-  id: string;
-  authorName: string;
-  name: string;
-  description: string;
-  phone?: string;
-  price: string;
-  thumbnail_url?: string;
-  images: ProductImage[];
-  user_id: string;
-  post_type_id: string;
-  dealType: DealType;
-  category_id: string;
-  category: Category;
-  sub_category_id: string | null;
-  categoryChange_id?: string | null;
-  subCategoryChange_id?: string | null;
-
-  // Thêm đây
-  categoryChange?: {
-    id: string;
-    name: string;
-    image?: string;
-  };
-  subCategoryChange?: {
-    id: string;
-    name: string;
-    parent_category_id?: string;
-    source_table?: string;
-    source_id?: string;
-  };
-
-  productType: ProductType;
-  condition: Condition;
-  address_json: AddressJson;
-  status_id: string;
-  visibility_type: string;
-  group_id?: string | null;
-  is_approved: boolean;
-  created_at: string;
-  updated_at: string;
-  image?: any;
-  location?: string;
-  time?: string;
-  tag?: string;
-  imageCount?: number;
-  isFavorite?: boolean;
-}
-
-type RootStackParamList = {
-  ProductDetail: { product: Product };
-  ChatRoomScreen: {
-    product: Product;
-    otherUserId: number;
-    otherUserName?: string;
-    currentUserId: number;
-    currentUserName: string;
-  };
-};
-
-type ProductDetailScreenRouteProp = RouteProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-
-=======
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 export default function ProductDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -168,12 +45,7 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-<<<<<<< HEAD
-  const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
-  const tagText = product.tag || "Chưa có tag";
-=======
   const product: Product = route.params?.product || {} as Product;
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -197,7 +69,7 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => { }, [product]);
+  useEffect(() => {}, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
@@ -216,27 +88,27 @@ export default function ProductDetailScreen() {
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-        ...img,
-        id: img.id.toString(),
-        product_id: img.product_id.toString(),
-        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-        image_url:
-          img.image_url.startsWith("file://") ||
-            img.image_url.startsWith("http")
-            ? img.image_url
-            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-      })) // Cast string nếu cần
-      : [
-        {
-          id: "1",
-          product_id: product.id || "1",
-          name: "Default",
+          ...img,
+          id: img.id.toString(),
+          product_id: img.product_id.toString(),
+          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
           image_url:
-            product.image ||
-            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
-          created_at: new Date().toISOString(),
-        },
-      ];
+            img.image_url.startsWith("file://") ||
+            img.image_url.startsWith("http")
+              ? img.image_url
+              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+        })) // Cast string nếu cần
+      : [
+          {
+            id: "1",
+            product_id: product.id || "1",
+            name: "Default",
+            image_url:
+              product.image ||
+              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+            created_at: new Date().toISOString(),
+          },
+        ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -290,59 +162,11 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
-<<<<<<< HEAD
-  const handleChatPress = async () => {
-    try {
-      if (!currentUser) {
-        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-        return;
-      }
-
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
-        return;
-      }
-
-      const sellerId = String(product.user_id);
-      const buyerId = String(currentUser.id);
-
-      const response = await openOrCreateRoom(token, {
-        seller_id: sellerId,
-        buyer_id: buyerId,
-        room_type: "PAIR",
-        product_id: String(product.id),
-      });
-
-      // ✅ Tùy theo backend trả về
-      const room = response.room ?? response;
-      console.log("🟢 Room nhận được:", room);
-      const headerValue = token.startsWith("Bearer ")
-        ? token
-        : `Bearer ${token}`;
-      console.log("🧾 Authorization header gửi đi:", headerValue);
-      const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
-      const otherUserName = product.authorName || "Người dùng";
-
-      navigation.navigate("ChatRoomScreen", {
-        roomId: room.id,
-        product,
-        otherUserId,
-        otherUserName,
-        currentUserId: currentUser.id,
-        currentUserName: currentUser.name,
-        token,
-      });
-    } catch (error) {
-      console.error("❌ Lỗi mở phòng chat:", error);
-      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-=======
  const handleChatPress = async () => {
   try {
     if (!currentUser) {
       Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
       return;
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
     }
 
     const token = await AsyncStorage.getItem("token");
@@ -387,7 +211,6 @@ console.log("🧾 Authorization header gửi đi:", headerValue);
 };
 
 
-
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
     const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
@@ -406,8 +229,6 @@ console.log("🧾 Authorization header gửi đi:", headerValue);
     offset: width * index,
     index,
   });
-<<<<<<< HEAD
-=======
 
   // 🧩 Gọi API tạo hoặc lấy phòng chat
 async function openOrCreateRoom(
@@ -437,7 +258,6 @@ const res = await axios.post(`${path}/chat/room`, payload, {
     throw err;
   }
 }
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -534,29 +354,19 @@ const res = await axios.post(`${path}/chat/room`, payload, {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                "vi-VN",
-                {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                }
-              )}`
+                  "vi-VN",
+                  {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }
+                )}`
               : product.time || "1 tuần trước"}
           </Text>
 
           {/* Thông tin shop */}
-          <TouchableOpacity
-            onPress={() => {
-              if (product.user_id) {
-                navigation.navigate("UserDetail", {
-                  userId: product.user_id,
-                  productId: product.id, // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
-                });
-              } else {
-                Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
-              }
-            }}
->
+          <TouchableOpacity /* onPress={() => navigation.navigate("UserDetail")} */
+          >
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
@@ -565,12 +375,14 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">{product.authorName || "Người dùng"}</Text>
+                <Text className="font-semibold">Người dùng</Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
+                <Text className="ml-1 text-gray-500 text-xs">
+                  (14 đánh giá)
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -780,8 +592,9 @@ const res = await axios.post(`${path}/chat/room`, payload, {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
-                  }`}
+                className={`ml-2 px-4 py-2 rounded-full ${
+                  isSending ? "bg-gray-400" : "bg-blue-500"
+                }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">

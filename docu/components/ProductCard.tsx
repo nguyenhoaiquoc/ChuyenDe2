@@ -11,25 +11,6 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({
-<<<<<<< HEAD
-  image,
-  name,
-  price,
-  location,
-  time,
-  authorName,
-  category,
-  subCategory,
-  imageCount = 0,
-  isFavorite = false,
-  onPress,
-  onToggleFavorite,
-}: ProductCardProps) {
-  // console.log("🖼️ Image prop nhận vào:", image);
-  const placeholder =
-    "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
-
-=======
   product,
   onPress,
   onToggleFavorite,
@@ -57,7 +38,6 @@ export default function ProductCard({
   const subCategory = product.sub_category_change;
   const imageCount = product.images?.length || 1;
   const isFavorite = product.isFavorite || false;
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
   return (
     <View
       className="w-[48%] mx-[1%] mb-3 bg-white rounded-lg overflow-hidden shadow-sm"

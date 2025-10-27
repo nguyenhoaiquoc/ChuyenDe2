@@ -8,11 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-<<<<<<< HEAD
-import { RootStackParamList, ProductType } from "../../types";
-=======
 import { Product, RootStackParamList } from "../../types";
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -131,11 +127,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-<<<<<<< HEAD
-            authorName: authorName,
-            category: categoryNameItem,
-            subCategory: subCategoryObj,
-=======
             authorName: item.user?.fullName || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
             category: categoryName,
@@ -165,7 +156,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                   source_table: item.sub_category_change.source_table || null,
                 }
               : undefined,
->>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
             imageCount: item.images?.length || 1,
             isFavorite: false,
             images: item.images || [],
