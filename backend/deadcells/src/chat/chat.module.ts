@@ -1,17 +1,20 @@
 // src/chat/chat.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ChatGateway } from './chat.gateway';
-import { ChatService } from './chat.service';
-import { JwtModule } from '@nestjs/jwt';
+import { ConversationRoom } from 'src/entities/conversation-room.entity';
+import { ConversationParticipant } from 'src/entities/conversation-participant.entity';
 import { Message } from 'src/entities/message.entity';
+import { ChatService } from './chat.service';
+import { ChatGateway } from './chat.gateway';
+import { ChatController } from './chat.controller';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Message]),
-    JwtModule.register({ secret: process.env.JWT_SECRET || 'changeme' }), // hoặc import AuthModule
+    TypeOrmModule.forFeature([ConversationRoom, ConversationParticipant, Message]),
   ],
-  providers: [ChatGateway, ChatService],
+  controllers: [ChatController],
+  providers: [ChatService, ChatGateway, JwtAuthGuard],
   exports: [ChatService],
 })
 export class ChatModule {}
