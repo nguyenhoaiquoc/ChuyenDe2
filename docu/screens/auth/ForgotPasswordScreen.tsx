@@ -1,9 +1,6 @@
-
 import '../../global.css';
-import { Text, View, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { Image } from 'react-native';
-import { TextInput } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import Header_lg_reg from '../../components/HeaderAuth';
@@ -15,55 +12,85 @@ import axios from 'axios';
 import { path } from '../../config';
 
 type Props = {
-    navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>
-}
+  navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>;
+};
+
 export default function ForgotPasswordScreen({ navigation }: Props) {
-    const [email, setEmail] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleSendOtp = async () => {
-        if (!email) return Alert.alert('Vui lòng nhập email');
+  const onChangeEmail = (t: string) => setEmail(t);
 
-        try {
-            setIsLoading(true);
-            const res = await axios.post(`${path}/auth/forgot-password`, { email });
-            Alert.alert(res.data.message);
-            // Điều hướng sang màn OTPVerifyScreen kèm param email
-            navigation.navigate('OTPVerifyScreen', { email });
-        } catch (err: any) {
-            Alert.alert(err.response?.data?.message || 'Gửi OTP thất bại');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    return (
-        <View className="">
-            <View className="pl-5 pt-20" >
+  const handleSendOtp = async () => {
+    if (isLoading) return;
 
-                <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
-            </View>
+    const emailTrim = (email || '').trim().toLowerCase();
+    if (!emailTrim) {
+      Alert.alert('Vui lòng nhập email');
+      return;
+    }
+    // Nếu BE chỉ chấp nhận domain @fit.tdc.edu.vn, FE nên chặn sớm
+    if (!emailTrim.endsWith('@fit.tdc.edu.vn')) {
+      Alert.alert('Email không hợp lệ', 'Chỉ chấp nhận email @fit.tdc.edu.vn');
+      return;
+    }
 
-            <StatusBar style="auto" />
+    try {
+      setIsLoading(true);
+      await axios.post(
+        `${path}/auth/forgot-password`,
+        { email: emailTrim },
+        { timeout: 15000 }
+      );
+      // Anti-enumeration: luôn báo thông điệp trung tính
+      Alert.alert('Nếu email hợp lệ, mã OTP đặt lại đã được gửi.');
+      // Điều hướng sang màn xác thực OTP reset, kèm email
+      navigation.navigate('VerifyResetOtpScreen' as any, { email: emailTrim });
+    } catch (err: any) {
+      // Dù lỗi gì cũng nên giữ thông điệp trung tính để tránh lộ tồn tại email
+      Alert.alert('Nếu email hợp lệ, mã OTP đặt lại đã được gửi.');
+      navigation.navigate('VerifyResetOtpScreen' as any, { email: emailTrim });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            <Header_lg_reg value="Đặt lại mật khẩu" />
-            <View className="px-2 mt-10">
-                <Text>
-                    Nhập Email để đặt lại mật khẩu của bạn
-                </Text>
-            </View>
+  const canSubmit = !!email.trim() && !isLoading;
 
-            <View className="mt-5 px-2" >
+  return (
+    <View>
+      <View className="pl-5 pt-20">
+        <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
+      </View>
 
-                <View className="mt-5 px-2">
-                    <FloatingInput
-                        label="Email"
-                        value={email}
-                        onChangeText={setEmail}
-                    />
+      <StatusBar style="auto" />
+      <Header_lg_reg value="Đặt lại mật khẩu" />
 
-                    <Button value="Tiếp tục" onPress={handleSendOtp} loading={isLoading} />
-                </View>
-            </View>
-        </View>
-    )
+      <View className="px-2 mt-10">
+        <Text>Nhập Email để đặt lại mật khẩu của bạn</Text>
+      </View>
+
+      <View className="mt-5 px-2">
+        <FloatingInput
+          label="Email"
+          value={email}
+          onChangeText={onChangeEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="emailAddress"
+          autoComplete="email"
+          returnKeyType="done"
+          onSubmitEditing={handleSendOtp}
+        />
+
+        <Button
+          value="Tiếp tục"
+          onPress={handleSendOtp}
+          loading={isLoading}
+          disabled={!canSubmit}
+        />
+      </View>
+    </View>
+  );
 }

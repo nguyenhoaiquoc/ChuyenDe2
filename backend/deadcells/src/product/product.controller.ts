@@ -1,7 +1,10 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  NotFoundException,
+  Param,
   Post,
   Query,
   UploadedFiles,
@@ -35,9 +38,8 @@ export class ProductController {
   @Get()
   async findAll(@Query('category_id') category_id?: string) {
     if (category_id) {
-      const products = await this.productService.findByCategoryId(+category_id);
-      return await this.productService.formatProducts(products);
+      return await this.productService.findByCategoryId(Number(category_id));
     }
-    return await this.productService.findAllFormatted();
+    return await this.productService.findAllFormatted(); 
   }
 }

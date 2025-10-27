@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList, ProductType } from "../../types";
+import { RootStackParamList } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -17,12 +17,66 @@ import { path } from "../../config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CategoryIndex">;
 
+interface Product {
+  id: string;
+  image: any;
+  name: string;
+  price: string;
+  phone?: string;
+  location: string;
+  time: string;
+  tag: string;
+  authorName: string;
+  category: string | undefined;
+  subCategory?: {
+    id?: number;
+    name?: string;
+    source_table?: string;
+    source_detail?: any;
+  };
+  imageCount: number;
+  isFavorite: boolean;
+  images?: {
+    id: string;
+    product_id: string;
+    name: string;
+    image_url: string;
+    created_at: string;
+  }[];
+  description?: string;
+  postType?: { id: string; name: string };
+  productType?: { id: string; name: string };
+  condition?: { id: string; name: string };
+  address_json?: { full: string };
+  dealType?: { id: string; name: string };
+  categoryObj?: { id: string; name: string };
+  created_at?: string;
+}
+
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
   const [query, setQuery] = useState("");
-  const [products, setProducts] = useState<ProductType[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const timeSince = (date: Date): string => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (seconds < 60) return seconds < 5 ? "vừa xong" : `${seconds} giây trước`;
+    let interval = seconds / 31536000;
+    if (interval >= 1) return Math.floor(interval) + " năm trước";
+    interval = seconds / 2592000;
+    if (interval >= 1) return Math.floor(interval) + " tháng trước";
+    interval = seconds / 86400;
+    if (interval >= 1) return Math.floor(interval) + " ngày trước";
+    interval = seconds / 3600;
+    if (interval >= 1) return Math.floor(interval) + " giờ trước";
+    interval = seconds / 60;
+    if (interval >= 1) return Math.floor(interval) + " phút trước";
+    return Math.floor(seconds) > 5
+      ? Math.floor(seconds) + " giây trước"
+      : "vừa xong";
+  };
 
   useEffect(() => {
     if (!categoryId) {
@@ -31,28 +85,26 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
       return;
     }
 
-    console.log("Fetching products for categoryId:", categoryId);
     setLoading(true);
     setError(null);
 
-    // Fetch từ backend với query param category_id
     axios
       .get(`${path}/products?category_id=${categoryId}`)
       .then((res) => {
-        // Đảm bảo dữ liệu là mảng
         const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
-        // Map dữ liệu backend sang format ProductType
-        // Trong useEffect fetch products ở CategoryIndex
-        const mapped = rawData.map((item: any) => {
+        const mapped: Product[] = rawData.map((item: any) => {
+          console.log("CategoryIndex productType:", item.productType);
+          // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
-            : item.thumbnail_url
+            : item.thumbnail_url 
               ? `${path}${item.thumbnail_url}`
               : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`
                 : "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
 
+          // Địa chỉ
           let locationText = "Chưa rõ địa chỉ";
           if (item.address_json) {
             try {
@@ -66,17 +118,19 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                     .filter(Boolean)
                     .slice(-2)
                     .join(", ") || "Chưa rõ địa chỉ";
-            } catch (e) {
+            } catch {
               locationText = "Chưa rõ địa chỉ";
             }
           }
 
+          // Thời gian
           const createdAt = item.created_at
             ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
-            : new Date(new Date().getTime() + 7 * 60 * 60 * 1000);
+            : new Date();
           const timeDisplay = timeSince(createdAt);
 
-          const categoryNameItem = item.category?.name || undefined;
+          // Tag
+          const categoryNameItem = item.category?.name || null;
           const subCategoryObj = item.subCategory
             ? {
                 id: item.subCategory.id
@@ -87,10 +141,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                 source_detail: item.subCategory.source_detail,
               }
             : undefined;
-
-          const authorName = item.user?.name || "Ẩn danh";
-
-          // tag hiển thị
           let tagText = "Không có danh mục";
           if (categoryNameItem && subCategoryObj?.name)
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
@@ -111,15 +161,64 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: authorName,
-            category: categoryNameItem,
-            subCategory: subCategoryObj,
+            authorName: item.user?.name || "Ẩn danh",
+            category: categoryName,
+            subCategory: item.subCategory
+              ? {
+                  id: item.subCategory.id
+                    ? parseInt(item.subCategory.id)
+                    : undefined,
+                  name: item.subCategory.name,
+                  source_table: item.subCategory.source_table,
+                  source_detail: item.subCategory.source_detail,
+                }
+              : undefined,
+            category_change: item.category_change
+              ? {
+                  id: item.category_change.id,
+                  name: item.category_change.name,
+                  image: item.category_change.image,
+                }
+              : undefined,
+            sub_category_change: item.sub_category_change
+              ? {
+                  id: item.sub_category_change.id,
+                  name: item.sub_category_change.name,
+                  parent_category_id:
+                    item.sub_category_change.parent_category_id || null,
+                  source_table: item.sub_category_change.source_table || null,
+                }
+              : undefined,
             imageCount: item.images?.length || 1,
             isFavorite: false,
             images: item.images || [],
             description: item.description || "",
+            postType:
+              item.postType && item.postType.id
+                ? item.postType
+                : { id: "2", name: "Đăng mua" },
+
+            productType: item.productType || { id: "1", name: "Chưa rõ" },
+
+            condition:
+              item.condition && item.condition.id
+                ? item.condition
+                : { id: "1", name: "Chưa rõ" },
+
+            dealType:
+              item.dealType && item.dealType.name
+                ? item.dealType
+                : { id: "1", name: "Bán" },
+
+            address_json: item.address_json || { full: locationText },
+            categoryObj: item.category || {
+              id: "1",
+              name: categoryName || "Chưa rõ",
+            },
+            created_at: item.created_at || new Date().toISOString(),
           };
         });
+
         setProducts(mapped);
       })
       .catch((err) => {
@@ -129,7 +228,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
       .finally(() => setLoading(false));
   }, [categoryId]);
 
-  // Filter theo query
   const filtered = useMemo(
     () =>
       products.filter((p) =>
@@ -137,24 +235,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
       ),
     [products, query]
   );
-
-  // Hàm tính thời gian
-  const timeSince = (date: Date): string => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    let interval = seconds / 31536000;
-    if (interval >= 1) return Math.floor(interval) + " năm trước";
-    interval = seconds / 2592000;
-    if (interval >= 1) return Math.floor(interval) + " tháng trước";
-    interval = seconds / 86400;
-    if (interval >= 1) return Math.floor(interval) + " ngày trước";
-    interval = seconds / 3600;
-    if (interval >= 1) return Math.floor(interval) + " giờ trước";
-    interval = seconds / 60;
-    if (interval >= 1) return Math.floor(interval) + " phút trước";
-    return Math.floor(seconds) > 5
-      ? Math.floor(seconds) + " giây trước"
-      : "vừa xong";
-  };
 
   if (error) {
     return (
@@ -185,7 +265,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             onChangeText={setQuery}
             placeholder={`Tìm trong ${categoryName ?? "danh mục"}`}
             returnKeyType="search"
-            onSubmitEditing={() => {}}
             className="ml-3 flex-1 text-sm text-slate-800 p-0"
             clearButtonMode="while-editing"
           />
@@ -193,7 +272,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             <TouchableOpacity
               className="p-2 rounded-full bg-slate-100 ml-2"
               onPress={() => setQuery("")}
-              accessibilityLabel="Xóa"
             >
               <Feather name="x" size={16} color="#6b7280" />
             </TouchableOpacity>

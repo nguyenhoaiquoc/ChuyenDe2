@@ -9,7 +9,7 @@ async function bootstrap() {
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
-  console.log('Serving uploads from:', join(__dirname, '..', 'uploads'));
+  // console.log('Serving uploads from:', join(__dirname, '..', 'uploads'));
 
   app.useGlobalPipes(
     new ValidationPipe({

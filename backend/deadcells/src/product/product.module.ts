@@ -45,4 +45,4 @@ import { GroupModule } from "src/groups/group.module";
   providers: [ProductService],
   controllers: [ProductController],
 })
-export class ProductModule { }
+export class ProductModule {}
