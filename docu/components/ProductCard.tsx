@@ -3,22 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { PostType, Product } from "../types";
 
 type ProductCardProps = {
-  image?: string;
-  name: string;
-  price: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName?: string;
-  category?: string;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount?: number;
-  isFavorite?: boolean;
+  product: Product; // truyền thẳng cả object Product
   onPress?: () => void;
   onToggleFavorite?: () => void;
   onPressPostType?: (postType: PostType) => void;
@@ -26,6 +11,7 @@ type ProductCardProps = {
 };
 
 export default function ProductCard({
+<<<<<<< HEAD
   image,
   name,
   price,
@@ -43,6 +29,35 @@ export default function ProductCard({
   const placeholder =
     "https://cdn-icons-png.flaticon.com/512/8146/8146003.png"; // fallback ảnh
 
+=======
+  product,
+  onPress,
+  onToggleFavorite,
+  onPressPostType,
+  onPressCategory,
+}: ProductCardProps) {
+  const placeholder = "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
+  const image = product.image || product.thumbnail_url || placeholder;
+  const name = product.name;
+  const price = product.price;
+  const location =
+    product.location || product.address_json?.full || "Chưa rõ địa chỉ";
+  const time = product.time || "vừa xong";
+  const tag =
+    product.tag ||
+    (typeof product.category === "object" && product.category !== null
+      ? product.category.name
+      : (product.category ?? "Chưa rõ danh mục"));
+  const postType = product.postType;
+  const authorName = product.authorName;
+  const category =
+    typeof product.category === "object"
+      ? product.category.name
+      : product.category;
+  const subCategory = product.sub_category_change;
+  const imageCount = product.images?.length || 1;
+  const isFavorite = product.isFavorite || false;
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
   return (
     <View
       className="w-[48%] mx-[1%] mb-3 bg-white rounded-lg overflow-hidden shadow-sm"

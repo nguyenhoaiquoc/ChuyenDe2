@@ -29,6 +29,7 @@ import {
 
 const { width } = Dimensions.get("window");
 
+<<<<<<< HEAD
 interface Comment {
   id: number;
   content: string;
@@ -149,6 +150,8 @@ type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
   "ProductDetail"
 >;
 
+=======
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 export default function ProductDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
@@ -165,8 +168,12 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
+<<<<<<< HEAD
   const product = route.params?.product || {}; // ✅ Dùng trực tiếp từ Home (có images array)
   const tagText = product.tag || "Chưa có tag";
+=======
+  const product: Product = route.params?.product || {} as Product;
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -283,6 +290,7 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
+<<<<<<< HEAD
   const handleChatPress = async () => {
     try {
       if (!currentUser) {
@@ -328,8 +336,56 @@ export default function ProductDetailScreen() {
     } catch (error) {
       console.error("❌ Lỗi mở phòng chat:", error);
       Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+=======
+ const handleChatPress = async () => {
+  try {
+    if (!currentUser) {
+      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+      return;
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
     }
-  };
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    const sellerId = String(product.user_id);
+    const buyerId = String(currentUser.id);
+
+    const response = await openOrCreateRoom(token, {
+      seller_id: sellerId,
+      buyer_id: buyerId,
+      room_type: "PAIR",
+      product_id: String(product.id),
+    });
+
+    // ✅ Tùy theo backend trả về
+    const room = response.room ?? response;
+    console.log("🟢 Room nhận được:", room);
+      const headerValue = token.startsWith("Bearer ")
+  ? token
+  : `Bearer ${token}`;
+console.log("🧾 Authorization header gửi đi:", headerValue);
+    const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+    const otherUserName = product.authorName || "Người dùng";
+
+    navigation.navigate("ChatRoomScreen", {
+      roomId: room.id,
+      product,
+      otherUserId,
+      otherUserName,
+      currentUserId: currentUser.id,
+      currentUserName: currentUser.name,
+      token,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi mở phòng chat:", error);
+    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+  }
+};
+
 
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
@@ -350,6 +406,38 @@ export default function ProductDetailScreen() {
     offset: width * index,
     index,
   });
+<<<<<<< HEAD
+=======
+
+  // 🧩 Gọi API tạo hoặc lấy phòng chat
+async function openOrCreateRoom(
+  token: string,
+  payload: {
+    seller_id: string;
+    buyer_id: string;
+    room_type: "PAIR";
+    product_id?: string;
+  }
+) {
+  console.log("🪙 Token gửi đi:", token);
+  console.log("📤 Payload gửi:", payload);
+
+  try {
+   const authHeader = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
+const res = await axios.post(`${path}/chat/room`, payload, {
+  headers: { Authorization: authHeader },
+});
+  console.log("🧾 Header gửi đi:", authHeader);
+
+    console.log("💬 Phản hồi từ server:", res.data);
+    return res.data; // Có thể là { room: {...} } hoặc {...}
+  } catch (err: any) {
+    console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
+    throw err;
+  }
+}
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -709,4 +797,4 @@ export default function ProductDetailScreen() {
       </ScrollView>
     </View>
   );
-} 
+}

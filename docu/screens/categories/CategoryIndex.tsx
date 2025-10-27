@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+<<<<<<< HEAD
 import { RootStackParamList, ProductType } from "../../types";
+=======
+import { Product, RootStackParamList } from "../../types";
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -16,42 +20,6 @@ import axios from "axios";
 import { path } from "../../config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CategoryIndex">;
-
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[];
-  description?: string;
-  postType?: { id: string; name: string };
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string };
-  created_at?: string;
-}
 
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
@@ -98,7 +66,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
-            : item.thumbnail_url 
+            : item.thumbnail_url
               ? `${path}${item.thumbnail_url}`
               : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`
@@ -163,9 +131,41 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
+<<<<<<< HEAD
             authorName: authorName,
             category: categoryNameItem,
             subCategory: subCategoryObj,
+=======
+            authorName: item.user?.fullName || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
+            category: categoryName,
+            subCategory: item.subCategory
+              ? {
+                  id: item.subCategory.id
+                    ? parseInt(item.subCategory.id)
+                    : undefined,
+                  name: item.subCategory.name,
+                  source_table: item.subCategory.source_table,
+                  source_detail: item.subCategory.source_detail,
+                }
+              : undefined,
+            category_change: item.category_change
+              ? {
+                  id: item.category_change.id,
+                  name: item.category_change.name,
+                  image: item.category_change.image,
+                }
+              : undefined,
+            sub_category_change: item.sub_category_change
+              ? {
+                  id: item.sub_category_change.id,
+                  name: item.sub_category_change.name,
+                  parent_category_id:
+                    item.sub_category_change.parent_category_id || null,
+                  source_table: item.sub_category_change.source_table || null,
+                }
+              : undefined,
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
             imageCount: item.images?.length || 1,
             isFavorite: false,
             images: item.images || [],

@@ -32,6 +32,7 @@ const filters = [
   { id: "6", label: "Gợi ý cho bạn " },
 ];
 
+<<<<<<< HEAD
 interface Product {
   id: string;
   image: any;
@@ -73,6 +74,8 @@ interface Category {
   image: string;
 }
 
+=======
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -178,7 +181,11 @@ export default function HomeScreen({ navigation }: Props) {
             time: timeDisplay,
             tag: tagText,
             authorName: authorName,
+<<<<<<< HEAD
               user_id: item.user?.id ? Number(item.user.id) : null, // ✅ Thêm dòng này
+=======
+         
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
 
             category: categoryName || null,
             subCategory: item.subCategory
@@ -401,6 +408,7 @@ export default function HomeScreen({ navigation }: Props) {
             scrollEnabled={false}
             renderItem={({ item }) => (
               <ProductCard
+<<<<<<< HEAD
                 image={item.image}
                 name={item.name}
                 price={item.price}
@@ -412,6 +420,9 @@ export default function HomeScreen({ navigation }: Props) {
                 subCategory={item.subCategory}
                 imageCount={item.imageCount}
                 isFavorite={item.isFavorite}
+=======
+                product={item}
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
                 }
@@ -426,7 +437,7 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
       </ScrollView>
-      {/* Menu dưới */} 
+      {/* Menu dưới */}
       <Menu />
     </View>
   );

@@ -45,6 +45,22 @@ const PostFormScreen = ({
   const [images, setImages] = useState<string[]>([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+<<<<<<< HEAD
+=======
+  const [user, setUser] = useState<{ id: number; name: string } | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userId = await AsyncStorage.getItem("userId");
+      const userName = await AsyncStorage.getItem("userName");
+      if (userId && userName) {
+        setUser({ id: Number(userId), name: userName });
+      }
+    };
+    fetchUser();
+  }, []);
+
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
   const [conditionId, setConditionId] = useState<number | null>(null);
   const [productTypeId, setProductTypeId] = useState<number | null>(null);
   const [dealTypeId, setDealTypeId] = useState<number | null>(null);
@@ -248,10 +264,18 @@ const PostFormScreen = ({
       formData.append("title", finalTitle);
       formData.append("product_type_id", String(productTypeId));
       formData.append("description", description);
+<<<<<<< HEAD
       formData.append("price", dealTypeId === 1 ? String(price) : "0");
       formData.append("category_id", String((category as any)?.id || ""));
       formData.append("sub_category_id", String(subCategory?.id || ""));
       formData.append("post_type_id", String(postTypeId)); // Sử dụng postTypeId từ state
+=======
+      formData.append("user_id", user?.id ? String(user.id) : "");
+      formData.append("price", dealTypeId === 1 ? String(price) : "0");
+      formData.append("category_id", String((category as any)?.id || ""));
+      formData.append("sub_category_id", String(subCategory?.id || ""));
+      formData.append("post_type_id", String(postTypeId));
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
       formData.append("deal_type_id", String(dealTypeId));
       formData.append("condition_id", String(conditionId));
       formData.append("status_id", "1");
@@ -259,8 +283,16 @@ const PostFormScreen = ({
       formData.append("address_json", JSON.stringify({ full: address }));
 
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
+<<<<<<< HEAD
         formData.append("categoryChange_id", String(exchangeCategory.id));
         formData.append("subCategoryChange_id", String(exchangeSubCategory.id));
+=======
+        formData.append("category_change_id", String(exchangeCategory.id));
+        formData.append(
+          "sub_category_change_id",
+          String(exchangeSubCategory.id)
+        );
+>>>>>>> e6bd1a6094cac90d7c947e4d43ee15ecd1f5932c
       }
 
       images.forEach((uri, index) => {
