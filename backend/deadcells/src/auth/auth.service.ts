@@ -24,7 +24,7 @@ export class AuthService {
     private readonly otpRepository: Repository<OtpVerification>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-  ) { }
+  ) {}
 
   async getUsers() {
     return this.userRepository.find();
@@ -118,7 +118,8 @@ export class AuthService {
     });
 
     // Tránh lộ thông tin
-    if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+    if (!user)
+      throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
     if (!user.is_verified) {
       throw new UnauthorizedException(
@@ -128,10 +129,7 @@ export class AuthService {
 
     // (Tuỳ chọn) kiểm tra trạng thái bị khoá/banned theo statusId hoặc status.name
 
-    const passwordValid = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
+    const passwordValid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!passwordValid) {
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
     }
