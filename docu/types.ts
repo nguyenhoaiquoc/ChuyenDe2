@@ -7,16 +7,27 @@ export type RootStackParamList = {
   ForgotPasswordScreen: undefined;
   NewPasswordScreen: { token: string };
   ChatListScreen: undefined;
-  ChatRoomScreen: { product: ProductType; otherUserId: number; otherUserName?: string; currentUserId: number; currentUserName: string; token: string;  };  OTPVerifyScreen: { email: string,
- };
+  ChatRoomScreen: {
+    product: ProductType;
+    otherUserId: number;
+    otherUserName?: string;
+    currentUserId: number;
+    currentUserName: string;
+    token: string;
+  };
+  OTPVerifyScreen: { email: string };
   ProductDetail: { product?: ProductType } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
-  ChooseSubCategoryScreen: { category: { id: string; name: string } } | undefined;
-  PostFormScreen: {
-    category: { id: string; name: string };
-    subCategory: { id: string; name: string };
-  } | undefined;
+  ChooseSubCategoryScreen:
+    | { category: { id: string; name: string } }
+    | undefined;
+  PostFormScreen:
+    | {
+        category: { id: string; name: string };
+        subCategory: { id: string; name: string };
+      }
+    | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -28,8 +39,8 @@ export type RootStackParamList = {
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
   UserDetail: undefined;
-  ManagerGroupsScreen : undefined;
-  UserInforScreen : undefined;
+  ManagerGroupsScreen: undefined;
+  UserInforScreen: undefined;
   EditProfileScreen: undefined;
   CreateGroupScreen: undefined;
   // TestApi: undefined;
@@ -39,7 +50,7 @@ export type ProductType = {
   id: string;
   image: any;
   name: string;
-  authorName?: string; 
+  authorName?: string;
   price: string;
   location: string;
   time: string;
@@ -53,6 +64,9 @@ export type ProductType = {
   };
   imageCount: number;
   isFavorite: boolean;
+
+  groupName?: string;
+  groupImage?: string;
 };
 
 export type CategoryType = {
