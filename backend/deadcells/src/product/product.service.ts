@@ -1,3 +1,4 @@
+import { GroupService } from './../groups/group.service';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -65,6 +66,8 @@ export class ProductService {
 
     @InjectRepository(VehicleCategory)
     private readonly vehicleRepo: Repository<VehicleCategory>,
+
+    private readonly groupService: GroupService,
 
     private readonly dataSource: DataSource,
   ) {}
@@ -326,6 +329,23 @@ export class ProductService {
       ],
       order: { created_at: 'DESC' },
     });
+
+    const visibleProducts: Product[] = [];
+    const userId = 1;
+    for (const p of products) {
+      // toàn trường
+      if (p.visibility_type === 0) {
+        visibleProducts.push(p);
+      }
+
+      //  chỉ hiển thị trong nhóm user là member
+      else if (p.visibility_type === 1) {
+        const isMember = await this.groupService.isMember(p.group_id, userId);
+        if (isMember) {
+          visibleProducts.push(p);
+        }
+      }
+    }
 
     return products.map((p) => {
       const categoryName = p.category?.name || null;
