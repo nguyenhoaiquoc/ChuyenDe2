@@ -1,69 +1,76 @@
-import { useState } from "react";
-import { TextInput, View, Text, TouchableOpacity } from "react-native";
+import { useState, forwardRef } from "react";
+import { TextInput, View, Text, TouchableOpacity, TextInputProps } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 
+// Kế thừa toàn bộ TextInputProps để nhận đúng union type của RN
 type FloatingInputProps = {
   label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  secureTextEntry?: boolean;
-  toggleSecure?: () => void; 
-};
+  toggleSecure?: () => void;
+  containerClassName?: string; // tuỳ chọn: custom style container
+  inputClassName?: string;     // tuỳ chọn: custom style input
+} & TextInputProps;
 
-export default function FloatingInput({
-  label,
-  value,
-  onChangeText,
-  secureTextEntry,
-  toggleSecure,
-}: FloatingInputProps) {
+const FloatingInput = forwardRef<TextInput, FloatingInputProps>(function FloatingInput(
+  {
+    label,
+    toggleSecure,
+    containerClassName,
+    inputClassName,
+    secureTextEntry, // đã có trong TextInputProps
+    value,
+    onChangeText,
+    ...rest // nhận keyboardType, autoCapitalize, autoCorrect, v.v.
+  },
+  ref
+) {
   const [isFocused, setIsFocused] = useState(false);
-  const isActive = isFocused || value.length > 0;
+  const isActive = isFocused || (!!value && String(value).length > 0);
 
   return (
-    <View className="mb-5 relative">
+    <View className={`mb-5 relative ${containerClassName ?? ""}`}>
       <TextInput
-        secureTextEntry={secureTextEntry}
+        ref={ref}
         value={value}
         onChangeText={onChangeText}
-        className={`w-full h-[50px] px-5 rounded-xl transition-all duration-300 pb-1
-          ${isActive ? "border-2 border-black" : "border border-gray-500"}`}
+        secureTextEntry={secureTextEntry}
+        className={`w-full h-[50px] px-5 rounded-xl transition-all duration-300 pb-1 ${
+          isActive ? "border-2 border-black" : "border border-gray-500"
+        } ${inputClassName ?? ""}`}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
+        {...rest}
       />
 
       <View
         pointerEvents="none"
-        className={`absolute flex flex-row transition-all duration-300
-          ${isActive ? "top-1 left-5" : "top-4 left-5"}`}
+        className={`absolute flex flex-row transition-all duration-300 ${
+          isActive ? "top-1 left-5" : "top-4 left-5"
+        }`}
       >
         <Text
-          className={`font-bold transition-all duration-300 
-            ${isActive ? "text-[10px]" : "text-[14px] text-gray-500"}`}
+          className={`font-bold transition-all duration-300 ${
+            isActive ? "text-[10px]" : "text-[14px] text-gray-500"
+          }`}
         >
           {label}
         </Text>
         <Text
-          className={`text-[red] transition-all duration-300
-            ${isActive ? "text-[10px] ml-1" : "text-[14px] ml-1"}`}
+          className={`text-[red] transition-all duration-300 ${
+            isActive ? "text-[10px] ml-1" : "text-[14px] ml-1"
+          }`}
         >
           *
         </Text>
       </View>
 
-  
-      {toggleSecure && (
-        <TouchableOpacity
-          onPress={toggleSecure}
-          className="absolute right-5 top-3"
-        >
-          <FontAwesome5
-            name={secureTextEntry ? "eye-slash" : "eye"}
-            size={20}
-            color="gray"
-          />
+      {/* Chỉ hiển thị nút show/hide khi có toggleSecure (tức là input dạng password) */}
+      {typeof toggleSecure === "function" && (
+        <TouchableOpacity onPress={toggleSecure} className="absolute right-5 top-3">
+          <FontAwesome5 name={secureTextEntry ? "eye-slash" : "eye"} size={20} color="gray" />
         </TouchableOpacity>
       )}
     </View>
   );
-}
+});
+
+export default FloatingInput;
