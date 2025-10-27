@@ -98,7 +98,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
-            : item.thumbnail_url
+            : item.thumbnail_url 
               ? `${path}${item.thumbnail_url}`
               : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`

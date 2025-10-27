@@ -38,6 +38,6 @@ export class ProductController {
     if (category_id) {
       return await this.productService.findByCategoryId(Number(category_id));
     }
-    return await this.productService.findAllFormatted();
+    return await this.productService.findAllFormatted(); 
   }
 }
