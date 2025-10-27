@@ -110,6 +110,8 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
+          console.log("item.user", item.user);
+          console.log("item.user_id", item.user_id);
 
           return {
             id: item.id.toString(),
@@ -125,7 +127,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: item.user?.name || "Ẩn danh",
+            authorName: item.user?.fullName || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
             category: categoryName,
             subCategory: item.subCategory
@@ -181,7 +183,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
               name: categoryName || "Chưa rõ",
             },
             created_at: item.created_at || new Date().toISOString(),
-            
           };
         });
 
