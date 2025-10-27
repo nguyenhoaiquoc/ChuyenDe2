@@ -6,6 +6,9 @@ import { StatusBar } from "expo-status-bar";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+import { path } from "../../config";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "UserInforScreen">;
@@ -38,12 +41,69 @@ export default function UserInforScreen({ navigation }: Props) {
     sold: SoldRoute,
   });
    const [name, setName] = useState('');
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
 
-  useEffect(() => {
-    AsyncStorage.getItem('userName').then(value => {
-      if (value) setName(value);
+ useEffect(() => {
+  const fetchUser = async () => {
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+
+    if (!userId) return;
+
+    try {
+      const res = await axios.get(`${path}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data) {
+        setName(res.data.name || res.data.fullName || "");
+        setAvatar(res.data.image || null);
+        setCoverImage(res.data.coverImage || null);
+
+        await AsyncStorage.setItem("userName", res.data.name || res.data.fullName || "");
+      }
+    } catch (err) {
+      console.log("Lấy user error:", err);
+      
+      // fallback nếu request fail
+      const localName = await AsyncStorage.getItem("userName");
+      if (localName) setName(localName);
+    }
+  };
+
+  fetchUser();
+}, []);
+
+
+const handlePickImage = async () => {
+  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permission.granted) return alert("Cần quyền truy cập ảnh");
+
+  const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.7, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+  if (result.canceled) return;
+
+  const userId = await AsyncStorage.getItem("userId");
+  const token = await AsyncStorage.getItem("token");
+  if (!userId) return alert("Vui lòng đăng nhập trước khi đổi ảnh");
+
+  const formData = new FormData();
+  formData.append("image", { uri: result.assets[0].uri, name: "avatar.jpg", type: "image/jpeg" } as any);
+
+  try {
+    const url = `${path}/users/${userId}`;
+    console.log("📌 Upload URL:", url);
+    const response = await axios.patch(url, formData, {
+      headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
     });
-  }, []);
+        setAvatar(response.data.image);
+    alert("Cập nhật ảnh thành công!");
+  } catch (err: any) {
+    console.log("Upload error:", err.response?.status, err.response?.data || err);
+    alert("Upload thất bại");
+  }
+};
+
 
   return (
     <ScrollView className="flex-1">
@@ -57,12 +117,27 @@ export default function UserInforScreen({ navigation }: Props) {
 
         {/* Ảnh bìa + avatar */}
         <View className="w-full h-[100px] relative mt-2">
-          <Image className="w-full h-full object-contain" source={require("../../assets/anhbia.jpg")} />
-          <MaterialIcons className="absolute right-5 top-1/4 bg-white rounded-full p-1" name="camera-alt" size={16} color="black" />
+          <Image
+  className="w-full h-full object-contain"
+  source={
+    coverImage
+      ? { uri: coverImage.startsWith("http") ? coverImage : `${path}${coverImage}` }
+      : require("../../assets/anhbia.jpg") // fallback nếu chưa có cover
+  }
+/>
+
+          <MaterialIcons onPress={handlePickImage}  className="absolute right-5 top-1/4 bg-white rounded-full p-1" name="camera-alt" size={16} color="black" />
 
           <TouchableOpacity  className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
-            <Image className="w-full h-full object-contain rounded-full" source={require("../../assets/meo.jpg")} />
-            <MaterialIcons className="absolute right-0 bottom-0 bg-white rounded-full p-1" name="camera-alt" size={10} color="black" />
+              <Image
+    className="w-full h-full object-contain rounded-full"
+    source={
+      avatar
+        ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
+        : require("../../assets/meo.jpg")
+    }
+  />
+            <MaterialIcons  onPress={handlePickImage} className="absolute right-0 bottom-0 bg-white rounded-full p-1" name="camera-alt" size={10} color="black" />
           </TouchableOpacity>
         </View>
 

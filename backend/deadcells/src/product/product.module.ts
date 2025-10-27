@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Product } from "src/entities/product.entity";
 import { ProductImage } from "src/entities/product-image.entity";
@@ -17,6 +17,8 @@ import { HouseCategory } from "src/entities/categories/house-category.entity";
 import { VehicleCategory } from "src/entities/categories/vehicle-category.entity";
 import { PostType } from "src/entities/post-type.entity";
 import { User } from "src/entities/user.entity";
+import { ProductType } from "src/entities/product_types.entity";
+import { GroupModule } from "src/groups/group.module";
 
 @Module({
   imports: [
@@ -36,7 +38,9 @@ import { User } from "src/entities/user.entity";
       HouseCategory,
       VehicleCategory,
       PostType,
+      ProductType,
     ]),
+     forwardRef(() => GroupModule),
   ],
   providers: [ProductService],
   controllers: [ProductController],

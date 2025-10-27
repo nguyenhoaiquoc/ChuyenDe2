@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import Menu from "../../components/Menu";
@@ -10,18 +10,31 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import axios from "axios";
+import { path } from "../../config";
 
 export default function ManagerGroupsScreen() {
   const tabs = ["Dành cho bạn", "Nhóm của bạn", "Bài viết", "Khám phá"];
 
   const [selectedTab, setSelectedTab] = useState("Dành cho bạn");
-  // 2. Lấy đối tượng navigation
+  //  Lấy đối tượng navigation
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handleViewAllGroups = () => {
     setSelectedTab("Nhóm của bạn");
   };
-  // 2. Hàm render nội dung sẽ trả về component tương ứng
+
+  const [previewPosts, setPreviewPosts] = useState<any[]>([]);
+  const userId = 1;
+
+  useEffect(() => {
+    axios
+      .get(`${path}/groups/users/${userId}/group-posts?limit=4`)
+      .then((res) => setPreviewPosts(res.data))
+      .catch((err) => console.error("❌ Lỗi khi lấy preview:", err));
+  }, []);
+
+  // Hàm render nội dung sẽ trả về component tương ứng
   const renderContent = () => {
     switch (selectedTab) {
       case "Dành cho bạn":
@@ -61,7 +74,7 @@ export default function ManagerGroupsScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             // Chức năng TẠO NHÓM, điều hướng tới màn hình mới
-            /* onPress={() => navigation.navigate("CreateGroupScreen")} */
+            onPress={() => navigation.navigate("CreateGroupScreen")}
             className="bg-gray-100 p-2 rounded-full ml-3"
           >
             <Feather name="plus" size={20} color="black" />

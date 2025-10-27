@@ -20,6 +20,10 @@ import { ReportModule } from './report/report.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProductTypeModule } from './product-types/product-type.module';
 import { PostTypeModule } from './post-type/post-type.module';
+import { CommentModule } from './comment/comment.module';
+import { ChatModule } from './chat/chat.module';
+import { UsersModule } from './users/users.module';
+import { GroupModule } from './groups/group.module';
 
 @Module({
   imports: [
@@ -50,9 +54,13 @@ import { PostTypeModule } from './post-type/post-type.module';
     AuthModule,
     ReportModule,
     ProductTypeModule,
-    PostTypeModule
+    PostTypeModule,
+    CommentModule,
+    UsersModule,
+    ChatModule,
+    GroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

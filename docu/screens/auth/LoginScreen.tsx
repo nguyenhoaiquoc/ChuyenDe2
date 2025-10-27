@@ -50,8 +50,8 @@ const handleLogin = async () => {
     const res = await axios.post(`${path}/auth/login`, { email, password });
     Alert.alert('Đăng nhập thành công');
     await AsyncStorage.setItem('token', res.data.token);
-      await AsyncStorage.setItem('userName', res.data.fullName);
-
+    await AsyncStorage.setItem('userName', res.data.fullName);
+    await AsyncStorage.setItem('userId', String(res.data.id)); 
     if (res.data.role === 'Admin') {
       navigation.reset({ index: 0, routes: [{ name: 'HomeAdminScreen' }] });
     } else {
