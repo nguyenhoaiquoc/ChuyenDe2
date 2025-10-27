@@ -31,6 +31,8 @@ export type RootStackParamList = {
   ManagerGroupsScreen : undefined;
   UserInforScreen : undefined;
   EditProfileScreen: undefined;
+  SellProductScreen: undefined; 
+  PurchaseRequestScreen: undefined;
   // TestApi: undefined;
 };
 

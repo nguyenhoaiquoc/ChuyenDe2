@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -31,20 +32,12 @@ export class ProductController {
 
     return await this.productService.create(body, files);
   }
-  @Get(':id')
-async getProductById(@Param('id') id: string) {
-  const product = await this.productService.findById(+id);
-  if (!product) throw new NotFoundException(`Không tìm thấy sản phẩm với ID ${id}`);
-  return product;
-}
-
 
   @Get()
   async findAll(@Query('category_id') category_id?: string) {
     if (category_id) {
-      const products = await this.productService.findByCategoryId(+category_id);
-      return await this.productService.formatProducts(products);
+      return await this.productService.findByCategoryId(Number(category_id));
     }
-    return await this.productService.findAllFormatted();
+    return await this.productService.findAllFormatted(); 
   }
 }
