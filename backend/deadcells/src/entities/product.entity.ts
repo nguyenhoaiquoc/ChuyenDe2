@@ -18,6 +18,7 @@ import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
 import { PostType } from './post-type.entity';
 import { Comment } from './comment.entity';
+import { Group } from './group.entity';
 
 @Entity('products')
 export class Product {
@@ -121,10 +122,14 @@ export class Product {
   status_id: number;
 
   @Column({ type: 'bigint', default: 0 })
-  visibility_type: number;   //0 toàn trường, 1 trong nhóm
+  visibility_type: number; //0 toàn trường, 1 trong nhóm
 
   @Column({ type: 'bigint', nullable: true })
-  group_id: number;  
+  group_id: number;
+
+  @ManyToOne(() => Group, { nullable: true })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
 
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;

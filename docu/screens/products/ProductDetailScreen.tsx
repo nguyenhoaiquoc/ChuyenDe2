@@ -296,25 +296,6 @@ export default function ProductDetailScreen() {
     }
   };
 
-  const handleChatPress = async () => {
-    if (!currentUser) return;
-
-    try {
-      const res = await fetch(`${path}/products/${product.id}`);
-      const data = await res.json();
-
-      navigation.navigate("ChatRoomScreen", {
-        product: product,
-        otherUserId: Number(data.user_id),
-        otherUserName: data.author_name || "Người bán",
-        currentUserId: Number(currentUser.id),
-        currentUserName: currentUser.name,
-      });
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
-    }
-  };
-
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
     const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
