@@ -14,143 +14,23 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Comment,
+  Product,
+  ProductDetailScreenNavigationProp,
+  ProductDetailScreenRouteProp,
+  ProductImage,
+  User,
+} from "../../types";
 
 const { width } = Dimensions.get("window");
 
-interface Comment {
-  id: number;
-  content: string;
-  created_at: string;
-  user: {
-    id: number;
-    fullName: string;
-    image?: string;
-  };
-}
-
-interface ProductImage {
-  id: string;
-  product_id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-}
-
-interface Condition {
-  id: string;
-  name: string;
-}
-
-interface ProductType {
-  id: string;
-  name: string;
-}
-
-interface PostType {
-  id: string;
-  name: string;
-}
-interface AddressJson {
-  full: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  village?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-  hot?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface DealType {
-  id: string;
-  name: string;
-}
-
-interface Product {
-  id: string;
-  authorName: string;
-  name: string;
-  description: string;
-  phone?: string;
-  price: string;
-  thumbnail_url?: string;
-  images: ProductImage[];
-  user_id: string;
-  post_type_id: string;
-  dealType: DealType;
-  category_id: string;
-  category: Category;
-  sub_category_id: string | null;
-  category_change_id?: string | null;
-  sub_category_change_id?: string | null;
-
-  // Thêm đây
-  category_change?: {
-    id: string;
-    name: string;
-    image?: string;
-  };
-  sub_category_change?: {
-    id: string;
-    name: string;
-    parent_category_id?: string;
-    source_table?: string;
-    source_id?: string;
-  };
-  postType: PostType;
-  productType: ProductType;
-  condition: Condition;
-  address_json: AddressJson;
-  status_id: string;
-  visibility_type: string;
-  group_id?: string | null;
-  is_approved: boolean;
-  created_at: string;
-  updated_at: string;
-  image?: any;
-  location?: string;
-  time?: string;
-  tag?: string;
-  imageCount?: number;
-  isFavorite?: boolean;
-}
-
-type RootStackParamList = {
-  ProductDetail: { product: Product };
-  ChatRoomScreen: {
-    product: Product;
-    otherUserId: number;
-    otherUserName?: string;
-    currentUserId: number;
-    currentUserName: string;
-  };
-};
-
-type ProductDetailScreenRouteProp = RouteProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-
 export default function ProductDetailScreen() {
-  const [currentUser, setCurrentUser] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -161,11 +41,11 @@ export default function ProductDetailScreen() {
       }
     })();
   }, []);
+
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product = route.params?.product || {};
-  const tagText = product.tag || "Chưa có tag";
+  const product: Product = route.params?.product || ({} as Product);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -203,11 +83,6 @@ export default function ProductDetailScreen() {
       }
     }
   };
-  console.log({
-    product_id: Number(product.id),
-    user_id: 1,
-    content: comment.trim(),
-  });
 
   // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
@@ -246,9 +121,19 @@ export default function ProductDetailScreen() {
 
     try {
       setIsSending(true); // 🟡 Bắt đầu gửi
+
+      // Lấy user_id từ AsyncStorage
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) {
+        Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
+        setIsSending(false);
+        return;
+      }
+      const userId = Number(userIdStr);
+
       const res = await axios.post(`${path}/comments`, {
         product_id: Number(product.id),
-        user_id: 1,
+        user_id: userId, // dùng user thật
         content: comment.trim(),
       });
 
@@ -284,13 +169,13 @@ export default function ProductDetailScreen() {
       const res = await fetch(`${path}/products/${product.id}`);
       const data = await res.json();
 
-      navigation.navigate("ChatRoomScreen", {
-        product: product,
-        otherUserId: Number(data.user_id),
-        otherUserName: data.author_name || "Người bán",
-        currentUserId: Number(currentUser.id),
-        currentUserName: currentUser.name,
-      });
+      // navigation.navigate("ChatRoomScreen", {
+      //   product: product,
+      //   otherUserId: Number(data.user_id),
+      //   otherUserName: data.author_name || "Người bán",
+      //   currentUserId: Number(currentUser.id),
+      //   currentUserName: currentUser.name,
+      // });
     } catch (error) {
       Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
     }
@@ -619,7 +504,16 @@ export default function ProductDetailScreen() {
                       {c.content}
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                      {new Date(
+                        new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
+                      ).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -661,4 +555,4 @@ export default function ProductDetailScreen() {
       </ScrollView>
     </View>
   );
-} 
+}
