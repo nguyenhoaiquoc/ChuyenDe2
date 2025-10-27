@@ -5,9 +5,10 @@ export type RootStackParamList = {
   RegisterScreen: undefined;
   VerifyAccountScreen: { email: string };
   ForgotPasswordScreen: undefined;
-  NewPasswordScreen: { token: string };
+  NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
-  ChatRoomScreen: { product: ProductType; otherUserId: number; otherUserName?: string; currentUserId: number; currentUserName: string; token: string;  };  OTPVerifyScreen: { email: string,
+  ChatRoomScreen: { product: ProductType; otherUserId: number; otherUserName?: string; currentUserId: number; currentUserName: string; token: string;  }; 
+   OTPVerifyScreen: { email: string,
  };
   ProductDetail: { product?: ProductType } | undefined;
   ManagePostsScreen: undefined;

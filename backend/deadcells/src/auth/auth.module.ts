@@ -19,7 +19,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config'; // ✅ để đọ
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_ACCESS_SECRET') || 'supersecretkey',
-        signOptions: { expiresIn: '10m' }, // ⚡ nên để 10–15 phút thay vì 1d
+        signOptions: { expiresIn: '1d' }, // ⚡ nên để 10–15 phút thay vì 1d
       }),
       inject: [ConfigService],
     }),
