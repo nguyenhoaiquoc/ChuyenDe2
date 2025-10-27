@@ -24,7 +24,7 @@ export class AuthService {
     private readonly otpRepository: Repository<OtpVerification>,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
-  ) {}
+  ) { }
 
   async getUsers() {
     return this.userRepository.find();
