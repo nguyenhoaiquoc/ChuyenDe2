@@ -162,24 +162,54 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
-  const handleChatPress = async () => {
-    if (!currentUser) return;
-
-    try {
-      const res = await fetch(`${path}/products/${product.id}`);
-      const data = await res.json();
-
-      // navigation.navigate("ChatRoomScreen", {
-      //   product: product,
-      //   otherUserId: Number(data.user_id),
-      //   otherUserName: data.author_name || "Người bán",
-      //   currentUserId: Number(currentUser.id),
-      //   currentUserName: currentUser.name,
-      // });
-    } catch (error) {
-      Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
+ const handleChatPress = async () => {
+  try {
+    if (!currentUser) {
+      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+      return;
     }
-  };
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token) {
+      Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    const sellerId = String(product.user_id);
+    const buyerId = String(currentUser.id);
+
+    const response = await openOrCreateRoom(token, {
+      seller_id: sellerId,
+      buyer_id: buyerId,
+      room_type: "PAIR",
+      product_id: String(product.id),
+    });
+
+    // ✅ Tùy theo backend trả về
+    const room = response.room ?? response;
+    console.log("🟢 Room nhận được:", room);
+      const headerValue = token.startsWith("Bearer ")
+  ? token
+  : `Bearer ${token}`;
+console.log("🧾 Authorization header gửi đi:", headerValue);
+    const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+    const otherUserName = product.authorName || "Người dùng";
+
+    navigation.navigate("ChatRoomScreen", {
+      roomId: room.id,
+      product,
+      otherUserId,
+      otherUserName,
+      currentUserId: currentUser.id,
+      currentUserName: currentUser.name,
+      token,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi mở phòng chat:", error);
+    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+  }
+};
+
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -199,10 +229,35 @@ export default function ProductDetailScreen() {
     offset: width * index,
     index,
   });
-  console.log(">>> dealType:", product.dealType);
-  console.log(">>> category_change:", product.category_change);
-  console.log(">>> sub_category_change:", product.sub_category_change);
-  console.log(">>> product_type:", product.productType);
+
+  // 🧩 Gọi API tạo hoặc lấy phòng chat
+async function openOrCreateRoom(
+  token: string,
+  payload: {
+    seller_id: string;
+    buyer_id: string;
+    room_type: "PAIR";
+    product_id?: string;
+  }
+) {
+  console.log("🪙 Token gửi đi:", token);
+  console.log("📤 Payload gửi:", payload);
+
+  try {
+   const authHeader = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
+const res = await axios.post(`${path}/chat/room`, payload, {
+  headers: { Authorization: authHeader },
+});
+  console.log("🧾 Header gửi đi:", authHeader);
+
+    console.log("💬 Phản hồi từ server:", res.data);
+    return res.data; // Có thể là { room: {...} } hoặc {...}
+  } catch (err: any) {
+    console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
+    throw err;
+  }
+}
 
   return (
     <View className="flex-1 bg-white mt-5">

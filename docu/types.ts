@@ -40,6 +40,17 @@ export type RootStackParamList = {
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
   CreateGroupScreen: undefined;
+  // Trong types.ts, thêm vào cuối RootStackParamList:
+ChatRoomScreen: {
+  roomId: string | number;
+  product?: Product;
+  otherUserId: string | number;
+  otherUserName?: string;
+  currentUserId: string | number;
+  currentUserName: string;
+  token: string;
+};
+
   // TestApi: undefined;
 };
 
@@ -67,6 +78,12 @@ export type SellProductScreenNavigationProp = NativeStackNavigationProp<
   "SellProductScreen"
 >;
 
+export type ChatRoomRouteProp = RouteProp<RootStackParamList, "ChatRoomScreen">;
+
+export type ChatRoomNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ChatRoomScreen"
+>;
 export type ProductImage = {
   id: string;
   product_id: string;
@@ -118,6 +135,7 @@ export type Product = {
   isFavorite?: boolean;
   created_at: string;
   updated_at?: string;
+  user_id: string | number;
 };
 
 export type Comment = {
