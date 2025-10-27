@@ -154,3 +154,38 @@ export type User = {
   id: number;
   name: string;
 };
+
+
+// notification
+export type Notification = {
+  id: number;
+  is_read: boolean;
+  createdAt: string; // Hoặc Date nếu ông parse
+  target_id: number;
+
+  // Quan hệ: Người gây ra hành động
+  actor: {
+    id: number;
+    fullName: string;
+    image?: string;
+  };
+
+  // Quan hệ: Hành động là gì?
+  action: {
+    id: number;
+    name: string; // 'post_success', 'admin_new_post', 'comment', v.v.
+  };
+  
+  // Quan hệ: Loại đối tượng là gì?
+  targetType: {
+    id: number;
+    name: string; // 'product', 'user', v.v.
+  };
+
+  // Quan hệ: Sản phẩm liên quan (có thể có hoặc không)
+  product?: {
+    id: number;
+    name: string;
+    // Thêm các trường khác của Product nếu ông cần
+  };
+};

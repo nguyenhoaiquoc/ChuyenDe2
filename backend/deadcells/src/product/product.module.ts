@@ -41,8 +41,9 @@ import { NotificationModule } from 'src/notification/notification.module';
       VehicleCategory,
       PostType,
       ProductType,
-      NotificationModule,
     ]),
+
+      NotificationModule,
      forwardRef(() => GroupModule),
   ],
   providers: [ProductService],
