@@ -70,4 +70,15 @@ export class FavoritesService {
 
     return productIds;
   }
+
+  async isFavorite(
+    userId: number,
+    productId: number,
+  ): Promise<{ isFavorite: boolean }> {
+    const existing = await this.favoriteRepo.findOne({
+      where: { user_id: userId, product_id: productId },
+    });
+
+    return { isFavorite: !!existing };
+  }
 }

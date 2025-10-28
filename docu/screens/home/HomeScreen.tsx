@@ -82,6 +82,8 @@ export default function HomeScreen({ navigation }: Props) {
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
   useEffect(() => {
     axios
       .get(`${path}/categories`)
@@ -227,6 +229,23 @@ export default function HomeScreen({ navigation }: Props) {
         }
       });
   }, []);
+
+  useEffect(() => {
+    const userId = 1;
+    axios.get(`${path}/favorites/user/${userId}`).then((res) => {
+      setFavoriteIds(res.data.productIds || []);
+    });
+  }, []);
+
+  const handleToggleFavorite = async (productId: string) => {
+    try {
+      await axios.post(`${path}/favorites/toggle/${productId}`);
+      const res = await axios.get(`${path}/favorites/user/1`); // tạm thay userid = 1
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích:", err);
+    }
+  };
 
   // --- Hàm tiện ích tính toán khoảng thời gian ---
   const timeSince = (date: Date): string => {
@@ -417,17 +436,17 @@ export default function HomeScreen({ navigation }: Props) {
                 category={item.category}
                 subCategory={item.subCategory}
                 imageCount={item.imageCount}
-                isFavorite={item.isFavorite}
+                isFavorite={favoriteIds.includes(String(item.id))}
+                onToggleFavorite={() => handleToggleFavorite(item.id)}
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
                 }
-                onToggleFavorite={() => console.log("Yêu thích:", item.name)}
               />
             )}
           />
         </View>
       </ScrollView>
-      {/* Menu dưới */} 
+      {/* Menu dưới */}
       <Menu />
     </View>
   );

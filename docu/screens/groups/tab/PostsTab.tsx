@@ -57,16 +57,14 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
             <View className="mb-6 p-3 bg-white rounded-lg shadow">
               {/* Nhóm */}
               <View className="flex-row items-center mb-2">
-                {item.groupImage && (
-                  <Image
-                    source={
-                      item.groupImage && item.groupImage !== ""
-                        ? { uri: item.groupImage }
-                        : require("../../../assets/meo.jpg")
-                    }
-                    className="w-8 h-8 rounded-full"
-                  />
-                )}
+                <Image
+                  source={
+                    item.groupImage && item.groupImage !== ""
+                      ? { uri: item.groupImage }
+                      : require("../../../assets/meo.jpg")
+                  }
+                  className="w-8 h-8 rounded-full"
+                />
                 <Text className="text-xl ml-2 font-semibold">
                   {item.groupName}
                 </Text>
@@ -83,13 +81,11 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                 }
               >
                 {/* Ảnh bài viết */}
-                {item.image && (
-                  <Image
-                    source={{ uri: item.image }}
-                    className="w-full h-40 mt-2 rounded-lg"
-                    resizeMode="cover"
-                  />
-                )}
+                <Image
+                  source={{ uri: item.image }}
+                  className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
+                  resizeMode="contain"
+                />
               </TouchableOpacity>
             </View>
           )}

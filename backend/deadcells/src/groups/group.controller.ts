@@ -36,7 +36,7 @@ export class GroupController {
       id: g.id,
       name: g.name,
       members: `${g.count_member} thành viên`,
-      posts: 'Chưa có dữ liệu bài viết', // sau này nối thêm
+      posts: 'Chưa có dữ liệu bài viết', // sau này nối thêm 
       image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
     }));
   }
@@ -72,6 +72,8 @@ export class GroupController {
       members: group.count_member,
       posts: 'Chưa có dữ liệu bài viết',
       image: group.thumbnail_url,
+      owner: group.owner_id,
+      createdAt: group.created_at,
     };
   }
 

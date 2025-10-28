@@ -22,6 +22,7 @@ export default function CreateGroupScreen() {
   const [groupName, setGroupName] = useState("");
   const [privacy, setPrivacy] = useState("public");
   const [images, setImages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleUploadImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,7 +66,7 @@ export default function CreateGroupScreen() {
       Alert.alert("Thiếu tên nhóm", "Vui lòng nhập tên nhóm.");
       return;
     }
-
+    setIsLoading(true);
     try {
       let thumbnail_url = "";
 
@@ -108,6 +109,7 @@ export default function CreateGroupScreen() {
             <Text className="text-base font-medium mb-2">Tên nhóm</Text>
             <TextInput
               value={groupName}
+              editable={!isLoading}
               onChangeText={setGroupName}
               placeholder="Ví dụ: Hội yêu thú cưng Sài Gòn"
               className="border border-gray-300 rounded-lg p-3 text-base"
@@ -120,6 +122,7 @@ export default function CreateGroupScreen() {
 
             <TouchableOpacity
               onPress={() => setPrivacy("public")}
+              disabled={isLoading}
               className="flex-row items-center p-3 border border-gray-300 rounded-lg"
             >
               <Feather
@@ -160,6 +163,7 @@ export default function CreateGroupScreen() {
             </Text>
             <TouchableOpacity
               onPress={handleUploadImage}
+              disabled={isLoading}
               className="flex-row items-center p-3 border border-gray-300 rounded-lg"
             >
               <MaterialCommunityIcons
@@ -204,11 +208,26 @@ export default function CreateGroupScreen() {
       <View className="p-4 border-t border-gray-200">
         <TouchableOpacity
           onPress={handleCreateGroup}
-          className="bg-blue-500 rounded-lg p-4"
+          disabled={isLoading} //  Khóa nút khi đang xử lý
+          className={`bg-blue-500 rounded-lg p-4 ${isLoading ? "opacity-70" : ""}`}
         >
-          <Text className="text-white text-center font-bold text-base">
-            Tạo nhóm
-          </Text>
+          {isLoading ? (
+            <View className="flex-row justify-center items-center">
+              <MaterialCommunityIcons
+                name="loading"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text className="text-white font-bold text-base">
+                Đang tạo nhóm...
+              </Text>
+            </View>
+          ) : (
+            <Text className="text-white text-center font-bold text-base">
+              Tạo nhóm
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -28,16 +28,28 @@ export class GroupService {
   }
 
   async create(data: Partial<Group>): Promise<Group> {
+    // 1. Tạo nhóm
     const group = this.groupRepo.create({
       name: data.name,
       isPublic: data.isPublic ?? true,
       thumbnail_url: data.thumbnail_url || undefined,
-      owner_id: 1,
+      owner_id: 1, // tạm user_id = 1
       count_member: 1,
-      status_id: 1,
+      status_id: 1, //hoạt đọng
     });
 
-    return this.groupRepo.save(group);
+    const savedGroup = await this.groupRepo.save(group);
+
+    // 2. Tạo bản ghi group_members
+    const member = this.groupMemberRepo.create({
+      group_id: savedGroup.id,
+      user_id: savedGroup.owner_id,
+      group_role_id: 2, // 1.member 2.leader
+    });
+
+    await this.groupMemberRepo.save(member);
+
+    return savedGroup;
   }
 
   //KT thành vien
@@ -72,26 +84,9 @@ export class GroupService {
     await this.groupMemberRepo.delete({ group_id: groupId, user_id: userId });
   }
 
-  async findPostsFromUserGroups(userId: number, limit?: number) {
-    // 1️ Lấy danh sách group mà user là thành viên
-    const memberships = await this.groupMemberRepo.find({
-      where: { user_id: userId },
-      select: ['group_id'],
-    });
-
-    const groupIds = memberships.map((m) => m.group_id);
-    if (groupIds.length === 0) return [];
-
-    // 2️ Lấy danh sách bài viết thuộc các group đó
-    const posts = await this.productRepo.find({
-      where: { group_id: In(groupIds), status_id: 1 },
-      order: { created_at: 'DESC' },
-      take: limit || undefined,
-      relations: ['images', 'user', 'category', 'subCategory', 'group'],
-    });
-
-    // 3️ Format dữ liệu theo đúng cấu trúc FE mong muốn
-    return posts.map((p) => ({
+  // 🔧 Hàm format dùng chung
+  private formatPost(p: Product) {
+    return {
       id: String(p.id),
       image:
         p.images?.find((img) => !!img.image_url)?.image_url ||
@@ -117,9 +112,40 @@ export class GroupService {
         : undefined,
       imageCount: p.images?.length || 0,
       isFavorite: false,
-
       groupName: p.group?.name || 'Không rõ nhóm',
       groupImage: p.group?.thumbnail_url || null,
-    }));
+    };
+  }
+
+  // ✅ Lấy bài viết từ các nhóm user tham gia
+  async findPostsFromUserGroups(userId: number, limit?: number) {
+    const memberships = await this.groupMemberRepo.find({
+      where: { user_id: 1 },
+      select: ['group_id'],
+    });
+
+    const groupIds = memberships.map((m) => m.group_id);
+    if (groupIds.length === 0) return [];
+
+    const posts = await this.productRepo.find({
+      where: { group_id: In(groupIds), status_id: 1 },
+      order: { created_at: 'DESC' },
+      take: limit || undefined,
+      relations: ['images', 'user', 'category', 'subCategory', 'group'],
+    });
+
+    return posts.map((p) => this.formatPost(p));
+  }
+
+  // ✅ Lấy bài viết từ một nhóm cụ thể
+  async findPostsByGroup(groupId: number, limit?: number) {
+    const posts = await this.productRepo.find({
+      where: { group_id: groupId, status_id: 1 },
+      order: { created_at: 'DESC' },
+      take: limit || undefined,
+      relations: ['images', 'user', 'category', 'subCategory', 'group'],
+    });
+
+    return posts.map((p) => this.formatPost(p));
   }
 }
