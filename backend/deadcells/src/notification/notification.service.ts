@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Notification } from 'src/entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Product } from 'src/entities/product.entity';
 import { NotificationAction } from 'src/entities/notification-action.entity';
 import { TargetType } from 'src/entities/target-type.entity';
+
 import { User } from 'src/entities/user.entity';
 
 @Injectable()
@@ -63,7 +64,7 @@ export class NotificationService {
 
 
 
-    // 4. HÀM : Thông báo cho "tui" (Admin)
+    // 4. HÀM : Thông báo cho (Admin)
 
     async notifyAdminsOfNewPost(product: Product) {
         try {
@@ -105,19 +106,32 @@ export class NotificationService {
     /**
      * Lấy tất cả thông báo cho một người dùng (ví dụ: cho app React Native)
      */
-    async getNotificationsForUser(userId: number): Promise<Notification[]> {
+    async getNotificationsForUser(userId: number, tab?: string): Promise<Notification[]> { // 👈 Thêm "tab?: string"
+
+        // Xây dựng điều kiện WHERE cơ bản
+        const whereCondition: any = { user: { id: userId } };
+
+        // Thêm điều kiện lọc dựa trên 'tab'
+        if (tab === 'news') {
+            // Chỉ lấy thông báo có action là 'admin_new_post'
+            whereCondition.action = { name: 'admin_new_post' };
+        } else {
+            // Mặc định (tab 'activity'): Lấy các thông báo KHÔNG phải là 'admin_new_post'
+            whereCondition.action = { name: Not('admin_new_post') }; //  Dùng Not()
+        }
+
         return this.notificationRepo.find({
-            where: { user: { id: userId } },
+            where: whereCondition, // 👈 Sử dụng điều kiện đã xây dựng
             relations: [
-                'actor', // Lấy info người gây ra
-                'action', // Lấy tên hành động (e.g., 'comment')
-                'product', // Lấy info sản phẩm (nếu có)
-                'targetType', // Lấy tên loại (e.g., 'product')
+                'actor',
+                'action',
+                'product',
+                'targetType',
             ],
             order: {
-                createdAt: 'DESC', // Sắp xếp mới nhất lên đầu
+                createdAt: 'DESC',
             },
-            take: 20, // Lấy 20 cái gần nhất
+            take: 20,
         });
     }
 
@@ -131,4 +145,9 @@ export class NotificationService {
             { is_read: true },
         );
     }
+
+
+
+
+
 }

@@ -4,6 +4,7 @@ import {
   Patch,
   Param,
   ParseIntPipe, 
+  Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 
@@ -14,6 +15,7 @@ export class NotificationController {
   @Get('user/:userId') 
   async getMyNotifications(
     @Param('userId', ParseIntPipe) userId: number, 
+    @Query('tab') tab: string,
   ) {
 
     return this.notificationService.getNotificationsForUser(userId);

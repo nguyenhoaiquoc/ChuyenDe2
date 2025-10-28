@@ -49,11 +49,21 @@ export default function NotificationScreen({ navigation }: Props) {
                     return;
                 }
 
-                // 2. Gọi API (endpoint ông đã tạo)
-                console.log("Đang gọi API:", `${path}/notifications/user/${userId}`);
-                const response = await axios.get(
-                    `${path}/notifications/user/${userId}`,
-                );
+                // 👇 Xác định tham số 'tab' dựa trên state 'activeTab'
+                let tabQueryParam = '';
+                if (activeTab === 'Tin tức') {
+                    tabQueryParam = '?tab=news';
+                } else {
+                    // Mặc định là 'Hoạt động' (hoặc có thể thêm ?tab=activity)
+                    // tabQueryParam = '?tab=activity'; 
+                }
+
+                // 👇 Gọi API với tham số 'tab'
+                const apiUrl = `${path}/notifications/user/${userId}${tabQueryParam}`;
+                console.log("Calling API:", apiUrl); // Log để kiểm tra
+
+                const response = await axios.get(apiUrl);
+                setNotifications(response.data);
 
                 // 3. Lưu data vào state
                 setNotifications(response.data);
