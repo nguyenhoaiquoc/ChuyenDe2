@@ -125,53 +125,6 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
-          // return {
-          //   id: item.id.toString(),
-          //   image: imageUrl,
-          //   name: item.name || "Không có tiêu đề",
-          //   price: (() => {
-          //     if (item.dealType?.name === "Miễn phí") return "Miễn phí";
-          //     if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-          //     return item.price
-          //       ? `${item.price.toLocaleString("vi-VN")} đ`
-          //       : "Liên hệ";
-          //   })(),
-          //   location: locationText,
-          //   time: timeDisplay,
-          //   tag: tagText,
-          //   authorName: authorName,
-          //   category: item.category || null,
-          //   subCategory: item.subCategory
-          //     ? {
-          //         id: item.subCategory.id
-          //           ? parseInt(item.subCategory.id)
-          //           : undefined,
-          //         name: item.subCategory.name,
-          //         source_table: item.subCategory.source_table,
-          //         source_detail: item.subCategory.source_detail,
-          //       }
-          //     : undefined,
-          //   category_change_id: item.category_change_id || null,
-          //   sub_category_change_id: item.sub_category_change_id || null,
-          //   category_change: item.category_change || null,
-          //   sub_category_change: item.sub_category_change || null,
-          //   imageCount: item.images?.length || 1,
-          //   phone: item.phone || null,
-          //   isFavorite: false,
-          //   images: item.images || [],
-          //   description: item.description || "",
-          //   postType: item.postType || { id: "1", name: "Chưa rõ" },
-          //   productType: item.productType || { id: "1", name: "Chưa rõ" },
-          //   condition: item.condition || { id: "1", name: "Chưa rõ" },
-          //   dealType: item.dealType || { id: "1", name: "Bán" },
-          //   created_at: item.created_at || new Date().toISOString(),
-          //   updated_at: item.updated_at || undefined,
-          //   user_id: item.user_id ?? 0,
-          //   author: item.author || null,
-          //   year: item.year || null,
-          // };
-
-          // THAY THẾ TOÀN BỘ KHỐI 'return {...};' BÊN TRONG HÀM .map() BẰNG CODE NÀY
 
           return {
             id: item.id.toString(),
@@ -260,7 +213,9 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const userId = await AsyncStorage.getItem("userId");
+        const userIdStr = await AsyncStorage.getItem("userId");
+        if (!userIdStr) return;
+        const userId = parseInt(userIdStr, 10);
         const res = await axios.get(`${path}/favorites/user/${userId}`);
         setFavoriteIds(res.data.productIds || []);
       } catch (err) {
@@ -273,12 +228,14 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleToggleFavorite = async (productId: string) => {
     try {
-      const userId = await AsyncStorage.getItem("userId");
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) return; // nếu null thì bỏ qua
+      const userId = parseInt(userIdStr, 10);
       await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
       const res = await axios.get(`${path}/favorites/user/${userId}`);
       setFavoriteIds(res.data.productIds || []);
     } catch (err) {
-      console.log("Lỗi toggle yêu thích:", err);
+      console.log("Lỗi toggle yêu thích screen:", err);
     }
   };
 
@@ -457,10 +414,11 @@ export default function HomeScreen({ navigation }: Props) {
             renderItem={({ item }) => (
               <ProductCard
                 product={item}
+                isFavorite={favoriteIds.includes(String(item.id))}
+                onToggleFavorite={() => handleToggleFavorite(item.id)}
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
                 }
-                onToggleFavorite={() => console.log("Yêu thích:", item.name)}
                 onPressPostType={(pt) => {
                   if (pt.id == "1") navigation.navigate("SellProductScreen");
                   else if (pt.id == "2")

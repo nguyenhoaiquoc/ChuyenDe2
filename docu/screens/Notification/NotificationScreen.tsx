@@ -67,7 +67,7 @@ export default function NotificationScreen({ navigation }: Props) {
 
                 // 3. Lưu data vào state
                 setNotifications(response.data);
-
+                
             } catch (error: any) {
                 console.error("Lỗi khi tải thông báo:", error.message);
                 Alert.alert("Lỗi", "Không thể tải danh sách thông báo.");

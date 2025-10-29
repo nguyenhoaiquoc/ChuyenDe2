@@ -20,7 +20,7 @@ interface PostsTabProps {
 export default function PostsTab({ limit, navigation }: PostsTabProps) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const userId = 1; //macdinh
+  const userId = 1;
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -87,6 +87,8 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
+
+              
             </View>
           )}
         />

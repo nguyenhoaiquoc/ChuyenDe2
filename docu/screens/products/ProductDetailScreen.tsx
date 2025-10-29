@@ -79,7 +79,9 @@ export default function ProductDetailScreen() {
 
   const handleToggleFavorite = async () => {
     try {
-      await axios.post(`${path}/favorites/toggle/${product.id}`);
+      await axios.post(`${path}/favorites/toggle/${product.id}`, {
+        userId: currentUser?.id,
+      });
 
       const [countRes, statusRes] = await Promise.all([
         axios.get(`${path}/favorites/${product.id}/count`),
@@ -91,7 +93,7 @@ export default function ProductDetailScreen() {
       setFavoriteCount(countRes.data.count || 0);
       setIsFavorite(statusRes.data.isFavorite || false);
     } catch (err) {
-      console.log("Lỗi toggle yêu thích:", err);
+      console.log("Lỗi toggle yêu thích detail:", err);
     }
   };
 
@@ -260,6 +262,36 @@ export default function ProductDetailScreen() {
   };
 
 
+      const room = response.room ?? response;
+      console.log("🟢 Room nhận được:", room);
+
+      // ✅ Xác định người còn lại trong phòng (người bán)
+      const otherUserId =
+        sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserName = product.authorName || "Người bán";
+      const otherUserAvatar =
+        product.user?.avatar ||
+        product.seller?.avatar ||
+        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+
+      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
+
+      // ✅ Truyền avatar và product sang ChatRoom
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        product,
+        otherUserId,
+        otherUserName,
+        otherUserAvatar, // ✅ thêm dòng này
+        currentUserId: currentUser.id,
+        currentUserName: currentUser.name,
+        token: tokenValue,
+      });
+    } catch (error) {
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -310,18 +342,16 @@ export default function ProductDetailScreen() {
       throw err;
     }
   }
-  console.log("danh mục", product.category?.name);
-  console.log("TG", product.author);
-  console.log("Y", product.author);
 
-
+  const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
+  const priceNumber = Number(rawPrice);
   return (
     <View className="flex-1 bg-white mt-5">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Ảnh sản phẩm - Swipe horizontal để xem hết ảnh */}
+        {/* Ảnh sản phẩm */}
         <View className="relative">
           <TouchableOpacity
-            onPress={() => navigation.goBack()} // ✅ Nút back để quay lại screen trước
+            onPress={() => navigation.goBack()}
             className="absolute top-3 left-3 bg-white p-2 rounded-full z-10 shadow-md"
           >
             <Ionicons name="arrow-back" size={20} color="black" />
@@ -331,7 +361,7 @@ export default function ProductDetailScreen() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            snapToInterval={width} // ✅ Snap full width
+            snapToInterval={width}
             decelerationRate="fast"
             keyExtractor={(item) => item.id}
             renderItem={renderImageItem}
@@ -345,7 +375,6 @@ export default function ProductDetailScreen() {
               }
             }}
           />
-          {/* ✅ Dots indicator - Di chuyển ra ngoài, absolute dưới ảnh, luôn visible */}
           <View className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex-row items-center">
             {productImages.map((_, index) => (
               <View
@@ -396,9 +425,9 @@ export default function ProductDetailScreen() {
                 ? "Miễn phí"
                 : product.dealType?.name === "Trao đổi"
                   ? "Trao đổi"
-                  : parseFloat(product.price || "0") > 0
-                    ? `${parseFloat(product.price).toLocaleString()} đ`
-                    : null}
+                  : priceNumber > 0
+                    ? `${priceNumber.toLocaleString("vi-VN")} đ`
+                    : "Liên hệ"}
             </Text>
 
             {/* Tim */}
@@ -442,7 +471,7 @@ export default function ProductDetailScreen() {
                 navigation.navigate("UserDetail", {
                   userId: product.user_id,
                   productId: product.id,
-                  product: product // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
+                  product: product,
                 });
               } else {
                 Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
@@ -457,7 +486,9 @@ export default function ProductDetailScreen() {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">{product.authorName || "Người dùng"}</Text>
+                <Text className="font-semibold">
+                  {product.authorName || "Người dùng"}
+                </Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
