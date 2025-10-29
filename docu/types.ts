@@ -14,15 +14,11 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
-  ChooseSubCategoryScreen:
-    | { category: { id: string; name: string } }
-    | undefined;
-  PostFormScreen:
-    | {
-        category: { id: string; name: string };
-        subCategory: { id: string; name: string };
-      }
-    | undefined;
+  ChooseSubCategoryScreen: { category: { id: string; name: string } } | undefined;
+  PostFormScreen: {
+    category: { id: string; name: string };
+    subCategory: { id: string; name: string };
+  } | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -33,12 +29,12 @@ export type RootStackParamList = {
   ChooseExchangeCategoryScreen: undefined;
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
-  UserDetail: undefined;
-  ManagerGroupsScreen: undefined;
-  UserInforScreen: undefined;
+  ManagerGroupsScreen : undefined;
+  UserInforScreen : undefined;
   EditProfileScreen: undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
+  NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
@@ -49,6 +45,12 @@ export type RootStackParamList = {
     currentUserId: string | number;
     currentUserName: string;
     token: string;
+  };
+
+UserDetail: {
+    userId: number | string; 
+    productId: string;
+    product: Product;
   };
 
   // TestApi: undefined;
@@ -160,4 +162,37 @@ export type FileResult = {
   uri: string;
   name: string;
   type: string;
+
+// notification
+export type Notification = {
+  id: number;
+  is_read: boolean;
+  createdAt: string; // Hoặc Date nếu ông parse
+  target_id: number;
+
+  // Quan hệ: Người gây ra hành động
+  actor: {
+    id: number;
+    fullName: string;
+    image?: string;
+  };
+
+  // Quan hệ: Hành động là gì?
+  action: {
+    id: number;
+    name: string; // 'post_success', 'admin_new_post', 'comment', v.v.
+  };
+  
+  // Quan hệ: Loại đối tượng là gì?
+  targetType: {
+    id: number;
+    name: string; // 'product', 'user', v.v.
+  };
+
+  // Quan hệ: Sản phẩm liên quan (có thể có hoặc không)
+  product?: {
+    id: number;
+    name: string;
+    // Thêm các trường khác của Product nếu ông cần
+  };
 };

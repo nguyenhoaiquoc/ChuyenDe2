@@ -425,8 +425,18 @@ export default function ProductDetailScreen() {
           </Text>
 
           {/* Thông tin shop */}
-          <TouchableOpacity /* onPress={() => navigation.navigate("UserDetail")} */
-          >
+          <TouchableOpacity
+            onPress={() => {
+              if (product.user_id) {
+                navigation.navigate("UserDetail", {
+                  userId: product.user_id,
+                  productId: product.id, // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
+                });
+              } else {
+                Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
+              }
+            }}
+>
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
@@ -435,18 +445,15 @@ export default function ProductDetailScreen() {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">Người dùng</Text>
+                <Text className="font-semibold">{product.authorName || "Người dùng"}</Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="ml-1 text-gray-500 text-xs">
-                  (14 đánh giá)
-                </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
               </View>
             </View>
           </TouchableOpacity>
-
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
