@@ -29,14 +29,14 @@ export default function Menu() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-// Kiểm tra trạng thái đăng nhập khi component mount
-useEffect(() => {
-  const checkLogin = async () => {
-    const token = await AsyncStorage.getItem('token');
-    setIsLoggedIn(!!token); // true nếu có token
-  };
-  checkLogin();
-}, []);
+  // Kiểm tra trạng thái đăng nhập khi component mount
+  useEffect(() => {
+    const checkLogin = async () => {
+      const token = await AsyncStorage.getItem("token");
+      setIsLoggedIn(!!token); // true nếu có token
+    };
+    checkLogin();
+  }, []);
 
   return (
     <View className="absolute bottom-0 left-0 right-0">
@@ -78,7 +78,13 @@ useEffect(() => {
         {/* Đăng tin */}
         <TouchableOpacity
           className="items-center flex-1 -mt-5"
-          onPress={() => navigation.navigate("ChooseCategoryScreen")}
+          onPress={() => {
+            if (isLoggedIn) {
+              navigation.navigate("ChooseCategoryScreen");
+            } else {
+              navigation.navigate("LoginScreen");
+            }
+          }}
         >
           <View className="w-14 h-14 rounded-full bg-blue-500 justify-center items-center shadow-lg">
             <Entypo name="plus" size={28} color="#fff" />
@@ -106,22 +112,22 @@ useEffect(() => {
         </TouchableOpacity>
 
         {/* Tài khoản */}
-    <TouchableOpacity
+        <TouchableOpacity
           className="items-center flex-1"
           onPress={() => {
-  if (isLoggedIn) {
-    navigation.navigate("UserScreen");
-  } else {
-    navigation.navigate("LoginScreen");
-  }
-}}
+            if (isLoggedIn) {
+              navigation.navigate("UserScreen");
+            } else {
+              navigation.navigate("LoginScreen");
+            }
+          }}
         >
           <FontAwesome
             name="user"
             size={22}
-            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"} 
+            color={activeTab === "userscreen" ? "#4285F4" : "#aaa"}
           />
-          <Text 
+          <Text
             className={`text-[10px] mt-1 font-medium ${activeTab === "userscreen" ? "text-blue-500 font-semibold" : "text-[#aaa]"}`}
           >
             Tài khoản

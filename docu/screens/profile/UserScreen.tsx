@@ -1,4 +1,11 @@
-import { View, Text, Image, TouchableOpacity, StatusBar, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StatusBar,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -6,90 +13,85 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";  
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
 
-  useEffect(() => {
-    AsyncStorage.getItem('userName').then(value => {
-      if (value) setName(value);
-    });
-  }, []);
   const [avatar, setAvatar] = useState<string | null>(null);
 
-useEffect(() => {
-  const fetchUser = async () => {
-    const userId = await AsyncStorage.getItem("userId");
-    const token = await AsyncStorage.getItem("token");
-    if (!userId) return;
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const token = await AsyncStorage.getItem("token");
+        if (!userId) return;
 
-    try {
-      const res = await axios.get(`${path}/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data) {
-        setName(res.data.fullName || res.data.name || "");
-        setAvatar(res.data.image || null); // <-- dùng URL từ server
-        await AsyncStorage.setItem("userName", res.data.fullName || res.data.name || "");
-        if (res.data.image) await AsyncStorage.setItem("userAvatar", res.data.image);
+        const res = await axios.get(`${path}/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const fullName = res.data.fullName || res.data.name || "";
+        const image = res.data.image || null;
+        setName(fullName);
+        setAvatar(image);
+        await AsyncStorage.setItem("userName", fullName);
+        if (image) await AsyncStorage.setItem("userAvatar", image);
+      } catch {
+        const localName = await AsyncStorage.getItem("userName");
+        const localAvatar = await AsyncStorage.getItem("userAvatar");
+        if (localName) setName(localName);
+        if (localAvatar) setAvatar(localAvatar);
       }
-    } catch (err) {
-      console.log("Lấy user error:", err);
-      const localName = await AsyncStorage.getItem("userName");
-      const localAvatar = await AsyncStorage.getItem("userAvatar");
-      if (localName) setName(localName);
-      if (localAvatar) setAvatar(localAvatar);
-    }
-  };
-
-  fetchUser();
-}, []);
-
+    };
+    fetchUser();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
         {/* --- Phần thông tin cá nhân --- */}
-        <View style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}>
+        <View
+          style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}
+        >
           {/* Avatar */}
- <TouchableOpacity  onPress={() => navigation.navigate("UserInforScreen")}>
-          <View
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: "#d1d5db",
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 4,
-              borderColor: "white",
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 4,
-              elevation: 3,
-            }}
-           
+          <TouchableOpacity
+            onPress={() => navigation.navigate("UserInforScreen")}
           >
-            
-  <Image
-  source={
-    avatar
-      ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
-      : require("../../assets/meo.jpg")
-  }
-  style={{ width: "100%", height: "100%", borderRadius: 48 }}
-/>
-
-
-
-          </View>
+            <View
+              style={{
+                width: 96,
+                height: 96,
+                borderRadius: 48,
+                backgroundColor: "#d1d5db",
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 4,
+                borderColor: "white",
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+            >
+              <Image
+                source={
+                  avatar
+                    ? {
+                        uri: avatar.startsWith("http")
+                          ? avatar
+                          : `${path}${avatar}`,
+                      }
+                    : require("../../assets/meo.jpg")
+                }
+                style={{ width: "100%", height: "100%", borderRadius: 48 }}
+              />
+            </View>
           </TouchableOpacity>
           {/* Tên và thông tin theo dõi */}
           <Text
@@ -166,7 +168,12 @@ useEffect(() => {
               isLast={true}
               color="red"
               onPress={async () => {
-                await AsyncStorage.removeItem("token");
+                await AsyncStorage.multiRemove([
+                  "token",
+                  "userId",
+                  "userName",
+                  "userAvatar",
+                ]);
                 navigation.reset({
                   index: 0,
                   routes: [{ name: "LoginScreen" }],
@@ -195,8 +202,6 @@ function UtilityItem({
   onPress?: () => void;
   textStyle?: object; // kiểu style cho text
   color?: string; // màu tùy chọn
-
-
 }) {
   const textColor = color || "#1f2937"; // default text
   const iconColor = color || "#6b7280"; // default icon
@@ -215,7 +220,12 @@ function UtilityItem({
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Ionicons name={icon} size={24} color={iconColor} />
-        <Text style={[{ marginLeft: 16, fontSize: 16, color: "#1f2937" }, textStyle]}>
+        <Text
+          style={[
+            { marginLeft: 16, fontSize: 16, color: "#1f2937" },
+            textStyle,
+          ]}
+        >
           {title}
         </Text>
       </View>

@@ -98,6 +98,9 @@ export class User {
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
 
+  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
+  lastOnlineAt?: Date | null;
+
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 

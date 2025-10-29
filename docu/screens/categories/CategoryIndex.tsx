@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { Product, RootStackParamList } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -16,42 +16,6 @@ import axios from "axios";
 import { path } from "../../config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CategoryIndex">;
-
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[];
-  description?: string;
-  postType?: { id: string; name: string };
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string };
-  created_at?: string;
-}
 
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
@@ -95,10 +59,11 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
 
         const mapped: Product[] = rawData.map((item: any) => {
           console.log("CategoryIndex productType:", item.productType);
+          console.log('API Response Item:', item.id, 'Author:', item.author, 'Year:', item.year);
           // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
-            : item.thumbnail_url 
+            : item.thumbnail_url
               ? `${path}${item.thumbnail_url}`
               : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`
@@ -146,23 +111,87 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
+          // return {
+          //   id: item.id.toString(),
+          //   image: imageUrl,
+          //   name: item.name || "Không có tiêu đề",
+          //   price: (() => {
+          //     if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+          //     if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+          //     return item.price
+          //       ? `${item.price.toLocaleString("vi-VN")} đ`
+          //       : "Liên hệ";
+          //   })(),
+          //   location: locationText,
+          //   time: timeDisplay,
+          //   tag: tagText,
+          //   authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+          //   user_id: item.user?.id ?? item.user_id ?? 0,
+          //   category: item.category,
+          //   subCategory: item.subCategory
+          //     ? {
+          //         id: item.subCategory.id
+          //           ? parseInt(item.subCategory.id)
+          //           : undefined,
+          //         name: item.subCategory.name,
+          //         source_table: item.subCategory.source_table,
+          //         source_detail: item.subCategory.source_detail,
+          //       }
+          //     : undefined,
+          //   category_change: item.category_change
+          //     ? {
+          //         id: item.category_change.id,
+          //         name: item.category_change.name,
+          //         image: item.category_change.image,
+          //       }
+          //     : undefined,
+          //   sub_category_change: item.sub_category_change
+          //     ? {
+          //         id: item.sub_category_change.id,
+          //         name: item.sub_category_change.name,
+          //         parent_category_id:
+          //           item.sub_category_change.parent_category_id || null,
+          //         source_table: item.sub_category_change.source_table || null,
+          //       }
+          //     : undefined,
+          //   imageCount: item.images?.length || (imageUrl ? 1 : 0),
+          //   isFavorite: false,
+          //   images: item.images || [],
+          //   description: item.description || "",
+          //   postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
+          //   productType: item.productType || { id: "1", name: "Chưa rõ" },
+          //   condition: item.condition || { id: "1", name: "Chưa rõ" },
+          //   dealType: item.dealType || { id: "1", name: "Bán" },
+          //   address_json: item.address_json || { full: locationText },
+          //   author: item.author || null,
+          //   year: item.year || null,
+          //   created_at: item.created_at || new Date().toISOString(),
+          //   updated_at: item.updated_at || undefined,
+          // };
+          // THAY THẾ TOÀN BỘ KHỐI 'return {...};' BÊN TRONG HÀM .map() BẰNG CODE NÀY
 
           return {
             id: item.id.toString(),
-            image: imageUrl,
+            image: imageUrl, // Sử dụng imageUrl đã xử lý
             name: item.name || "Không có tiêu đề",
             price: (() => {
+              // Logic giá của bạn đã đúng
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
               return item.price
-                ? `${item.price.toLocaleString("vi-VN")} đ`
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ` // Ép kiểu Number để toLocaleString
                 : "Liên hệ";
             })(),
-            location: locationText,
-            time: timeDisplay,
-            tag: tagText,
-            authorName: item.user?.name || "Ẩn danh",
-            category: categoryName,
+            location: locationText, // Sử dụng locationText đã xử lý
+            time: timeDisplay, // Sử dụng timeDisplay đã xử lý
+            tag: tagText, // Sử dụng tagText đã xử lý
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh", // Ưu tiên fullName
+            user_id: item.user?.id ?? item.user_id ?? 0, // ===== SỬA LỖI 1: category =====
+            // Gán trực tiếp object 'category' từ API
+
+            category: item.category, // <-- Gán object category
+            // Giữ nguyên logic subCategory của bạn (đã ổn)
+
             subCategory: item.subCategory
               ? {
                   id: item.subCategory.id
@@ -173,49 +202,43 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                   source_detail: item.subCategory.source_detail,
                 }
               : undefined,
-            category_change: item.category_change
-              ? {
-                  id: item.category_change.id,
-                  name: item.category_change.name,
-                  image: item.category_change.image,
-                }
-              : undefined,
-            sub_category_change: item.sub_category_change
-              ? {
-                  id: item.sub_category_change.id,
-                  name: item.sub_category_change.name,
-                  parent_category_id:
-                    item.sub_category_change.parent_category_id || null,
-                  source_table: item.sub_category_change.source_table || null,
-                }
-              : undefined,
-            imageCount: item.images?.length || 1,
-            isFavorite: false,
-            images: item.images || [],
+            // Giữ nguyên category_change và sub_category_change
+            category_change: item.category_change || undefined,
+            sub_category_change: item.sub_category_change || undefined,
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0), // Đếm ảnh hoặc dựa vào imageUrl
+            isFavorite: false, // Mặc định là false
+            images: item.images || [], // Gán mảng images
             description: item.description || "",
-            postType:
-              item.postType && item.postType.id
-                ? item.postType
-                : { id: "2", name: "Đăng mua" },
 
+            // Chuẩn hóa các object liên quan (PostType, ProductType, Condition, DealType)
+            postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
             productType: item.productType || { id: "1", name: "Chưa rõ" },
+            condition: item.condition || { id: "1", name: "Chưa rõ" },
+            dealType: item.dealType || { id: "1", name: "Bán" },
 
-            condition:
-              item.condition && item.condition.id
-                ? item.condition
-                : { id: "1", name: "Chưa rõ" },
+            address_json: item.address_json || { full: locationText }, // Gán object address_json
+            phone: item.user?.phone || null, // Lấy phone từ user nếu có
+            // ===== SỬA LỖI 2: year =====
 
-            dealType:
-              item.dealType && item.dealType.name
-                ? item.dealType
-                : { id: "1", name: "Bán" },
+            // (XÓA DÒNG 'categoryObj' bị thừa)
 
-            address_json: item.address_json || { full: locationText },
-            categoryObj: item.category || {
-              id: "1",
-              name: categoryName || "Chưa rõ",
-            },
+            author: item.author || null, // Gán author
+            year: item.year || null, // Gán year (sửa lỗi copy-paste)
+
             created_at: item.created_at || new Date().toISOString(),
+            updated_at: item.updated_at || undefined, // Thêm updated_at
+
+            // Đảm bảo các trường còn lại của Product type cũng có mặt (nếu API trả về)
+            sub_category_id: item.sub_category_id || null,
+            status_id: item.status_id?.toString() || undefined,
+            visibility_type: item.visibility_type?.toString() || undefined,
+            group_id: item.group_id || null,
+            is_approved:
+              typeof item.is_approved === "boolean"
+                ? item.is_approved
+                : undefined,
+            // 'file' không cần map ở đây vì nó không đến từ API get products
           };
         });
 
@@ -307,21 +330,16 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           }
           renderItem={({ item }) => (
             <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              location={item.location}
-              time={item.time}
-              tag={item.tag}
-              authorName={item.authorName}
-              category={item.category}
-              subCategory={item.subCategory}
-              imageCount={item.imageCount}
-              isFavorite={item.isFavorite}
+              product={item}
               onPress={() =>
                 navigation.navigate("ProductDetail", { product: item })
               }
               onToggleFavorite={() => console.log("Yêu thích:", item.name)}
+              onPressPostType={(pt) => {
+                if (pt.id == "1") navigation.navigate("SellProductScreen");
+                else if (pt.id == "2")
+                  navigation.navigate("PurchaseRequestScreen");
+              }}
             />
           )}
         />

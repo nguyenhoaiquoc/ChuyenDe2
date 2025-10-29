@@ -134,9 +134,9 @@ export class Product {
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;
 
-  // ===== Thông tin tài liệu khoa học =====
+  // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })
-  author: string | null; // Tác giả / Người biên soạn
+  author: string | null;
 
   @Column({ type: 'int', nullable: true })
   year: number | null;
