@@ -7,6 +7,7 @@ import {
   Text,
   StatusBar,
   FlatList,
+  Alert,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -223,13 +224,16 @@ export default function HomeScreen({ navigation }: Props) {
       }
     };
 
-    fetchFavorites(); // gọi hàm async
+    fetchFavorites();
   }, []);
 
   const handleToggleFavorite = async (productId: string) => {
     try {
       const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) return; // nếu null thì bỏ qua
+      if (!userIdStr) {
+        Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
+        return;
+      }
       const userId = parseInt(userIdStr, 10);
       await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
       const res = await axios.get(`${path}/favorites/user/${userId}`);
@@ -292,8 +296,10 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity className="p-2" 
-        onPress={() => navigation.navigate("NotificationScreen")}>
+        <TouchableOpacity
+          className="p-2"
+          onPress={() => navigation.navigate("NotificationScreen")}
+        >
           <Feather name="bell" size={22} color="#333" />
         </TouchableOpacity>
       </View>
