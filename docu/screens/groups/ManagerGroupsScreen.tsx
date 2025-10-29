@@ -34,7 +34,7 @@ export default function ManagerGroupsScreen() {
       case "Nhóm của bạn":
         return <YourGroupsTab navigation={navigation} />;
       case "Bài viết":
-        return <PostsTab />;
+        return <PostsTab navigation={navigation} limit={4} />;
       case "Khám phá":
         return <DiscoverTab />;
       default:

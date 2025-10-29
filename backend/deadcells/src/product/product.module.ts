@@ -48,5 +48,6 @@ import { NotificationModule } from 'src/notification/notification.module';
   ],
   providers: [ProductService],
   controllers: [ProductController],
+  exports: [ProductService],
 })
 export class ProductModule {}

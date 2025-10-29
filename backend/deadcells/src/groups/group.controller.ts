@@ -13,10 +13,21 @@ import { GroupService } from './group.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Product } from 'src/entities/product.entity';
 
 @Controller('groups')
 export class GroupController {
-  constructor(private readonly groupService: GroupService) {}
+  constructor(
+    private readonly groupService: GroupService,
+
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
+
+    @InjectRepository(Product)
+    private readonly productRepo: Repository<Product>,
+  ) {}
 
   @Get()
   async getGroups() {
@@ -25,7 +36,7 @@ export class GroupController {
       id: g.id,
       name: g.name,
       members: `${g.count_member} thành viên`,
-      posts: 'Chưa có dữ liệu bài viết', // sau này nối thêm
+      posts: 'Chưa có dữ liệu bài viết', // sau này nối thêm 
       image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
     }));
   }
@@ -61,6 +72,8 @@ export class GroupController {
       members: group.count_member,
       posts: 'Chưa có dữ liệu bài viết',
       image: group.thumbnail_url,
+      owner: group.owner_id,
+      createdAt: group.created_at,
     };
   }
 
@@ -74,34 +87,33 @@ export class GroupController {
     return { groupId, userId, isMember };
   }
 
-  // // User vào group
-  // @Post(':groupId/join/:userId')
-  // async joinGroup(
-  //   @Param('groupId') groupId: number,
-  //   @Param('userId') userId: number,
-  // ): Promise<GroupMember> {
-  //   return this.groupService.joinGroup(+groupId, +userId);
-  // }
+  // User vào group
+  @Post(':groupId/join/:userId')
+  async joinGroup(
+    @Param('groupId') groupId: number,
+    @Param('userId') userId: number,
+  ): Promise<GroupMember> {
+    return this.groupService.joinGroup(+groupId, +userId);
+  }
 
-  // // User leave group
-  // @Delete(':groupId/leave/:userId')
-  // async leaveGroup(
-  //   @Param('groupId') groupId: number,
-  //   @Param('userId') userId: number,
-  // ): Promise<{ success: boolean }> {
-  //   await this.groupService.leaveGroup(+groupId, +userId);
-  //   return { success: true };
-  // }
+  // User leave group
+  @Delete(':groupId/leave/:userId')
+  async leaveGroup(
+    @Param('groupId') groupId: number,
+    @Param('userId') userId: number,
+  ): Promise<{ success: boolean }> {
+    await this.groupService.leaveGroup(+groupId, +userId);
+    return { success: true };
+  }
 
-  // ✅ Lấy tất cả bài viết từ các group mà user tham gia
-  // @Get('users/:userId/group-posts')
-  // async getGroupPosts(
-  //   @Param('userId') userId: number,
-  //   @Query('limit') limit?: number,
-  // ) {
-  //   return this.groupService.findPostsFromUserGroups(
-  //     +userId,
-  //     limit ? +limit : undefined,
-  //   );
-  // }
+  @Get('users/:userId/group-posts')
+  async getGroupPosts(
+    @Param('userId') userId: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.groupService.findPostsFromUserGroups(
+      +userId,
+      limit ? +limit : undefined,
+    );
+  }
 }

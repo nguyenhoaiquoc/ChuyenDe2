@@ -37,15 +37,15 @@ export type RootStackParamList = {
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   // Trong types.ts, thêm vào cuối RootStackParamList:
-ChatRoomScreen: {
-  roomId: string | number;
-  product?: Product;
-  otherUserId: string | number;
-  otherUserName?: string;
-  currentUserId: string | number;
-  currentUserName: string;
-  token: string;
-};
+  ChatRoomScreen: {
+    roomId: string | number;
+    product?: Product;
+    otherUserId: string | number;
+    otherUserName?: string;
+    currentUserId: string | number;
+    currentUserName: string;
+    token: string;
+  };
 
 UserDetail: {
     userId: number | string; 
@@ -117,7 +117,7 @@ export type Product = {
   thumbnail_url?: string;
   images: ProductImage[];
   dealType: DealType;
-  category: Category | string | undefined;
+  category: Category  | undefined;
   sub_category_id?: string | null;
   category_change?: Category;
   sub_category_change?: { id: string; name: string };
@@ -135,9 +135,12 @@ export type Product = {
   tag?: string;
   imageCount?: number;
   isFavorite?: boolean;
+  user_id: string | number;
+  file?: FileResult;
+  author: string;
+  year: number;
   created_at: string;
   updated_at?: string;
-  user_id: string | number;
 };
 
 export type Comment = {
@@ -155,6 +158,10 @@ export type User = {
   name: string;
 };
 
+export type FileResult = {
+  uri: string;
+  name: string;
+  type: string;
 
 // notification
 export type Notification = {

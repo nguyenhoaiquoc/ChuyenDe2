@@ -79,7 +79,7 @@ export class ProductService {
   // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
   async create(data: any, files?: Express.Multer.File[]) {
     const dealType = await this.dealTypeRepo.findOne({
-      where: { id: Number(data.deal_type_id) },
+      where: { id: data.deal_type_id },
     });
     if (!dealType) {
       throw new NotFoundException(
@@ -88,7 +88,7 @@ export class ProductService {
     }
 
     const condition = await this.conditionRepo.findOne({
-      where: { id: Number(data.condition_id) },
+      where: { id: data.condition_id },
     });
     if (!condition) {
       throw new NotFoundException(
@@ -97,7 +97,7 @@ export class ProductService {
     }
 
     const postType = await this.postTypeRepo.findOne({
-      where: { id: Number(data.post_type_id) },
+      where: { id: data.post_type_id },
     });
     if (!postType) {
       throw new NotFoundException(
@@ -159,7 +159,7 @@ export class ProductService {
     let user: User | null = null;
     if (data.user_id) {
       user = await this.userRepo.findOne({
-        where: { id: Number(data.user_id) },
+        where: { id: data.user_id },
       });
       if (!user) {
         console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
@@ -175,15 +175,15 @@ export class ProductService {
       sub_category_id: subCategoryId,
       category_change_id: data.category_change_id || null,
       sub_category_change_id: data.sub_category_change_id || null,
-      address_json: data.address_json || {},
+      address_json: data.address_json ? JSON.parse(data.address_json) : {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
       dealType: dealType,
       condition: condition,
       postType: postType,
-      product_type_id: data.product_type_id
-        ? Number(data.product_type_id)
-        : null,
+      product_type_id: data.product_type_id,
+      author: data.author,
+      year: data.year,
     });
 
     const savedProduct = await this.productRepo.save(product);
@@ -236,47 +236,7 @@ export class ProductService {
 
     if (!fullProduct) throw new Error('Không tìm thấy sản phẩm sau khi lưu.');
 
-    const categoryName = fullProduct.category?.name || null;
-    const subCategoryName = fullProduct.subCategory?.name || null;
-    const sourceDetail = fullProduct.subCategory
-      ? await this.getSourceDetail(fullProduct.subCategory)
-      : null;
-
-    return {
-      id: fullProduct.id,
-      image: fullProduct.thumbnail_url || null,
-      name: fullProduct.name || 'Không có tên',
-      price: fullProduct.price.toLocaleString('vi-VN'),
-      location: this.formatAddress(fullProduct.address_json),
-      created_at: fullProduct.created_at,
-      tag:
-        categoryName && subCategoryName
-          ? `${categoryName} - ${subCategoryName}`
-          : categoryName ||
-            subCategoryName ||
-            fullProduct.dealType?.name ||
-            'Không có danh mục',
-      category: categoryName,
-      subCategory: {
-        id: fullProduct.subCategory?.id || null,
-        name: subCategoryName,
-        source_table: fullProduct.subCategory?.source_table || null,
-        source_detail: sourceDetail,
-      },
-      condition: fullProduct.condition
-        ? { id: fullProduct.condition.id, name: fullProduct.condition.name } // Sửa lại thành object
-        : null,
-      // SỬA: Trả về object { id, name }
-      postType: fullProduct.postType
-        ? { id: fullProduct.postType.id, name: fullProduct.postType.name } // <<< ĐÃ SỬA
-        : null,
-      // SỬA: Trả về object { id, name }
-      productType: fullProduct.productType
-        ? { id: fullProduct.productType.id, name: fullProduct.productType.name } // <<< ĐÃ SỬA
-        : null,
-      imageCount: fullProduct.images?.length || 0,
-      isFavorite: false,
-    };
+    return this.formatProduct(fullProduct);
   }
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
@@ -292,21 +252,12 @@ export class ProductService {
         'category_change',
         'sub_category_change',
         'postType',
-        'productType', 
+        'productType',
       ],
 
       order: { created_at: 'DESC' },
     });
-    console.log(
-      '>>> ProductType test:',
-      products.map((p) => ({
-        id: p.id,
-        product_type: p.productType?.name,
-        product_type_id: p.productType?.id,
-      })),
-    );
-    // 👇 Thêm log để xem dữ liệu
-    return products;
+    return this.formatProducts(products);
   }
 
   //  Lấy toàn bộ sản phẩm (cho Postman, trả full dữ liệu chi tiết)
@@ -331,7 +282,7 @@ export class ProductService {
   }
 
   // Format dữ liệu cho client (React Native)
-  async findAllFormatted(): Promise<any[]> {
+  async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
       where: { status_id: 1 },
       relations: [
@@ -350,28 +301,40 @@ export class ProductService {
     });
 
     const visibleProducts: Product[] = [];
-    const userId = 1;
-    for (const p of products) {
-      // toàn trường
-      if (p.visibility_type === 0) {
-        visibleProducts.push(p);
-      }
 
-      //  chỉ hiển thị trong nhóm user là member
-      else if (p.visibility_type === 1) {
+    for (const p of products) {
+      const vis = Number(p.visibility_type);
+
+      if (vis === 0 || p.visibility_type == null) {
+        visibleProducts.push(p);
+      } else if (vis === 1 && userId) {
         const isMember = await this.groupService.isMember(p.group_id, userId);
-        if (isMember) {
-          visibleProducts.push(p);
-        }
+        if (isMember) visibleProducts.push(p);
       }
     }
 
+    console.log('✅ userId:', userId);
+    console.log('✅ products count:', products.length);
+    console.log('✅ visibleProducts count:', visibleProducts.length);
+    for (const p of products) {
+      console.log(`🧱 Product ${p.id}: visibility_type =`, p.visibility_type);
+    }
+
+    return this.formatProducts(visibleProducts);
+  }
+
+  // Format danh sách sản phẩm
+  async formatProducts(products: Product[]): Promise<any[]> {
     return products.map((p) => {
       const categoryName = p.category?.name || null;
       const subCategoryName = p.subCategory?.name || null;
-      const sourceDetail = p.subCategory
-        ? p.subCategory.source_table || null
-        : null;
+      const tag =
+        categoryName && subCategoryName
+          ? `${categoryName} - ${subCategoryName}`
+          : categoryName ||
+            subCategoryName ||
+            p.dealType?.name ||
+            'Không có danh mục';
 
       return {
         id: p.id,
@@ -389,31 +352,25 @@ export class ProductService {
               phone: p.user.phone,
             }
           : null,
-        post_type_id: p.post_type_id,
-        postType: p.postType
-          ? { id: p.postType.id, name: p.postType.name } // <<< THÊM VÀO ĐÂY
-          : null,
-        deal_type_id: p.deal_type_id,
-        category_id: p.category_id,
-        sub_category_id: p.sub_category_id,
-        category_change_id: p.category_change_id,
-        sub_category_change_id: p.sub_category_change_id,
-        status_id: p.status_id,
-        visibility_type: p.visibility_type,
-        group_id: p.group_id,
-        is_approved: p.is_approved,
-        address_json: p.address_json,
+        author_name: p.user?.fullName || 'Người bán',
+        author: p.author || null,
+        year: p.year || null,
 
+        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch
+        postType: p.postType
+          ? { id: p.postType.id, name: p.postType.name }
+          : null,
         productType: p.productType
           ? { id: p.productType.id, name: p.productType.name }
           : null,
-        // quan hệ chi tiết
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,
         condition: p.condition
           ? { id: p.condition.id, name: p.condition.name }
           : null,
+
+        // Danh mục chính và phụ
         category: p.category
           ? {
               id: p.category.id,
@@ -431,6 +388,8 @@ export class ProductService {
               source_id: p.subCategory.source_id,
             }
           : null,
+
+        // Danh mục đổi (nếu có)
         category_change: p.category_change
           ? {
               id: p.category_change.id,
@@ -448,6 +407,7 @@ export class ProductService {
             }
           : null,
 
+        // Ảnh sản phẩm
         images:
           p.images?.map((img) => ({
             id: img.id,
@@ -457,98 +417,33 @@ export class ProductService {
             created_at: img.created_at,
           })) || [],
         imageCount: p.images?.length || 0,
-        isFavorite: false,
+
+        // Thông tin trạng thái
+        deal_type_id: p.deal_type_id,
+        category_id: p.category_id,
+        sub_category_id: p.sub_category_id,
+        category_change_id: p.category_change_id,
+        sub_category_change_id: p.sub_category_change_id,
+        status_id: p.status_id,
+        visibility_type: p.visibility_type,
+        group_id: p.group_id,
+        is_approved: p.is_approved,
+
+        // Thông tin phụ
+        address_json: p.address_json,
         location: this.formatAddress(p.address_json),
-        tag:
-          categoryName && subCategoryName
-            ? `${categoryName} - ${subCategoryName}`
-            : categoryName ||
-              subCategoryName ||
-              p.dealType?.name ||
-              'Không có danh mục',
+        tag: tag,
         created_at: p.created_at,
         updated_at: p.updated_at,
+        isFavorite: false,
       };
     });
   }
 
-  async formatProducts(products: Product[]): Promise<any[]> {
-    return products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: Number(p.price),
-      thumbnail_url: p.images?.[0]?.image_url || null,
-      user_id: p.user_id,
-      user: p.user
-        ? {
-            id: p.user.id,
-            name: p.user.fullName,
-            email: p.user.email,
-            phone: p.user.phone,
-          }
-        : null,
-      deal_type_id: p.deal_type_id,
-      category_id: p.category_id,
-      sub_category_id: p.sub_category_id,
-      category_change_id: p.category_change_id,
-      sub_category_change_id: p.sub_category_change_id,
-      is_approved: p.is_approved,
-      address_json: p.address_json,
-      created_at: p.created_at,
-      updated_at: p.updated_at,
-      postType: p.postType
-        ? { id: p.postType.id, name: p.postType.name } // <<< THÊM VÀO ĐÂY
-        : null,
-      dealType: p.dealType
-        ? { id: p.dealType.id, name: p.dealType.name }
-        : null,
-      condition: p.condition
-        ? { id: p.condition.id, name: p.condition.name }
-        : null,
-      category: p.category
-        ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
-        : null,
-      subCategory: p.subCategory
-        ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
-        : null,
-      category_change: p.category_change
-        ? {
-            id: p.category_change.id,
-            name: p.category_change.name,
-            image: p.category_change.image,
-          }
-        : null,
-      sub_category_change: p.sub_category_change
-        ? {
-            id: p.sub_category_change.id,
-            name: p.sub_category_change.name,
-            parent_category_id: p.sub_category_change.parent_category_id,
-            source_table: p.sub_category_change.source_table,
-            source_id: p.sub_category_change.source_id,
-          }
-        : null,
-      images: p.images
-        ? p.images.map((img) => ({
-            id: img.id,
-            product_id: img.product_id,
-            name: img.name,
-            image_url: img.image_url,
-            created_at: img.created_at,
-          }))
-        : [],
-    }));
+  // Format 1 sản phẩm đơn lẻ
+  async formatProduct(p: Product): Promise<any> {
+    const [result] = await this.formatProducts([p]);
+    return result;
   }
 
   // 🔧 Format địa chỉ
@@ -621,38 +516,6 @@ export class ProductService {
 
     if (!product) return null;
 
-    return {
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      price: Number(product.price),
-      thumbnail_url: product.images?.[0]?.image_url || null,
-      phone: product.user?.phone || null,
-      user_id: product.user_id,
-      author_name: product.user?.fullName || 'Người bán',
-      images:
-        product.images?.map((img) => ({
-          id: img.id,
-          product_id: img.product_id,
-          name: img.name,
-          image_url: img.image_url,
-          created_at: img.created_at,
-        })) || [],
-      dealType: product.dealType
-        ? { id: product.dealType.id, name: product.dealType.name }
-        : null,
-      condition: product.condition
-        ? { id: product.condition.id, name: product.condition.name }
-        : null,
-      category: product.category
-        ? { id: product.category.id, name: product.category.name }
-        : null,
-      subCategory: product.subCategory
-        ? { id: product.subCategory.id, name: product.subCategory.name }
-        : null,
-      productType: product.productType
-        ? { id: product.productType.id, name: product.productType.name }
-        : null,
-    };
+    return await this.formatProduct(product);
   }
 }

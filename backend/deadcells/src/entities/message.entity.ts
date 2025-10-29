@@ -23,7 +23,7 @@ export class Message {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: string;
 
-  @Column({ name: 'conversation_id', type: 'bigint' })
+  @Column({ name: 'conversation_id', type: 'bigint', nullable: true })
   conversation_id: string;
 
   @ManyToOne(() => ConversationRoom, (c) => c.messages, { onDelete: 'CASCADE' })
@@ -76,7 +76,7 @@ export class Message {
   edit_count: number;
 
   // Optimistic lock để tránh ghi đè xung đột khi edit
-  @VersionColumn({ name: 'version' })
+  @VersionColumn({ name: 'version', nullable: true })
   version: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
