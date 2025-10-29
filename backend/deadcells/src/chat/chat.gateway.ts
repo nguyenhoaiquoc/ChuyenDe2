@@ -13,9 +13,10 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/entities/user.entity';
+import { baseUrl } from 'config';
 
 @WebSocketGateway({
-  cors: { origin: '*' },
+  cors: { origin: baseUrl },
   pingInterval: 5000,  // gửi ping mỗi 5s
   pingTimeout: 10000,  // nếu không phản hồi 10s -> disconnect
 })
@@ -64,29 +65,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /** Khi user ngắt kết nối */
-  async handleDisconnect(client: Socket) {
-    const userId = client.data.userId;
-      console.log("🔥 handleDisconnect CALLED", { userId, id: client.id });
+ async handleDisconnect(client: Socket) {
+  const userId = client.data.userId;
+  console.log("🔥 Xử lý ngắt kết nối cho userId:", userId);  // Log userId để kiểm tra
 
-    if (!userId) return;
+  if (!userId) return;
 
-    const userSockets = this.socketsByUser.get(userId);
-    if (!userSockets) return;
+  const userSockets = this.socketsByUser.get(userId);
+  if (!userSockets) return;
 
-    userSockets.delete(client.id);
+  userSockets.delete(client.id);
 
-    // nếu còn socket khác => vẫn online
-    if (userSockets.size > 0) {
-      this.socketsByUser.set(userId, userSockets);
-      return;
-    }
-
-    // nếu hết socket => thực sự offline
-    this.socketsByUser.delete(userId);
-    await this.userRepo.update(userId, { lastOnlineAt: new Date() });
-    this.server.emit('userOnline', { userId, online: false });
-    console.log(`⚫ User ${userId} offline`);
+  // Nếu còn socket khác => vẫn online
+  if (userSockets.size > 0) {
+    this.socketsByUser.set(userId, userSockets);
+    return;
   }
+
+  // Nếu hết socket => thực sự offline
+  this.socketsByUser.delete(userId);
+  await this.userRepo.update(userId, { lastOnlineAt: new Date() });
+  this.server.emit('userOnline', { userId, online: false });
+  console.log(`⚫ User ${userId} offline`);
+}
 
   getOnlineUsers() {
     return this.socketsByUser;
@@ -96,7 +97,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @MessageBody()
-    data: { room_id: number; receiver_id: number; content: string; product_id?: number },
+    data: { room_id: number; receiver_id: number; content: string; product_id?: number,    media_url?: string; // 👈 thêm dòng này
+ },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.userId;
@@ -106,6 +108,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       Number(data.receiver_id),
       data.content,
       data.product_id ? Number(data.product_id) : undefined,
+          data.media_url || null, // 👈 truyền media_url vào
+
     );
 
     const receiverSockets = this.socketsByUser.get(Number(data.receiver_id));
@@ -146,10 +150,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   /** Khi user bấm đăng xuất chủ động */
-  @SubscribeMessage('logout')
-  async handleLogout(@ConnectedSocket() client: Socket) {
-    await this.handleDisconnect(client);
-    client.disconnect(true);
-  }
+ @SubscribeMessage('logout')
+async handleLogout(@ConnectedSocket() client: Socket) {
+  console.log("⚠️ Đang xử lý sự kiện logout");
+  await this.handleDisconnect(client);
+  client.disconnect(true);  // Ngắt kết nối socket
+  console.log("✅ Đã ngắt kết nối socket");
+}
+
 }
   
