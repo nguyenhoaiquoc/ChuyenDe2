@@ -136,7 +136,6 @@ export type Product = {
   tag?: string;
   imageCount?: number;
   isFavorite?: boolean;
-  user_id: string | number;
   file?: FileResult;
   author: string;
   year: number;
@@ -178,7 +177,7 @@ export type FileResult = {
   uri: string;
   name: string;
   type: string;
-
+}
 // notification
 export type Notification = {
   id: number;
