@@ -5,89 +5,151 @@ import {
   ConnectedSocket,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  WebSocketServer,
 } from '@nestjs/websockets';
-import { Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { ChatService } from './chat.service';
 import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/entities/user.entity';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+  cors: { origin: '*' },
+  pingInterval: 5000,  // gửi ping mỗi 5s
+  pingTimeout: 10000,  // nếu không phản hồi 10s -> disconnect
+})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  private onlineUsers = new Map<number, Socket>(); // userId -> socket
+  @WebSocketServer() server: Server;
+
+  // userId -> set of socketIds
+  private socketsByUser = new Map<number, Set<string>>();
 
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
+  /** Khi user kết nối socket */
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth?.token;
-      if (!token) return client.disconnect();
+      if (!token) {
+      console.log('⚠️ Không có token trong handshake');
+      return client.disconnect();
+    }
+
       const decoded = this.jwtService.verify(token);
       const userId = Number(decoded.sub || decoded.id);
       client.data.userId = userId;
-      this.onlineUsers.set(userId, client);
-      console.log(`✅ User ${userId} connected`);
-    } catch {
+          console.log(`✅ [Connect] User ${userId}, socketId=${client.id}`);
+
+      const userSockets = this.socketsByUser.get(userId) ?? new Set<string>();
+      const wasOffline = userSockets.size === 0;
+
+      userSockets.add(client.id);
+      this.socketsByUser.set(userId, userSockets);
+
+      if (wasOffline) {
+        await this.userRepo.update(userId, { lastOnlineAt: new Date() });
+        this.server.emit('userOnline', { userId, online: true });
+        console.log(`🟢 User ${userId} online`);
+      }
+    } catch (err) {
+      console.log('❌ Token invalid:', err.message);
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket) {
+  /** Khi user ngắt kết nối */
+  async handleDisconnect(client: Socket) {
     const userId = client.data.userId;
-    this.onlineUsers.delete(userId);
-    console.log(`❌ User ${userId} disconnected`);
+      console.log("🔥 handleDisconnect CALLED", { userId, id: client.id });
+
+    if (!userId) return;
+
+    const userSockets = this.socketsByUser.get(userId);
+    if (!userSockets) return;
+
+    userSockets.delete(client.id);
+
+    // nếu còn socket khác => vẫn online
+    if (userSockets.size > 0) {
+      this.socketsByUser.set(userId, userSockets);
+      return;
+    }
+
+    // nếu hết socket => thực sự offline
+    this.socketsByUser.delete(userId);
+    await this.userRepo.update(userId, { lastOnlineAt: new Date() });
+    this.server.emit('userOnline', { userId, online: false });
+    console.log(`⚫ User ${userId} offline`);
   }
 
-  /** Khi gửi tin nhắn */
+  getOnlineUsers() {
+    return this.socketsByUser;
+  }
+
+  /** Gửi tin nhắn */
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @MessageBody()
-data: { room_id: number; receiver_id: number; content: string; product_id?: number },
+    data: { room_id: number; receiver_id: number; content: string; product_id?: number },
     @ConnectedSocket() client: Socket,
   ) {
     const senderId = client.data.userId;
-    const { room_id, receiver_id, content, product_id } = data;
-
     const msg = await this.chatService.sendMessage(
-      room_id,
-      senderId,
-      receiver_id,
-      content,
-      product_id,
+      Number(data.room_id),
+      Number(senderId),
+      Number(data.receiver_id),
+      data.content,
+      data.product_id ? Number(data.product_id) : undefined,
     );
 
-    // gửi tin tới người nhận nếu online
-    const receiverSocket = this.onlineUsers.get(receiver_id);
-    if (receiverSocket) receiverSocket.emit('receiveMessage', msg);
+    const receiverSockets = this.socketsByUser.get(Number(data.receiver_id));
+    if (receiverSockets && receiverSockets.size > 0) {
+      for (const sid of receiverSockets) {
+        const sock = this.server.sockets.sockets.get(sid);
+        sock?.emit('receiveMessage', msg);
+      }
 
-    // gửi ack lại cho người gửi
-    client.emit('receiveMessage', msg);
-  }
-
-  /** Khi sửa tin nhắn */
-  @SubscribeMessage('editMessage')
-  async handleEditMessage(
-    @MessageBody() data: { message_id: number; content: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    const userId = client.data.userId;
-    const updated = await this.chatService.editMessage(userId, data.message_id, data.content);
-    // broadcast cho cả 2 user
-    client.emit('messageEdited', updated);
-    for (const [uid, socket] of this.onlineUsers.entries()) {
-      if (uid !== userId) socket.emit('messageEdited', updated);
+      const unread = await this.chatService.countUnreadMessages(Number(data.receiver_id));
+      for (const sid of receiverSockets) {
+        const sock = this.server.sockets.sockets.get(sid);
+        sock?.emit('unreadCount', { count: unread });
+      }
     }
   }
 
-  /** Khi client yêu cầu load lịch sử */
   @SubscribeMessage('getMessagesByRoom')
-async handleGetMessagesByRoom(
-  @MessageBody() data: { roomId: number },
-  @ConnectedSocket() client: Socket,
-) {
-  const msgs = await this.chatService.getHistory(data.roomId, client.data.userId);
-  client.emit('loadMessages', msgs);
-}
+  async handleGetMessagesByRoom(
+    @MessageBody() data: { roomId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const msgs = await this.chatService.getHistory(
+      Number(data.roomId),
+      Number(client.data.userId),
+    );
+    client.emit('loadMessages', msgs);
+  }
 
+  @SubscribeMessage('markAsRead')
+  async handleMarkAsRead(
+    @MessageBody() data: { roomId: number; userId: number },
+    @ConnectedSocket() client: Socket,
+  ) {
+    await this.chatService.markRead(Number(data.roomId), Number(data.userId));
+    const unread = await this.chatService.countUnreadMessages(Number(data.userId));
+    client.emit('unreadCount', { count: unread });
+  }
+
+  /** Khi user bấm đăng xuất chủ động */
+  @SubscribeMessage('logout')
+  async handleLogout(@ConnectedSocket() client: Socket) {
+    await this.handleDisconnect(client);
+    client.disconnect(true);
+  }
 }
+  

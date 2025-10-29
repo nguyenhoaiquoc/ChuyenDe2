@@ -46,6 +46,7 @@ ChatRoomScreen: {
   product?: Product;
   otherUserId: string | number;
   otherUserName?: string;
+  otherUserAvatar?: string; // ✅ thêm
   currentUserId: string | number;
   currentUserName: string;
   token: string;
@@ -136,6 +137,20 @@ export type Product = {
   created_at: string;
   updated_at?: string;
   user_id: string | number;
+
+   // ✅ Thêm hai field này
+  user?: {
+    id?: string | number;
+    name?: string;
+    avatar?: string;
+    image?: string;
+  };
+  seller?: {
+    id?: string | number;
+    name?: string;
+    avatar?: string;
+    image?: string;
+  };
 };
 
 export type Comment = {

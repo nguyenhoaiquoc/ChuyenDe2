@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
+import { io } from "socket.io-client";
 
 export default function UserScreen() {
   const navigation =
@@ -162,24 +163,37 @@ export default function UserScreen() {
               title="Đánh giá từ tôi"
               onPress={() => navigation.navigate("FeedbackScreen")}
             />
-            <UtilityItem
-              icon="log-out-outline"
-              title="Đăng xuất"
-              isLast={true}
-              color="red"
-              onPress={async () => {
-                await AsyncStorage.multiRemove([
-                  "token",
-                  "userId",
-                  "userName",
-                  "userAvatar",
-                ]);
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: "LoginScreen" }],
-                });
-              }}
-            />
+          <UtilityItem
+  icon="log-out-outline"
+  title="Đăng xuất"
+  isLast={true}
+  color="red"
+  onPress={async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (token) {
+        const socket = io(path, { auth: { token } });
+        socket.emit("logout"); // 👈 báo server
+        socket.disconnect();   // 👈 ngắt kết nối để trigger handleDisconnect
+      }
+    } catch (err) {
+      console.log("⚠️ Socket logout error:", err);
+    }
+
+    await AsyncStorage.multiRemove([
+      "token",
+      "userId",
+      "userName",
+      "userAvatar",
+    ]);
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  }}
+/>
+
           </View>
         </View>
       </ScrollView>

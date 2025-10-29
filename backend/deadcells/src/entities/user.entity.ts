@@ -61,6 +61,10 @@ export class User {
   @Column({ type: 'smallint', default: 0 })
   gender: number; // 0 = không xác định
 
+  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
+  lastOnlineAt?: Date | null;
+
+
   /** --------- Trạng thái xác minh --------- */
   @Column({ type: 'boolean', default: false })
   is_verified: boolean;
