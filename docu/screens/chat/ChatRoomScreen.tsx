@@ -1,16 +1,16 @@
 import { StatusBar } from "expo-status-bar";
-import { Text, View, Alert, Linking, Image, TouchableOpacity, KeyboardAvoidingView, ScrollView, TextInput } from "react-native";
+import { Text, View, Alert, Image, TouchableOpacity, KeyboardAvoidingView, ScrollView, TextInput } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
-import { path } from "../../config";
-import { useIsFocused } from "@react-navigation/native"; // ✅ để lắng nghe focus
+import * as ImagePicker from 'expo-image-picker'; // Import thư viện chọn ảnh
+import { path } from "../../config"; // Đảm bảo đường dẫn đúng
 
 import { io, Socket } from "socket.io-client"; // nếu bạn vẫn muốn dùng io(path) ở đây
 
 type Props = {
-  navigation: any; // Define proper types if you have the correct navigation types
-  route: any; // Same here for route types
+  navigation: any;
+  route: any;
 };
 
 export default function ChatRoomScreen({ navigation, route }: Props) {
@@ -25,14 +25,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     token,
   } = route.params;
 
-  const isFocused = useIsFocused(); // ✅ lắng nghe focus
-
-  const [messages, setMessages] = useState<any[]>([]); // use proper types
-  const [onlineStatus, setOnlineStatus] = useState<{ online: boolean; lastOnlineAt?: string }>({
-    online: false,
-  });
-
+  const [messages, setMessages] = useState<any[]>([]);
+  const [onlineStatus, setOnlineStatus] = useState<{ online: boolean; lastOnlineAt?: string }>({ online: false });
   const [content, setContent] = useState("");
+  const [selectedImages, setSelectedImages] = useState<any[]>([]); // Lưu danh sách ảnh đã chọn
   const scrollViewRef = useRef<ScrollView>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -52,6 +48,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           text: msg.content ?? "",
           time: new Date(msg.created_at).toLocaleTimeString("vi-VN").slice(0, 5),
           senderId: String(msg.sender_id),
+          mediaUrl: msg.media_url, // Lưu URL ảnh nếu có
         },
       ]);
     });
@@ -66,6 +63,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           text: m.content ?? "",
           time: new Date(m.created_at).toLocaleTimeString("vi-VN").slice(0, 5),
           senderId: String(m.sender_id),
+          mediaUrl: m.media_url, // Lưu URL ảnh nếu có
         }))
       );
     });
@@ -90,7 +88,6 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       })
       .catch(() => {});
 
-    // Cleanup
     return () => {
       socket.disconnect();
     };
@@ -103,46 +100,89 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     }
   }, [messages]);
 
-  // ─── Lắng nghe focus để lấy trạng thái online lại
-  useEffect(() => {
-    if (isFocused) {
-      axios
-        .get(`${path}/chat/online-status/${otherUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => {
-          setOnlineStatus({
-            online: res.data.online,
-            lastOnlineAt: res.data.lastOnlineAt,
-          });
-        })
-        .catch(() => {});
+  // ─── Hàm gửi tin nhắn và ảnh ─────────────────────────────────────────────
+const handleSend = async () => {
+  if (!content.trim() && selectedImages.length === 0) return;
+
+  try {
+    let imageUrl: string | undefined;
+
+    // Nếu có ảnh, upload trước
+    if (selectedImages.length > 0) {
+      const formData = new FormData();
+      formData.append("file", {
+        uri: selectedImages[0].uri,
+        type: "image/jpeg",
+        name: "upload.jpg",
+      } as any);
+
+      const uploadRes = await axios.post(`${path}/chat/upload`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      console.log("✅ Upload thành công:", uploadRes.data.url);
+      imageUrl = uploadRes.data.url;
     }
-  }, [isFocused]); // ✅ Sẽ gọi API khi màn hình trở lại focus
 
-  // ─── Hàm gửi tin nhắn ─────────────────────────────────────────────
-  const handleSend = () => {
-    if (!content.trim() || !socketRef.current) return;
-
-    const newMessage = {
+    // Emit tin nhắn (văn bản + ảnh nếu có)
+    socketRef.current?.emit("sendMessage", {
       room_id: String(roomId),
       sender_id: String(currentUserId),
       receiver_id: String(otherUserId),
       content: content.trim(),
-    };
+      media_url: imageUrl ?? undefined, // <-- chính xác
+    });
 
-    socketRef.current.emit("sendMessage", newMessage);
-
-    // Hiển thị ngay tin nhắn (optimistic UI)
+    // Hiển thị lên UI ngay (optimistic)
     setMessages((prev) => [
       ...prev,
       {
         text: content.trim(),
         time: new Date().toLocaleTimeString("vi-VN").slice(0, 5),
         senderId: String(currentUserId),
+        mediaUrl: imageUrl,
       },
     ]);
+
     setContent("");
+    setSelectedImages([]);
+
+  } catch (err) {
+    console.error("❌ Lỗi gửi ảnh:", err);
+  }
+};
+
+
+  // Chọn ảnh từ thư viện hoặc camera
+  const handleImageUpload = async (useCamera: boolean) => {
+    let result;
+    if (useCamera) {
+      result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+    } else {
+      result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 4, // Cho phép chọn tối đa 4 ảnh
+        quality: 1,
+      });
+    }
+
+    if (!result.canceled && result.assets) {
+      setSelectedImages(result.assets); // Lưu danh sách ảnh đã chọn
+    }
+  };
+
+  // Xóa ảnh
+  const removeImage = (index: number) => {
+    const updatedImages = [...selectedImages];
+    updatedImages.splice(index, 1);
+    setSelectedImages(updatedImages);
   };
 
   // ─── Hiển thị thời gian “Hoạt động ... trước” ─────────────────────
@@ -202,20 +242,25 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
         {messages.map((msg, index) => {
           const isMe = String(msg.senderId) === String(currentUserId);
           return (
-            <View
-              key={index}
-              className={`flex flex-col gap-1 ${isMe ? "self-end" : "self-start"} mb-3`}
-            >
-              <Text
-                className={`${
-                  isMe ? "bg-yellow-200" : "bg-gray-200"
-                } px-3 py-3 rounded-xl max-w-[70%]`}
-              >
-                {msg.text}
-              </Text>
-              <Text
-                className={`text-gray-400 text-xs ${isMe ? "self-end" : "self-start"}`}
-              >
+            <View key={index} className={`flex flex-col gap-1 ${isMe ? "self-end" : "self-start"} mb-3`}>
+              {/* Hiển thị hình ảnh nếu có */}
+             {msg.mediaUrl && (
+  <Image
+    source={{ uri: msg.mediaUrl }}
+    style={{ width: 200, height: 200, borderRadius: 12 }}
+  />
+)}
+
+{msg.text?.trim() ? (
+  <Text
+    className={`${isMe ? "bg-yellow-200" : "bg-gray-200"} px-3 py-3 rounded-xl max-w-[70%]`}
+  >
+    {msg.text}
+  </Text>
+) : null} 
+              
+              {/* Hiển thị thời gian */}
+              <Text className={`text-gray-400 text-xs ${isMe ? "self-end" : "self-start"}`}>
                 {msg.time}
               </Text>
             </View>
@@ -241,15 +286,27 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
 
+          {/* Chọn ảnh */}
           <View className="flex flex-row gap-4">
             <View className="flex flex-row bg-gray-300 px-4 py-2 rounded-full gap-2">
               <FontAwesome5 name="image" size={20} color="gray" />
-              <Text>Hình ảnh & video</Text>
+              <TouchableOpacity onPress={() => handleImageUpload(false)}>
+                <Text>Chọn ảnh</Text>
+              </TouchableOpacity>
             </View>
 
             <View className="bg-gray-300 px-4 py-2 rounded-full">
               <Text>Địa chỉ</Text>
             </View>
+          </View>
+
+          {/* Hiển thị ảnh đã chọn */}
+          <View className="flex flex-row gap-2 mt-2">
+            {selectedImages.map((image, index) => (
+              <TouchableOpacity key={index} onPress={() => removeImage(index)}>
+                <Image source={{ uri: image.uri }} style={{ width: 50, height: 50, borderRadius: 8 }} />
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
       </KeyboardAvoidingView>

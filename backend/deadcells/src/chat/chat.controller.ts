@@ -11,6 +11,8 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import type { Request } from 'express';
@@ -19,6 +21,9 @@ import { ChatGateway } from './chat.gateway';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/entities/user.entity';
 import { Repository } from 'typeorm';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
+import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
@@ -124,5 +129,12 @@ async openOrCreateRoom(
       lastOnlineAt: user.lastOnlineAt,
     };
   }
+@Post('upload')
+@UseGuards(OptionalJwtAuthGuard) // hoặc bỏ hẳn guard
+@UseInterceptors(FileInterceptor('file', CloudinaryMulter))
+async uploadImage(@UploadedFile() file: Express.Multer.File) {
+  if (!file) throw new HttpException('File not found', HttpStatus.BAD_REQUEST);
+  return { url: file.path };
+}
 
 }

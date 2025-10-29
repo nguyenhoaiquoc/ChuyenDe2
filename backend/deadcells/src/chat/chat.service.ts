@@ -44,35 +44,36 @@ export class ChatService {
 }
 
   /** 💬 Gửi tin nhắn (text hoặc media) */
-  async sendMessage(
-    conversationId: number,
-    senderId: number,
-    receiverId: number,
-    content: string,
-    productId?: number,
-    mediaUrl?: string,
-  ) {
-    const msg = this.messageRepo.create({
-      conversation_id: conversationId,
-      sender_id: senderId,
-      receiver_id: receiverId,
-      product_id: productId ?? null,
-      content,
-      media_url: mediaUrl ?? null,
-      message_type: mediaUrl ? 'IMAGE' : 'TEXT',
-    });
+async sendMessage(
+  conversationId: number,
+  senderId: number,
+  receiverId: number,
+  content: string,
+  productId?: number,
+  mediaUrl?: string | null, // 👈 thêm | null
+) {
+  const msg = this.messageRepo.create({
+    conversation_id: conversationId,
+    sender_id: senderId,
+    receiver_id: receiverId,
+    product_id: productId ?? null,
+    content,
+    media_url: mediaUrl ?? null,  // Lưu URL của ảnh nếu có
+    message_type: mediaUrl ? 'IMAGE' : 'TEXT',
+  });
 
-    const saved = await this.messageRepo.save(msg);
+  const saved = await this.messageRepo.save(msg);
 
-    // 🔁 Cập nhật room
-    await this.roomRepo.update(conversationId, {
-      last_message_id: saved.id,
-      last_message_at: saved.created_at,
-      last_product_id: productId ?? null,
-    });
+  // Cập nhật phòng trò chuyện
+  await this.roomRepo.update(conversationId, {
+    last_message_id: saved.id,
+    last_message_at: saved.created_at,
+    last_product_id: productId ?? null,
+  });
 
-    return saved;
-  }
+  return saved;
+}
+
 
   /** ✏️ Sửa tin nhắn */
   async editMessage(userId: number, messageId: number, newContent: string) {

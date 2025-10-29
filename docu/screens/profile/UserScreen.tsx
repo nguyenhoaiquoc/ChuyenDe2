@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
 import { io } from "socket.io-client";
+import { disconnectSocket, getSocket } from "../../src/libs/socket";
 
 export default function UserScreen() {
   const navigation =
@@ -50,7 +51,7 @@ export default function UserScreen() {
     };
     fetchUser();
   }, []);
-
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
       <StatusBar barStyle="dark-content" />
@@ -168,30 +169,26 @@ export default function UserScreen() {
   title="Đăng xuất"
   isLast={true}
   color="red"
-  onPress={async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      if (token) {
-        const socket = io(path, { auth: { token } });
-        socket.emit("logout"); // 👈 báo server
-        socket.disconnect();   // 👈 ngắt kết nối để trigger handleDisconnect
-      }
-    } catch (err) {
-      console.log("⚠️ Socket logout error:", err);
+onPress={async () => {
+  try {
+    const socket = getSocket();
+    if (socket) {
+      console.log("⚠️ Gửi sự kiện logout");
+      socket.emit("logout");  // Gửi sự kiện logout đến backend
+      disconnectSocket();     // Ngắt kết nối socket hiện tại
+      console.log("✅ Socket đã ngắt kết nối!");
     }
+  } catch (err) {
+    console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
+  }
 
-    await AsyncStorage.multiRemove([
-      "token",
-      "userId",
-      "userName",
-      "userAvatar",
-    ]);
-
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "LoginScreen" }],
-    });
-  }}
+  // Xoá thông tin người dùng và chuyển hướng
+  await AsyncStorage.multiRemove(["token", "userId", "userName", "userAvatar"]);
+  navigation.reset({
+    index: 0,
+    routes: [{ name: "LoginScreen" }],
+  });
+}}
 />
 
           </View>

@@ -112,7 +112,7 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => {}, [product]);
+  useEffect(() => { }, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
@@ -131,27 +131,27 @@ export default function ProductDetailScreen() {
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-          ...img,
-          id: img.id.toString(),
-          product_id: img.product_id.toString(),
-          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-          image_url:
-            img.image_url.startsWith("file://") ||
+        ...img,
+        id: img.id.toString(),
+        product_id: img.product_id.toString(),
+        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
+        image_url:
+          img.image_url.startsWith("file://") ||
             img.image_url.startsWith("http")
-              ? img.image_url
-              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-        })) // Cast string nếu cần
+            ? img.image_url
+            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+      })) // Cast string nếu cần
       : [
-          {
-            id: "1",
-            product_id: product.id || "1",
-            name: "Default",
-            image_url:
-              product.image ||
-              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
-            created_at: new Date().toISOString(),
-          },
-        ];
+        {
+          id: "1",
+          product_id: product.id || "1",
+          name: "Default",
+          image_url:
+            product.image ||
+            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+          created_at: new Date().toISOString(),
+        },
+      ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -205,59 +205,59 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
-const handleChatPress = async () => {
-  try {
-    if (!currentUser) {
-      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-      return;
-    }
+  const handleChatPress = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
 
-    const tokenValue = await AsyncStorage.getItem("token");
-    if (!tokenValue) {
-      Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
-      return;
-    }
+      const tokenValue = await AsyncStorage.getItem("token");
+      if (!tokenValue) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
 
       const sellerId = String(product.user_id);
       const buyerId = String(currentUser.id);
 
-    // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
-    const response = await openOrCreateRoom(tokenValue, {
-      seller_id: sellerId,
-      buyer_id: buyerId,
-      room_type: "PAIR",
-      product_id: String(product.id), // ✅ backend giờ nhận product_id
-    });
+      // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
+      const response = await openOrCreateRoom(tokenValue, {
+        seller_id: sellerId,
+        buyer_id: buyerId,
+        room_type: "PAIR",
+        product_id: String(product.id), // ✅ backend giờ nhận product_id
+      });
 
-    const room = response.room ?? response;
-    console.log("🟢 Room nhận được:", room);
+      const room = response.room ?? response;
+      console.log("🟢 Room nhận được:", room);
 
-    // ✅ Xác định người còn lại trong phòng (người bán)
-    const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
-    const otherUserName = product.authorName || "Người bán";
-    const otherUserAvatar =
-      product.user?.avatar ||
-      product.seller?.avatar ||
-      "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+      // ✅ Xác định người còn lại trong phòng (người bán)
+      const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserName = product.authorName || "Người bán";
+      const otherUserAvatar =
+        product.user?.avatar ||
+        product.seller?.avatar ||
+        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
 
-    console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
+      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
 
-    // ✅ Truyền avatar và product sang ChatRoom
-    navigation.navigate("ChatRoomScreen", {
-      roomId: room.id,
-      product,
-      otherUserId,
-      otherUserName,
-      otherUserAvatar, // ✅ thêm dòng này
-      currentUserId: currentUser.id,
-      currentUserName: currentUser.name,
-      token: tokenValue,
-    });
-  } catch (error) {
-    console.error("❌ Lỗi mở phòng chat:", error);
-    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-  }
-};
+      // ✅ Truyền avatar và product sang ChatRoom
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        product,
+        otherUserId,
+        otherUserName,
+        otherUserAvatar, // ✅ thêm dòng này
+        currentUserId: currentUser.id,
+        currentUserName: currentUser.name,
+        token: tokenValue,
+      });
+    } catch (error) {
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
 
 
 
@@ -365,17 +365,17 @@ const handleChatPress = async () => {
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
-       {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
-{currentUser && Number(product.user_id) === Number(currentUser.id) ? null : (
-  <View className="bg-green-500 self-end rounded-md my-2 mr-4">
-    <TouchableOpacity
-      onPress={handleChatPress}
-      className="bg-green-500 self-end rounded-md"
-    >
-      <Text className="text-white px-4 py-1 font-bold">Chat</Text>
-    </TouchableOpacity>
-  </View>
-)}
+        {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
+        {currentUser && Number(product.user_id) === Number(currentUser.id) ? null : (
+          <View className="bg-green-500 self-end rounded-md my-2 mr-4">
+            <TouchableOpacity
+              onPress={handleChatPress}
+              className="bg-green-500 self-end rounded-md"
+            >
+              <Text className="text-white px-4 py-1 font-bold">Chat</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View className="px-4 py-3 pb-12">
           {/* Tiêu đề */}
@@ -425,13 +425,13 @@ const handleChatPress = async () => {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                  "vi-VN",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}`
+                "vi-VN",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}`
               : product.time || "1 tuần trước"}
           </Text>
 
@@ -441,13 +441,14 @@ const handleChatPress = async () => {
               if (product.user_id) {
                 navigation.navigate("UserDetail", {
                   userId: product.user_id,
-                  productId: product.id, // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
+                  productId: product.id,
+                  product: product // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
                 });
               } else {
                 Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
               }
             }}
->
+          >
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
@@ -690,9 +691,8 @@ const handleChatPress = async () => {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${
-                  isSending ? "bg-gray-400" : "bg-blue-500"
-                }`}
+                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
+                  }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">
