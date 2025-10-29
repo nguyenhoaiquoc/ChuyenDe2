@@ -4,7 +4,8 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Req,
+  Body,
+  Query,
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
 
@@ -15,11 +16,8 @@ export class FavoritesController {
   @Post('toggle/:productId')
   toggleFavorite(
     @Param('productId', ParseIntPipe) productId: number,
-    @Req() req: any, // Sử dụng Request để lấy thông tin user
+    @Body('userId', ParseIntPipe) userId: number,
   ) {
-    // const userId = req.user.id; // Dòng này sẽ hoạt động khi có AuthGuard
-    const userId = 1; // Tạm thời hardcode để test
-
     return this.favoritesService.toggleFavorite(userId, productId);
   }
 
@@ -38,9 +36,8 @@ export class FavoritesController {
   @Get('check/:productId')
   async checkFavorite(
     @Param('productId', ParseIntPipe) productId: number,
-    @Req() req: any,
+    @Query('userId', ParseIntPipe) userId: number,
   ) {
-    const userId = 1; // lấy từ req.user.id
     return this.favoritesService.isFavorite(userId, productId);
   }
 }

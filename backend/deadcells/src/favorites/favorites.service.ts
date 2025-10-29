@@ -1,4 +1,3 @@
-import { Entity } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -11,11 +10,9 @@ export class FavoritesService {
     private readonly favoriteRepo: Repository<Favorite>,
   ) {}
 
-  /**
-   * 🚀 Toggle trạng thái yêu thích cho một sản phẩm.
-   * Nếu đã thích -> Bỏ thích.
-   * Nếu chưa thích -> Thích.
-   */
+  /* Toggle trạng thái yêu thích cho một sản phẩm.
+    Nếu đã thích -> Bỏ thích.
+    Nếu chưa thích -> Thích. */
   async toggleFavorite(userId: number, productId: number) {
     const existingFavorite = await this.favoriteRepo.findOne({
       where: { user_id: userId, product_id: productId },
@@ -36,9 +33,7 @@ export class FavoritesService {
     }
   }
 
-  /**
-   * ✅ Đếm tổng số lượt yêu thích của một sản phẩm.
-   */
+  // Đếm tổng số lượt yêu thích của một sản phẩm.
   async countFavorites(productId: number): Promise<{ count: number }> {
     const count = await this.favoriteRepo.count({
       where: { product_id: productId },
@@ -46,17 +41,13 @@ export class FavoritesService {
     return { count };
   }
 
-  //Lấy danh sách ID các sản phẩm mà một user đã thích() kiểm tra isFavorite cho cả danh sách sản phẩm.)
+  //Lấy danh sách ID các sản phẩm mà một user đã thích()
   async getFavoriteProductIdsByUser(userId: number): Promise<number[]> {
     console.log(`[FavoritesService] Đang tìm lượt thích cho userId: ${userId}`);
     const favorites = await this.favoriteRepo.find({
       where: { user_id: userId },
       select: ['product_id'], // Chỉ lấy cột product_id để tối ưu
     });
-    console.log(
-      `[FavoritesService] Dữ liệu thô tìm thấy trong bảng favorites:`,
-      favorites,
-    );
     const productIds = favorites.map((fav) => fav.product_id);
 
     console.log(
@@ -67,6 +58,7 @@ export class FavoritesService {
     return productIds;
   }
 
+  // kiểm tra xem một sản phẩm có đang được người dùng yêu thích hay không.
   async isFavorite(
     userId: number,
     productId: number,

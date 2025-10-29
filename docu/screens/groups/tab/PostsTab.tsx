@@ -87,6 +87,8 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
+
+              
             </View>
           )}
         />

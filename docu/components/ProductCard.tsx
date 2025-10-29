@@ -4,6 +4,7 @@ import { PostType, Product } from "../types";
 
 type ProductCardProps = {
   product: Product; // truyền thẳng cả object Product
+  isFavorite?: boolean;
   onPress?: () => void;
   onToggleFavorite?: () => void;
   onPressPostType?: (postType: PostType) => void;
@@ -12,6 +13,7 @@ type ProductCardProps = {
 
 export default function ProductCard({
   product,
+  isFavorite,
   onPress,
   onToggleFavorite,
   onPressPostType,
@@ -37,7 +39,7 @@ export default function ProductCard({
       : product.category;
   const subCategory = product.sub_category_change;
   const imageCount = product.images?.length || 1;
-  const isFavorite = product.isFavorite || false;
+  const isFavorites = isFavorite ?? product.isFavorite ?? false;
   return (
     <View
       className="w-[48%] mx-[1%] mb-3 bg-white rounded-lg overflow-hidden shadow-sm"
@@ -62,9 +64,9 @@ export default function ProductCard({
             onPress={onToggleFavorite}
           >
             <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
+              name={isFavorites ? "heart" : "heart-outline"}
               size={16}
-              color={isFavorite ? "red" : "#666"}
+              color={isFavorites ? "#ff0000ff" : "#777"}
             />
           </TouchableOpacity>
 
