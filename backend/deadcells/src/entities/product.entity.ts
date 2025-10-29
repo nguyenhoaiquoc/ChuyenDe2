@@ -18,6 +18,7 @@ import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
 import { PostType } from './post-type.entity';
 import { Comment } from './comment.entity';
+import { Group } from './group.entity';
 
 @Entity('products')
 export class Product {
@@ -126,12 +127,16 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   group_id: number;
 
+  @ManyToOne(() => Group, { nullable: true })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
+
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;
 
-  // ===== Thông tin tài liệu khoa học =====
+  // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })
-  author: string | null; // Tác giả / Người biên soạn
+  author: string | null;
 
   @Column({ type: 'int', nullable: true })
   year: number | null;

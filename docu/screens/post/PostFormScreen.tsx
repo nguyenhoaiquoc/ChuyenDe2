@@ -19,6 +19,7 @@ import { Alert } from "react-native";
 import { path } from "../../config";
 import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Picker } from "@react-native-picker/picker";
 
 const { width } = Dimensions.get("window");
 const PostFormScreen = ({
@@ -99,20 +100,6 @@ const PostFormScreen = ({
     number | null
   >(null);
 
-  // useEffect(() => {
-  //   const fetchProductTypes = async () => {
-  //     try {
-  //       const res = await axios.get(`${path}/product-types`);
-  //       if (res.status === 200) {
-  //         setProductTypes(res.data);
-  //       }
-  //     } catch (err) {
-  //       console.error("Lỗi tải product types:", err);
-  //     }
-  //   };
-  //   fetchProductTypes();
-  // }, []);
-
   const handleSelectProductType = (id: number) => {
     setSelectedProductTypeId(id);
     setProductTypeId(id);
@@ -181,7 +168,6 @@ const PostFormScreen = ({
     }
   };
 
-  // Hàm chuyển HEIC sang JPG nếu cần
   const convertToJpgIfNeeded = async (uri: string) => {
     const ext = uri.split(".").pop()?.toLowerCase();
 
@@ -220,22 +206,33 @@ const PostFormScreen = ({
   const handlePost = async () => {
     if (isLoading) return;
 
-    const finalTitle =
+    const finalName =
       title && title.trim() !== ""
         ? title.trim()
         : name && name.trim() !== ""
           ? name.trim()
           : "";
 
-    // Validation
     const missingFields: string[] = [];
     if (!category) missingFields.push("Danh mục cha");
     if (!subCategory) missingFields.push("Danh mục con");
-    if (!finalTitle) missingFields.push("Tên sản phẩm");
+    if (!finalName) missingFields.push("Tên sản phẩm");
     if (!description || description.trim() === "")
       missingFields.push("Mô tả sản phẩm");
     if (!conditionId) missingFields.push("Tình trạng sản phẩm");
-    if (!productTypeId) missingFields.push("Loại sản phẩm");
+    if (
+      showProductTypeDropdown &&
+      category?.name === "Thời trang, đồ dùng cá nhân" &&
+      !productTypeId
+    ) {
+      missingFields.push("Loại sản phẩm");
+    }
+    if (showAcademicFields && category?.name === "Tài liệu khoa" && !author) {
+      missingFields.push("Tác giả");
+    }
+    if (showAcademicFields && category?.name === "Tài liệu khoa" && !year) {
+      missingFields.push("Năm xuất bản");
+    }
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
     if (!postTypeId) missingFields.push("Loại bài đăng");
     if (images.length === 0)
@@ -248,7 +245,9 @@ const PostFormScreen = ({
     if (missingFields.length > 0) {
       Alert.alert(
         "Thiếu thông tin",
-        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(", ")}.`,
+        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(
+          ", "
+        )}.`,
         [{ text: "OK" }]
       );
       return;
@@ -257,21 +256,36 @@ const PostFormScreen = ({
     setIsLoading(true);
     try {
       const formData = new FormData();
-      formData.append("name", name || finalTitle);
-      formData.append("title", finalTitle);
-      formData.append("product_type_id", String(productTypeId));
+
+      // XÂY DỰNG FORMDATA
+      // 1. Các trường bắt buộc (String)
+      formData.append("name", finalName);
       formData.append("description", description);
-      formData.append("user_id", user?.id ? String(user.id) : "");
       formData.append("price", dealTypeId === 1 ? String(price) : "0");
-      formData.append("category_id", String((category as any)?.id || ""));
-      formData.append("sub_category_id", String(subCategory?.id || ""));
-      formData.append("post_type_id", String(postTypeId));
-      formData.append("deal_type_id", String(dealTypeId));
-      formData.append("condition_id", String(conditionId));
-      formData.append("status_id", "1");
-      formData.append("is_approved", "false");
       formData.append("address_json", JSON.stringify({ full: address }));
 
+      // 2. Các trường bắt buộc (Number)
+      formData.append("user_id", String(user?.id));
+      formData.append("post_type_id", String(postTypeId));
+      formData.append("deal_type_id", String(dealTypeId));
+      formData.append("category_id", String((category as any)?.id));
+      formData.append("sub_category_id", String(subCategory?.id));
+      formData.append("condition_id", String(conditionId));
+
+      // 3. Trường bắt buộc (Boolean)
+      formData.append("is_approved", "false");
+
+      // 4. Các trường tùy chọn (Optional)
+      // Chỉ gửi nếu chúng có giá trị
+      if (productTypeId) {
+        formData.append("product_type_id", String(productTypeId));
+      }
+      if (author) {
+        formData.append("author", author);
+      }
+      if (year) {
+        formData.append("year", String(year));
+      }
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
         formData.append("category_change_id", String(exchangeCategory.id));
         formData.append(
@@ -280,6 +294,7 @@ const PostFormScreen = ({
         );
       }
 
+      // 5. Hình ảnh
       images.forEach((uri, index) => {
         const filename = uri.split("/").pop();
         const ext = filename?.split(".").pop();
@@ -291,7 +306,7 @@ const PostFormScreen = ({
         } as any);
       });
 
-      console.log("formData:", formData);
+      console.log("FormData sẽ gửi đi:", formData);
 
       const response = await axios.post(`${path}/products`, formData, {
         headers: {
@@ -307,7 +322,24 @@ const PostFormScreen = ({
       }
     } catch (err: any) {
       console.error("Lỗi khi đăng tin:", err);
-      Alert.alert("Lỗi", "Không thể kết nối đến server.");
+
+      if (err.response && err.response.status === 400) {
+        Alert.alert(
+          "Thông tin không hợp lệ",
+          err.response.data.message ||
+            "Vui lòng kiểm tra lại các trường đã nhập."
+        );
+      } else if (err.message === "Network Error") {
+        Alert.alert(
+          "Lỗi mạng",
+          "Không thể kết nối đến server. Vui lòng kiểm tra lại đường dẫn API và tường lửa."
+        );
+      } else {
+        Alert.alert(
+          "Lỗi máy chủ",
+          "Đã xảy ra lỗi phía máy chủ, vui lòng thử lại sau."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -338,6 +370,21 @@ const PostFormScreen = ({
     };
     fetchOptions();
   }, []);
+
+  let showProductTypeDropdown = false;
+  let showAcademicFields = false;
+
+  if (category?.name === "Thời trang, đồ dùng cá nhân") {
+    showProductTypeDropdown = true;
+  } else if (category?.name === "Tài liệu khoa") {
+    showAcademicFields = true;
+  }
+
+  const [author, setAuthor] = useState("");
+  const [year, setYear] = useState<number | null>(null);
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 60 }, (_, i) => currentYear - i);
 
   return (
     <View style={styles.container}>
@@ -442,6 +489,7 @@ const PostFormScreen = ({
             value={name}
             onChangeText={setName}
           />
+          <Text style={styles.helperText}>Nhập tên sản phẩm của bạn</Text>
         </View>
 
         {/* Tình trạng sản phẩm */}
@@ -467,24 +515,55 @@ const PostFormScreen = ({
         </View>
 
         {/* Loại sản phẩm */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowTypeModal(true)}
-          >
-            <Text style={styles.dropdownLabel}>Loại sản phẩm</Text>
-            <View style={styles.dropdownContent}>
-              <Text style={styles.dropdownText}>
-                {selectedProductTypeId
-                  ? (productTypes.find((t) => t.id === selectedProductTypeId)
-                      ?.name ?? "Không xác định")
-                  : "Chọn loại sản phẩm"}
-              </Text>
-              <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+        {showProductTypeDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowTypeModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Loại sản phẩm</Text>
+              <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownText}>
+                  {selectedProductTypeId
+                    ? (productTypes.find((t) => t.id === selectedProductTypeId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn loại sản phẩm"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
+          </View>
+        )}
+        {/* Input đặc thù Tài liệu khoa */}
+        {showAcademicFields && (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.dropdownLabel}>Tác giả/ Người biên soạn</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Tác giả / Người biên soạn *"
+                value={author}
+                onChangeText={setAuthor}
+              />
             </View>
-          </TouchableOpacity>
-          <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.dropdownLabel}>Năm xuất bản / Năm học</Text>
+              <View style={styles.pickerContainer}>
+                <Picker
+                  selectedValue={year}
+                  onValueChange={(itemValue) => setYear(itemValue)}
+                  style={styles.picker}
+                >
+                  <Picker.Item label="Chọn năm *" value={null} />
+                  {years.map((y) => (
+                    <Picker.Item key={y} label={y.toString()} value={y} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Hình thức giao dịch */}
         <View style={styles.section}>
@@ -514,12 +593,16 @@ const PostFormScreen = ({
                 Giá bán (VNĐ)
               </Text>
               <TextInput
-                style={styles.input}
-                placeholder="Nhập giá bán mong muốn"
-                value={price}
-                onChangeText={(text) => setPrice(text.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
-              />
+  style={styles.input}
+  placeholder="Nhập giá bán mong muốn"
+  value={price.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+  onChangeText={(text) => {
+    const numeric = text.replace(/\D/g, "").slice(0, 9);
+    setPrice(numeric);
+  }}
+  keyboardType="numeric"
+/>
+
             </View>
           )}
 
@@ -549,6 +632,10 @@ const PostFormScreen = ({
               </Text>
             </TouchableOpacity>
           )}
+
+          <Text style={styles.helperText}>
+            Chọn hình thức giao dịch bạn muốn
+          </Text>
         </View>
 
         {/* Mô tả sản phẩm */}
@@ -562,12 +649,18 @@ const PostFormScreen = ({
             multiline
             numberOfLines={4}
           />
+          <Text style={styles.helperText}>
+            Nhập mô tả chi tiết cho sản phẩm của bạn
+          </Text>
         </View>
 
         {/* Địa chỉ giao dịch */}
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Chọn địa chỉ giao dịch</Text>
           <AddressPicker onChange={(fullAddress) => setAddress(fullAddress)} />
+            <Text style={styles.helperText}>
+            Chọn địa chỉ giao dịch
+          </Text>
         </View>
 
         {/* Loại bài đăng */}
@@ -611,11 +704,7 @@ const PostFormScreen = ({
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={[
-              styles.postButton,
-              // 💡 Thay đổi opacity khi đang tải để người dùng nhận biết
-              isLoading && { opacity: 0.7 },
-            ]}
+            style={[styles.postButton, isLoading && { opacity: 0.7 }]}
             onPress={handlePost}
             disabled={isLoading} // 💡 KHÔNG CHO PHÉP NHẤN NÚT KHI ĐANG TẢI
           >
@@ -770,6 +859,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
   },
+  pickerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  picker: {
+    height: 50,
+    width: "100%",
+  },
+
   dropdown: {
     marginBottom: 8,
   },

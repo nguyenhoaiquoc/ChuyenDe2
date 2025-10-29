@@ -19,6 +19,8 @@ import { PostType } from "src/entities/post-type.entity";
 import { User } from "src/entities/user.entity";
 import { ProductType } from "src/entities/product_types.entity";
 import { GroupModule } from "src/groups/group.module";
+import { NotificationModule } from 'src/notification/notification.module';
+
 
 @Module({
   imports: [
@@ -40,9 +42,12 @@ import { GroupModule } from "src/groups/group.module";
       PostType,
       ProductType,
     ]),
+
+      NotificationModule,
      forwardRef(() => GroupModule),
   ],
   providers: [ProductService],
   controllers: [ProductController],
+  exports: [ProductService],
 })
 export class ProductModule {}

@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -39,6 +40,8 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   useEffect(() => {
     axios
@@ -122,24 +125,76 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
+          // return {
+          //   id: item.id.toString(),
+          //   image: imageUrl,
+          //   name: item.name || "Không có tiêu đề",
+          //   price: (() => {
+          //     if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+          //     if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+          //     return item.price
+          //       ? `${item.price.toLocaleString("vi-VN")} đ`
+          //       : "Liên hệ";
+          //   })(),
+          //   location: locationText,
+          //   time: timeDisplay,
+          //   tag: tagText,
+          //   authorName: authorName,
+          //   category: item.category || null,
+          //   subCategory: item.subCategory
+          //     ? {
+          //         id: item.subCategory.id
+          //           ? parseInt(item.subCategory.id)
+          //           : undefined,
+          //         name: item.subCategory.name,
+          //         source_table: item.subCategory.source_table,
+          //         source_detail: item.subCategory.source_detail,
+          //       }
+          //     : undefined,
+          //   category_change_id: item.category_change_id || null,
+          //   sub_category_change_id: item.sub_category_change_id || null,
+          //   category_change: item.category_change || null,
+          //   sub_category_change: item.sub_category_change || null,
+          //   imageCount: item.images?.length || 1,
+          //   phone: item.phone || null,
+          //   isFavorite: false,
+          //   images: item.images || [],
+          //   description: item.description || "",
+          //   postType: item.postType || { id: "1", name: "Chưa rõ" },
+          //   productType: item.productType || { id: "1", name: "Chưa rõ" },
+          //   condition: item.condition || { id: "1", name: "Chưa rõ" },
+          //   dealType: item.dealType || { id: "1", name: "Bán" },
+          //   created_at: item.created_at || new Date().toISOString(),
+          //   updated_at: item.updated_at || undefined,
+          //   user_id: item.user_id ?? 0,
+          //   author: item.author || null,
+          //   year: item.year || null,
+          // };
+
+          // THAY THẾ TOÀN BỘ KHỐI 'return {...};' BÊN TRONG HÀM .map() BẰNG CODE NÀY
+
           return {
             id: item.id.toString(),
-            image: imageUrl,
+            image: imageUrl, // Sử dụng imageUrl đã xử lý
             name: item.name || "Không có tiêu đề",
             price: (() => {
+              // Logic giá của bạn đã đúng
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
               return item.price
-                ? `${item.price.toLocaleString("vi-VN")} đ`
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ` // Ép kiểu Number để toLocaleString
                 : "Liên hệ";
             })(),
-            location: locationText,
-            time: timeDisplay,
-            tag: tagText,
-            authorName: authorName,
-         
+            location: locationText, // Sử dụng locationText đã xử lý
+            time: timeDisplay, // Sử dụng timeDisplay đã xử lý
+            tag: tagText, // Sử dụng tagText đã xử lý
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh", // Ưu tiên fullName
+            user_id: item.user?.id ?? item.user_id ?? 0, // ===== SỬA LỖI 1: category =====
+            // Gán trực tiếp object 'category' từ API
 
-            category: categoryName || null,
+            category: item.category, // <-- Gán object category
+            // Giữ nguyên logic subCategory của bạn (đã ổn)
+
             subCategory: item.subCategory
               ? {
                   id: item.subCategory.id
@@ -150,28 +205,43 @@ export default function HomeScreen({ navigation }: Props) {
                   source_detail: item.subCategory.source_detail,
                 }
               : undefined,
-            category_change_id: item.category_change_id || null,
-            sub_category_change_id: item.sub_category_change_id || null,
-            category_change: item.category_change || null,
-            sub_category_change: item.sub_category_change || null,
-            imageCount: item.images?.length || 1,
-            phone: item.phone || null,
-            isFavorite: false,
-            images: item.images || [],
+            // Giữ nguyên category_change và sub_category_change
+            category_change: item.category_change || undefined,
+            sub_category_change: item.sub_category_change || undefined,
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0), // Đếm ảnh hoặc dựa vào imageUrl
+            isFavorite: false, // Mặc định là false
+            images: item.images || [], // Gán mảng images
             description: item.description || "",
-            postType: item.postType ||
-              item.post_type || { id: "1", name: "Chưa rõ" },
-            productType: item.productType ||
-              item.product_type || { id: "1", name: "Chưa rõ" },
+
+            // Chuẩn hóa các object liên quan (PostType, ProductType, Condition, DealType)
+            postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
+            productType: item.productType || { id: "1", name: "Chưa rõ" },
             condition: item.condition || { id: "1", name: "Chưa rõ" },
-            address_json: item.address_json || { full: locationText },
             dealType: item.dealType || { id: "1", name: "Bán" },
-            categoryObj: item.category || {
-              id: "1",
-              name: categoryName || "Chưa rõ",
-            },
+
+            address_json: item.address_json || { full: locationText }, // Gán object address_json
+            phone: item.user?.phone || null, // Lấy phone từ user nếu có
+            // ===== SỬA LỖI 2: year =====
+
+            // (XÓA DÒNG 'categoryObj' bị thừa)
+
+            author: item.author || null, // Gán author
+            year: item.year || null, // Gán year (sửa lỗi copy-paste)
+
             created_at: item.created_at || new Date().toISOString(),
-            user_id: item.user_id ?? 0,
+            updated_at: item.updated_at || undefined, // Thêm updated_at
+
+            // Đảm bảo các trường còn lại của Product type cũng có mặt (nếu API trả về)
+            sub_category_id: item.sub_category_id || null,
+            status_id: item.status_id?.toString() || undefined,
+            visibility_type: item.visibility_type?.toString() || undefined,
+            group_id: item.group_id || null,
+            is_approved:
+              typeof item.is_approved === "boolean"
+                ? item.is_approved
+                : undefined,
+            // 'file' không cần map ở đây vì nó không đến từ API get products
           };
         });
         setProducts(mapped);
@@ -186,6 +256,31 @@ export default function HomeScreen({ navigation }: Props) {
         }
       });
   }, []);
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const res = await axios.get(`${path}/favorites/user/${userId}`);
+        setFavoriteIds(res.data.productIds || []);
+      } catch (err) {
+        console.log("Lỗi khi lấy danh sách yêu thích:", err);
+      }
+    };
+
+    fetchFavorites(); // gọi hàm async
+  }, []);
+
+  const handleToggleFavorite = async (productId: string) => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
+      const res = await axios.get(`${path}/favorites/user/${userId}`);
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích:", err);
+    }
+  };
 
   // --- Hàm tiện ích tính toán khoảng thời gian ---
   const timeSince = (date: Date): string => {
@@ -240,7 +335,8 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity className="p-2" 
+        onPress={() => navigation.navigate("NotificationScreen")}>
           <Feather name="bell" size={22} color="#333" />
         </TouchableOpacity>
       </View>

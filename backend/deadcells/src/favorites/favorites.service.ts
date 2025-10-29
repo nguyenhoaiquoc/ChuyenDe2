@@ -46,10 +46,7 @@ export class FavoritesService {
     return { count };
   }
 
-  /**
-   * ✨ Lấy danh sách ID các sản phẩm mà một user đã thích.
-   * Hàm này rất quan trọng để kiểm tra isFavorite cho cả danh sách sản phẩm.
-   */
+  //Lấy danh sách ID các sản phẩm mà một user đã thích() kiểm tra isFavorite cho cả danh sách sản phẩm.)
   async getFavoriteProductIdsByUser(userId: number): Promise<number[]> {
     console.log(`[FavoritesService] Đang tìm lượt thích cho userId: ${userId}`);
     const favorites = await this.favoriteRepo.find({
@@ -62,12 +59,22 @@ export class FavoritesService {
     );
     const productIds = favorites.map((fav) => fav.product_id);
 
-    // LOG 3: Kiểm tra kết quả cuối cùng trước khi trả về
     console.log(
       `[FavoritesService] Danh sách ID sản phẩm sẽ trả về:`,
       productIds,
     );
 
     return productIds;
+  }
+
+  async isFavorite(
+    userId: number,
+    productId: number,
+  ): Promise<{ isFavorite: boolean }> {
+    const existing = await this.favoriteRepo.findOne({
+      where: { user_id: userId, product_id: productId },
+    });
+
+    return { isFavorite: !!existing };
   }
 }

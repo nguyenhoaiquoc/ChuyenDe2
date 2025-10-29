@@ -45,12 +45,55 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product: Product = route.params?.product || {} as Product;
+  const product: Product = route.params?.product || ({} as Product);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [comment, setComment] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+
+  useEffect(() => {
+    const fetchFavoriteData = async () => {
+      try {
+        const [countRes, statusRes] = await Promise.all([
+          axios.get(`${path}/favorites/${product.id}/count`),
+          axios.get(
+            `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+          ),
+        ]);
+
+        setFavoriteCount(countRes.data.count || 0);
+        setIsFavorite(statusRes.data.isFavorite || false);
+      } catch (err) {
+        console.log("Lỗi lấy dữ liệu yêu thích:", err);
+      }
+    };
+
+    if (product.id && currentUser?.id) {
+      fetchFavoriteData();
+    }
+  }, [product.id, currentUser]);
+
+  const handleToggleFavorite = async () => {
+    try {
+      await axios.post(`${path}/favorites/toggle/${product.id}`);
+
+      const [countRes, statusRes] = await Promise.all([
+        axios.get(`${path}/favorites/${product.id}/count`),
+        axios.get(
+          `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+        ),
+      ]);
+
+      setFavoriteCount(countRes.data.count || 0);
+      setIsFavorite(statusRes.data.isFavorite || false);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchComments = async () => {
@@ -175,8 +218,8 @@ const handleChatPress = async () => {
       return;
     }
 
-    const sellerId = String(product.user_id);
-    const buyerId = String(currentUser.id);
+      const sellerId = String(product.user_id);
+      const buyerId = String(currentUser.id);
 
     // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
     const response = await openOrCreateRoom(tokenValue, {
@@ -238,33 +281,39 @@ const handleChatPress = async () => {
   });
 
   // 🧩 Gọi API tạo hoặc lấy phòng chat
-async function openOrCreateRoom(
-  token: string,
-  payload: {
-    seller_id: string;
-    buyer_id: string;
-    room_type: "PAIR";
-    product_id?: string;
+  async function openOrCreateRoom(
+    token: string,
+    payload: {
+      seller_id: string;
+      buyer_id: string;
+      room_type: "PAIR";
+      product_id?: string;
+    }
+  ) {
+    console.log("🪙 Token gửi đi:", token);
+    console.log("📤 Payload gửi:", payload);
+
+    try {
+      const authHeader = token?.startsWith("Bearer ")
+        ? token
+        : `Bearer ${token}`;
+
+      const res = await axios.post(`${path}/chat/room`, payload, {
+        headers: { Authorization: authHeader },
+      });
+      console.log("🧾 Header gửi đi:", authHeader);
+
+      console.log("💬 Phản hồi từ server:", res.data);
+      return res.data; // Có thể là { room: {...} } hoặc {...}
+    } catch (err: any) {
+      console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
+      throw err;
+    }
   }
-) {
-  console.log("🪙 Token gửi đi:", token);
-  console.log("📤 Payload gửi:", payload);
+  console.log("danh mục", product.category?.name);
+  console.log("TG", product.author);
+  console.log("Y", product.author);
 
-  try {
-   const authHeader = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
-
-const res = await axios.post(`${path}/chat/room`, payload, {
-  headers: { Authorization: authHeader },
-});
-  console.log("🧾 Header gửi đi:", authHeader);
-
-    console.log("💬 Phản hồi từ server:", res.data);
-    return res.data; // Có thể là { room: {...} } hoặc {...}
-  } catch (err: any) {
-    console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
-    throw err;
-  }
-}
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -313,11 +362,6 @@ const res = await axios.post(`${path}/chat/room`, payload, {
           </View>
           {/* Nút Lưu */}
           <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
-            <Ionicons
-              name={product.isFavorite ? "heart" : "heart-outline"}
-              size={16}
-              color={product.isFavorite ? "red" : "black"}
-            />
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
@@ -344,16 +388,32 @@ const res = await axios.post(`${path}/chat/room`, payload, {
           >
             {product.tag || "Chưa rõ"}
           </Text>
-          {/* Giá */}
-          <Text className="text-red-600 text-xl font-bold mb-2">
-            {product.dealType?.name === "Miễn phí"
-              ? "Miễn phí"
-              : product.dealType?.name === "Trao đổi"
-                ? "Trao đổi"
-                : parseFloat(product.price || "0") > 0
-                  ? `${parseFloat(product.price).toLocaleString()} đ`
-                  : null}
-          </Text>
+
+          <View className="flex-row justify-between items-center mb-2">
+            {/* Giá  */}
+            <Text className="text-red-600 text-xl font-bold">
+              {product.dealType?.name === "Miễn phí"
+                ? "Miễn phí"
+                : product.dealType?.name === "Trao đổi"
+                  ? "Trao đổi"
+                  : parseFloat(product.price || "0") > 0
+                    ? `${parseFloat(product.price).toLocaleString()} đ`
+                    : null}
+            </Text>
+
+            {/* Tim */}
+            <TouchableOpacity
+              className="flex-row items-center"
+              onPress={handleToggleFavorite}
+            >
+              <Text className="mr-1 text-gray-700">{favoriteCount}</Text>
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={20}
+                color={isFavorite ? "red" : "#666"}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Địa chỉ */}
           <Text className="text-gray-500 text-sm mb-1">
@@ -376,8 +436,18 @@ const res = await axios.post(`${path}/chat/room`, payload, {
           </Text>
 
           {/* Thông tin shop */}
-          <TouchableOpacity /* onPress={() => navigation.navigate("UserDetail")} */
-          >
+          <TouchableOpacity
+            onPress={() => {
+              if (product.user_id) {
+                navigation.navigate("UserDetail", {
+                  userId: product.user_id,
+                  productId: product.id, // Gửi cả ID sản phẩm để dùng cho chức năng báo cáo
+                });
+              } else {
+                Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
+              }
+            }}
+>
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
@@ -386,22 +456,19 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">Người dùng</Text>
+                <Text className="font-semibold">{product.authorName || "Người dùng"}</Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="ml-1 text-gray-500 text-xs">
-                  (14 đánh giá)
-                </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
               </View>
             </View>
           </TouchableOpacity>
-
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
-            <Text className="text-gray-700 leading-6 text-sm">
+            <Text className="text-gray-700 leading-6 text-lg">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
           </View>
@@ -485,15 +552,48 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                 )}
 
               {/* Loại sản phẩm */}
-              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.productType?.name || "Chưa rõ"}
-                </Text>
-              </View>
+              {product.category?.name === "Thời trang, đồ dùng cá nhân" &&
+                product.productType?.name && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.productType.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Tác giả */}
+              {product.category?.name === "Tài liệu khoa" && product.author && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">
+                    Tác giả/ Người biên soạn
+                  </Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.author}
+                  </Text>
+                </View>
+              )}
+
+              {/* Năm xuất bản */}
+              {product.category?.name === "Tài liệu khoa" && product.year && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">
+                    Năm xuất bản/ Năm học
+                  </Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.year}
+                  </Text>
+                </View>
+              )}
 
               {/* Tình trạng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
@@ -516,19 +616,6 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                   {product.images?.length || product.imageCount || 0} ảnh
                 </Text>
               </View>
-
-              {/* Địa chỉ */}
-              {product.address_json?.full && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">Địa chỉ</Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.address_json.full}
-                  </Text>
-                </View>
-              )}
 
               {/* Người đăng */}
               {product.authorName && (
