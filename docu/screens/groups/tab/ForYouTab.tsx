@@ -8,7 +8,6 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import ProductCard from "../../../components/ProductCard";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { path } from "../../../config";
@@ -38,7 +37,7 @@ export default function ForYouTab({
         setGroups(groupRes.data);
         setPosts(postRes.data);
       } catch (err) {
-        console.error("❌ Lỗi khi lấy dữ liệu:", err);
+        console.error(" Lỗi khi lấy dữ liệu:", err);
       } finally {
         setLoading(false);
       }
@@ -101,17 +100,23 @@ export default function ForYouTab({
           renderItem={({ item }) => {
             return (
               <View className="w-[48%] bg-white rounded-lg shadow p-2">
-                {/* Ảnh bài viết */}
-
-                <Image
-                  source={
-                    item.image
-                      ? { uri: item.image }
-                      : require("../../../assets/khi.png")
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: item })
                   }
-                  className="w-full h-40 rounded-lg"
-                  resizeMode="cover"
-                />
+                >
+                  {/* Ảnh bài viết */}
+                  <Image
+                    source={{ uri: item.image }}
+                    className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+
+                {/* Tên người đnăg */}
+                <Text className="font-semibold text-sm mt-2" numberOfLines={1}>
+                  {item.authorName}
+                </Text>
 
                 {/* Tiêu đề */}
                 <Text className="font-semibold text-sm mt-2" numberOfLines={1}>
@@ -120,9 +125,7 @@ export default function ForYouTab({
 
                 {/* Giá + vị trí */}
                 <Text className="text-gray-500 text-xs">
-                  {item.price
-                    ? `${item.price.toLocaleString()} đ`
-                    : "Thỏa thuận"}
+                  {item.price ? `${item.price}` : "Thỏa thuận"}
                 </Text>
                 <Text className="text-gray-400 text-xs">{item.location}</Text>
               </View>

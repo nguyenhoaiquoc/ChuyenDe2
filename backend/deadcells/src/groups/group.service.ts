@@ -94,11 +94,15 @@ export class GroupService {
         null,
       name: p.name,
       authorName: p.user?.fullName || 'Ẩn danh',
-      price: p.price ? `${p.price.toLocaleString('vi-VN')} đ` : 'Thỏa thuận',
+      price: p.price ? `${p.price.toLocaleString('vi-VN')} đ` : 'Miễn phí',
       location:
-        (p.address_json as any)?.ward ||
-        (p.address_json as any)?.district ||
-        'Không rõ',
+        [
+          (p.address_json as any)?.ward,
+          (p.address_json as any)?.district,
+          (p.address_json as any)?.city,
+        ]
+          .filter(Boolean)
+          .join(', ') || 'Không rõ',
       time: new Date(p.created_at).toLocaleString('vi-VN'),
       tag: p.subCategory?.name || '',
       category: p.category?.name,
@@ -117,7 +121,7 @@ export class GroupService {
     };
   }
 
-  // ✅ Lấy bài viết từ các nhóm user tham gia
+  //Lấy bài viết từ các nhóm user tham gia
   async findPostsFromUserGroups(userId: number, limit?: number) {
     const memberships = await this.groupMemberRepo.find({
       where: { user_id: 1 },
@@ -137,7 +141,7 @@ export class GroupService {
     return posts.map((p) => this.formatPost(p));
   }
 
-  // ✅ Lấy bài viết từ một nhóm cụ thể
+  // Lấy bài viết từ 1 nhóm cụ thể
   async findPostsByGroup(groupId: number, limit?: number) {
     const posts = await this.productRepo.find({
       where: { group_id: groupId, status_id: 1 },
