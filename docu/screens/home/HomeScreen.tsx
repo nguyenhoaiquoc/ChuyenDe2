@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -39,6 +40,8 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   useEffect(() => {
     axios
@@ -253,6 +256,31 @@ export default function HomeScreen({ navigation }: Props) {
         }
       });
   }, []);
+
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const res = await axios.get(`${path}/favorites/user/${userId}`);
+        setFavoriteIds(res.data.productIds || []);
+      } catch (err) {
+        console.log("Lỗi khi lấy danh sách yêu thích:", err);
+      }
+    };
+
+    fetchFavorites(); // gọi hàm async
+  }, []);
+
+  const handleToggleFavorite = async (productId: string) => {
+    try {
+      const userId = await AsyncStorage.getItem("userId");
+      await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
+      const res = await axios.get(`${path}/favorites/user/${userId}`);
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích:", err);
+    }
+  };
 
   // --- Hàm tiện ích tính toán khoảng thời gian ---
   const timeSince = (date: Date): string => {

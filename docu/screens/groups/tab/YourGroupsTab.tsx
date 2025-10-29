@@ -110,7 +110,7 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
         </>
       ) : (
         // Hiển thị thông báo khi không có kết quả
-        <Text className="text-center text-gray-500 mt-8">
+        <Text className="text-center text-gray-500 my-8">
           Không tìm thấy nhóm nào phù hợp.
         </Text>
       )}

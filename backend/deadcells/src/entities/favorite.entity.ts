@@ -1,6 +1,11 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn,
-  ManyToOne, JoinColumn
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { Product } from './product.entity';
@@ -10,10 +15,10 @@ export class Favorite {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ name: 'user_id', type: 'bigint' })
   user_id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ name: 'product_id', type: 'bigint' })
   product_id: number;
 
   @ManyToOne(() => User)

@@ -42,6 +42,9 @@ export class User {
   @Column({ type: 'citext', unique: true })
   email: string;
 
+  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
+  lastOnlineAt?: Date | null;
+
   // Lưu hash, không lưu password thuần
   @Column({ type: 'varchar', length: 191, name: 'password_hash' })
   passwordHash: string;

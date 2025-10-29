@@ -52,6 +52,49 @@ export default function ProductDetailScreen() {
   const [comment, setComment] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+
+  useEffect(() => {
+    const fetchFavoriteData = async () => {
+      try {
+        const [countRes, statusRes] = await Promise.all([
+          axios.get(`${path}/favorites/${product.id}/count`),
+          axios.get(
+            `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+          ),
+        ]);
+
+        setFavoriteCount(countRes.data.count || 0);
+        setIsFavorite(statusRes.data.isFavorite || false);
+      } catch (err) {
+        console.log("Lỗi lấy dữ liệu yêu thích:", err);
+      }
+    };
+
+    if (product.id && currentUser?.id) {
+      fetchFavoriteData();
+    }
+  }, [product.id, currentUser]);
+
+  const handleToggleFavorite = async () => {
+    try {
+      await axios.post(`${path}/favorites/toggle/${product.id}`);
+
+      const [countRes, statusRes] = await Promise.all([
+        axios.get(`${path}/favorites/${product.id}/count`),
+        axios.get(
+          `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+        ),
+      ]);
+
+      setFavoriteCount(countRes.data.count || 0);
+      setIsFavorite(statusRes.data.isFavorite || false);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích:", err);
+    }
+  };
+
   useEffect(() => {
     const fetchComments = async () => {
       try {
@@ -312,11 +355,6 @@ export default function ProductDetailScreen() {
           </View>
           {/* Nút Lưu */}
           <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
-            <Ionicons
-              name={product.isFavorite ? "heart" : "heart-outline"}
-              size={16}
-              color={product.isFavorite ? "red" : "black"}
-            />
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
@@ -339,16 +377,32 @@ export default function ProductDetailScreen() {
           >
             {product.tag || "Chưa rõ"}
           </Text>
-          {/* Giá */}
-          <Text className="text-red-600 text-xl font-bold mb-2">
-            {product.dealType?.name === "Miễn phí"
-              ? "Miễn phí"
-              : product.dealType?.name === "Trao đổi"
-                ? "Trao đổi"
-                : parseFloat(product.price || "0") > 0
-                  ? `${parseFloat(product.price).toLocaleString()} đ`
-                  : null}
-          </Text>
+
+          <View className="flex-row justify-between items-center mb-2">
+            {/* Giá  */}
+            <Text className="text-red-600 text-xl font-bold">
+              {product.dealType?.name === "Miễn phí"
+                ? "Miễn phí"
+                : product.dealType?.name === "Trao đổi"
+                  ? "Trao đổi"
+                  : parseFloat(product.price || "0") > 0
+                    ? `${parseFloat(product.price).toLocaleString()} đ`
+                    : null}
+            </Text>
+
+            {/* Tim */}
+            <TouchableOpacity
+              className="flex-row items-center"
+              onPress={handleToggleFavorite}
+            >
+              <Text className="mr-1 text-gray-700">{favoriteCount}</Text>
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={20}
+                color={isFavorite ? "red" : "#666"}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Địa chỉ */}
           <Text className="text-gray-500 text-sm mb-1">

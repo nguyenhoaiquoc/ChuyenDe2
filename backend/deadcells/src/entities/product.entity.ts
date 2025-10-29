@@ -18,6 +18,7 @@ import { User } from './user.entity';
 import { ProductType } from './product_types.entity';
 import { PostType } from './post-type.entity';
 import { Comment } from './comment.entity';
+import { Group } from './group.entity';
 
 @Entity('products')
 export class Product {
@@ -125,6 +126,10 @@ export class Product {
 
   @Column({ type: 'bigint', nullable: true })
   group_id: number;
+
+  @ManyToOne(() => Group, { nullable: true })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
 
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;
