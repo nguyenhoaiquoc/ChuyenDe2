@@ -205,54 +205,61 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
-  const handleChatPress = async () => {
-    try {
-      if (!currentUser) {
-        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-        return;
-      }
+const handleChatPress = async () => {
+  try {
+    if (!currentUser) {
+      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+      return;
+    }
 
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
-        return;
-      }
+    const tokenValue = await AsyncStorage.getItem("token");
+    if (!tokenValue) {
+      Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+      return;
+    }
 
       const sellerId = String(product.user_id);
       const buyerId = String(currentUser.id);
 
-      const response = await openOrCreateRoom(token, {
-        seller_id: sellerId,
-        buyer_id: buyerId,
-        room_type: "PAIR",
-        product_id: String(product.id),
-      });
+    // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
+    const response = await openOrCreateRoom(tokenValue, {
+      seller_id: sellerId,
+      buyer_id: buyerId,
+      room_type: "PAIR",
+      product_id: String(product.id), // ✅ backend giờ nhận product_id
+    });
 
-      // ✅ Tùy theo backend trả về
-      const room = response.room ?? response;
-      console.log("🟢 Room nhận được:", room);
-      const headerValue = token.startsWith("Bearer ")
-        ? token
-        : `Bearer ${token}`;
-      console.log("🧾 Authorization header gửi đi:", headerValue);
-      const otherUserId =
-        sellerId === String(currentUser.id) ? buyerId : sellerId;
-      const otherUserName = product.authorName || "Người dùng";
+    const room = response.room ?? response;
+    console.log("🟢 Room nhận được:", room);
 
-      navigation.navigate("ChatRoomScreen", {
-        roomId: room.id,
-        product,
-        otherUserId,
-        otherUserName,
-        currentUserId: currentUser.id,
-        currentUserName: currentUser.name,
-        token,
-      });
-    } catch (error) {
-      console.error("❌ Lỗi mở phòng chat:", error);
-      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-    }
-  };
+    // ✅ Xác định người còn lại trong phòng (người bán)
+    const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+    const otherUserName = product.authorName || "Người bán";
+    const otherUserAvatar =
+      product.user?.avatar ||
+      product.seller?.avatar ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+
+    console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
+
+    // ✅ Truyền avatar và product sang ChatRoom
+    navigation.navigate("ChatRoomScreen", {
+      roomId: room.id,
+      product,
+      otherUserId,
+      otherUserName,
+      otherUserAvatar, // ✅ thêm dòng này
+      currentUserId: currentUser.id,
+      currentUserName: currentUser.name,
+      token: tokenValue,
+    });
+  } catch (error) {
+    console.error("❌ Lỗi mở phòng chat:", error);
+    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+  }
+};
+
+
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -358,14 +365,18 @@ export default function ProductDetailScreen() {
             <Text className="ml-1 text-xs text-black">Lưu</Text>
           </TouchableOpacity>
         </View>
-        <View className="bg-green-500 self-end rounded-md ">
-          <TouchableOpacity
-            onPress={handleChatPress}
-            className="bg-green-500 self-end rounded-md"
-          >
-            <Text className="text-white px-4 py-1 font-bold">Chat</Text>
-          </TouchableOpacity>
-        </View>
+       {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
+{currentUser && Number(product.user_id) === Number(currentUser.id) ? null : (
+  <View className="bg-green-500 self-end rounded-md my-2 mr-4">
+    <TouchableOpacity
+      onPress={handleChatPress}
+      className="bg-green-500 self-end rounded-md"
+    >
+      <Text className="text-white px-4 py-1 font-bold">Chat</Text>
+    </TouchableOpacity>
+  </View>
+)}
+
         <View className="px-4 py-3 pb-12">
           {/* Tiêu đề */}
           <Text className=" text-xl font-bold mb-2">

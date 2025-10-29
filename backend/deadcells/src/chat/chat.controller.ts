@@ -10,34 +10,49 @@ import {
   ParseIntPipe,
   HttpException,
   HttpStatus,
+  NotFoundException,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import type { Request } from 'express';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { ChatGateway } from './chat.gateway';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from 'src/entities/user.entity';
+import { Repository } from 'typeorm';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService, 
+     private readonly chatGateway: ChatGateway,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+  ) {}
 
   /** 
    * Mở hoặc tạo mới room giữa buyer và seller (từ trang sản phẩm)
    * Body: { seller_id: number, buyer_id?: number }
    * buyer_id sẽ lấy từ token nếu không gửi
    */
-  @Post('room')
-  async openOrCreateRoom(
-    @Body() body: { seller_id: number; buyer_id?: number },
-    @Req() req: Request,
-  ) {
-    const user = req['user'];
-    const buyerId = body.buyer_id || user.id;
-    if (buyerId === body.seller_id)
-      throw new HttpException('Không thể tự chat với chính mình', HttpStatus.BAD_REQUEST);
+@Post('room')
+async openOrCreateRoom(
+  @Body() body: { seller_id: number; buyer_id?: number; product_id?: number },
+  @Req() req: Request,
+) {
+  const user = req['user'];
+  const buyerId = body.buyer_id || user.id;
 
-    const room = await this.chatService.openOrCreateRoom(body.seller_id, buyerId);
-    return { room };
-  }
+  if (buyerId === body.seller_id)
+    throw new HttpException('Không thể tự chat với chính mình', HttpStatus.BAD_REQUEST);
+
+  const room = await this.chatService.openOrCreateRoom(
+    body.seller_id,
+    buyerId,
+    body.product_id,      // ✅ thêm dòng này
+  );
+  return { room };
+}
+
 
   /**
    * Lấy danh sách room (chatlist)
@@ -96,4 +111,18 @@ export class ChatController {
     const msg = await this.chatService.editMessage(userId, body.message_id, body.content);
     return { message: msg };
   }
+
+  @Get('online-status/:id')
+  async getOnlineStatus(@Param('id') id: number) {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User không tồn tại');
+
+    const online = this.chatGateway.getOnlineUsers().has(id);
+    return {
+      userId: id,
+      online,
+      lastOnlineAt: user.lastOnlineAt,
+    };
+  }
+
 }

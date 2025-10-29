@@ -37,15 +37,16 @@ export type RootStackParamList = {
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   // Trong types.ts, thêm vào cuối RootStackParamList:
-  ChatRoomScreen: {
-    roomId: string | number;
-    product?: Product;
-    otherUserId: string | number;
-    otherUserName?: string;
-    currentUserId: string | number;
-    currentUserName: string;
-    token: string;
-  };
+ChatRoomScreen: {
+  roomId: string | number;
+  product?: Product;
+  otherUserId: string | number;
+  otherUserName?: string;
+  otherUserAvatar?: string; // ✅ thêm
+  currentUserId: string | number;
+  currentUserName: string;
+  token: string;
+};
 
 UserDetail: {
     userId: number | string; 
@@ -141,6 +142,21 @@ export type Product = {
   year: number;
   created_at: string;
   updated_at?: string;
+  user_id: string | number;
+
+   // ✅ Thêm hai field này
+  user?: {
+    id?: string | number;
+    name?: string;
+    avatar?: string;
+    image?: string;
+  };
+  seller?: {
+    id?: string | number;
+    name?: string;
+    avatar?: string;
+    image?: string;
+  };
 };
 
 export type Comment = {
