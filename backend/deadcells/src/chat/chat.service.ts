@@ -16,79 +16,70 @@ export class ChatService {
     private readonly messageRepo: Repository<Message>,
   ) {}
 
-  /** Tạo hoặc lấy room giữa buyer và seller */
-  async openOrCreateRoom(sellerId: number, buyerId: number) {
-    let room = await this.roomRepo.findOne({
-      where: { seller_id: String(sellerId), buyer_id: String(buyerId), room_type: 'PAIR' },
+  /** 🧩 Tạo hoặc lấy room giữa hai user (fix duplicate room) */
+  async openOrCreateRoom(userA: number, userB: number, productId?: number) {
+  let room = await this.roomRepo.findOne({
+    where: [
+      { seller_id: userA, buyer_id: userB, room_type: 'PAIR' },
+      { seller_id: userB, buyer_id: userA, room_type: 'PAIR' },
+    ],
+  });
+
+  if (!room) {
+    room = this.roomRepo.create({
+      seller_id: userA,
+      buyer_id: userB,
+      room_type: 'PAIR',
+      product_id: productId ?? null,   // ✅ thêm dòng này
     });
+    await this.roomRepo.save(room);
 
-    if (!room) {
-      room = this.roomRepo.create({
-        seller_id: String(sellerId),
-        buyer_id: String(buyerId),
-        room_type: 'PAIR',
-      });
-      await this.roomRepo.save(room);
-
-      // Tạo participants
-      await this.partRepo.insert([
-        { conversation_id: room.id, user_id: String(sellerId), role: 'SELLER' },
-        { conversation_id: room.id, user_id: String(buyerId), role: 'BUYER' },
-      ]);
-    }
-
-    return room;
+    await this.partRepo.insert([
+      { conversation_id: room.id, user_id: userA, role: 'SELLER' },
+      { conversation_id: room.id, user_id: userB, role: 'BUYER' },
+    ]);
   }
 
-  /** Gửi tin nhắn (text hoặc media) */
-  async sendMessage(
-    conversationId: number,
-    senderId: number,
-    receiverId: number,
-    content: string,
-    productId?: number,
-    mediaUrl?: string,
-  ) {
-    const msg = this.messageRepo.create({
-      conversation_id: String(conversationId),
-      sender_id: String(senderId),
-      receiver_id: String(receiverId),
-      product_id: productId ? String(productId) : null,
-      content,
-      media_url: mediaUrl ?? null,
-      message_type: mediaUrl ? 'IMAGE' : 'TEXT',
-    });
+  return room;
+}
 
-    const saved = await this.messageRepo.save(msg);
+  /** 💬 Gửi tin nhắn (text hoặc media) */
+async sendMessage(
+  conversationId: number,
+  senderId: number,
+  receiverId: number,
+  content: string,
+  productId?: number,
+  mediaUrl?: string | null, // 👈 thêm | null
+) {
+  const msg = this.messageRepo.create({
+    conversation_id: conversationId,
+    sender_id: senderId,
+    receiver_id: receiverId,
+    product_id: productId ?? null,
+    content,
+    media_url: mediaUrl ?? null,  // Lưu URL của ảnh nếu có
+    message_type: mediaUrl ? 'IMAGE' : 'TEXT',
+  });
 
-    // Cập nhật room
-    await this.roomRepo.update(conversationId, {
-      last_message_id: saved.id,
-      last_message_at: saved.created_at,
-  last_product_id: productId != null ? String(productId) : null, // ✅ ép kiểu
-    });
+  const saved = await this.messageRepo.save(msg);
 
-    return saved;
-  }
+  // Cập nhật phòng trò chuyện
+  await this.roomRepo.update(conversationId, {
+    last_message_id: saved.id,
+    last_message_at: saved.created_at,
+    last_product_id: productId ?? null,
+  });
 
-  /** Lấy lịch sử tin nhắn giữa 2 user */
-  async getMessagesBetween(userA: number, userB: number, limit = 50) {
-    return this.messageRepo.find({
-      where: [
-        { sender_id: String(userA), receiver_id: String(userB) },
-        { sender_id: String(userB), receiver_id: String(userA) },
-      ],
-      relations: ['sender', 'receiver'],
-      order: { created_at: 'ASC' },
-      take: limit,
-    });
-  }
+  return saved;
+}
 
-  /** Sửa tin nhắn */
+
+  /** ✏️ Sửa tin nhắn */
   async editMessage(userId: number, messageId: number, newContent: string) {
-    const msg = await this.messageRepo.findOne({ where: { id: String(messageId) } });
+    const msg = await this.messageRepo.findOne({ where: { id: messageId } });
     if (!msg) throw new Error('Không tìm thấy tin nhắn');
-    if (msg.sender_id !== String(userId)) throw new Error('Bạn không thể sửa tin này');
+    if (msg.sender_id !== userId) throw new Error('Bạn không thể sửa tin này');
 
     msg.content = newContent;
     msg.is_edited = true;
@@ -98,14 +89,28 @@ export class ChatService {
     return this.messageRepo.save(msg);
   }
 
-  /** Đánh dấu đã đọc */
-  async markRead(conversationId: number, userId: number) {
-    await this.partRepo.update(
-      { conversation_id: String(conversationId), user_id: String(userId) },
-      { last_read_at: new Date() },
-    );
-  }
-  /** Lấy danh sách các cuộc chat (chatlist) của 1 user */
+  /** ✅ Đánh dấu tin nhắn đã đọc */
+async markRead(conversationId: number, userId: number) {
+  // 1) Ghi nhận thời điểm đọc
+  await this.partRepo.update(
+    { conversation_id: conversationId, user_id: userId },
+    { last_read_at: new Date() },
+  );
+
+  // 2) Đặt cờ is_read cho các tin chưa đọc gửi tới user này trong room
+  await this.messageRepo
+    .createQueryBuilder()
+    .update()
+    .set({ is_read: true })
+    .where('conversation_id = :conversationId', { conversationId })
+    .andWhere('receiver_id = :userId', { userId })
+    .andWhere('is_read = false')
+    .execute();
+}
+
+
+  /** 📜 Lấy danh sách các cuộc chat (chatlist) */
+ /** 📜 Lấy danh sách các cuộc chat (có số tin chưa đọc) */
 async getChatList(userId: number, limit = 20, offset = 0) {
   const qb = this.roomRepo
     .createQueryBuilder('r')
@@ -120,30 +125,76 @@ async getChatList(userId: number, limit = 20, offset = 0) {
 
   const rooms = await qb.getMany();
 
+  // 🔁 Đếm số tin chưa đọc từng phòng
+  const unreadCounts = await this.messageRepo
+    .createQueryBuilder('msg')
+    .select('msg.conversation_id', 'conversation_id')
+    .addSelect('COUNT(msg.id)', 'count')
+    .where('msg.receiver_id = :userId', { userId })
+    .andWhere('msg.is_read = false')
+    .groupBy('msg.conversation_id')
+    .getRawMany();
+
+  const unreadMap = new Map(
+    unreadCounts.map((r) => [Number(r.conversation_id), Number(r.count)]),
+  );
+
   return rooms.map((r) => ({
     room_id: r.id,
     last_message: r.last_message?.content || '',
     last_message_at: r.last_message_at,
-    product: r.last_product ? { id: r.last_product.id, name: r.last_product['name'] } : null,
+    unread_count: unreadMap.get(r.id) || 0, // ✅ thêm vào
+    product: r.last_product
+      ? { id: r.last_product.id, name: r.last_product['name'] }
+      : null,
     partner:
-      String(r.seller_id) === String(userId)
+      r.seller_id === userId
         ? { id: r.buyer?.id, name: r.buyer?.fullName, avatar: r.buyer?.image }
         : { id: r.seller?.id, name: r.seller?.fullName, avatar: r.seller?.image },
   }));
 }
 
-/** Lịch sử tin nhắn theo cursor (cuộn lên) */
-async getHistory(roomId: number, userId: number, cursor?: string, limit = 30) {
-  const qb = this.messageRepo
+  /** 🧱 Lấy lịch sử tin nhắn theo roomId (fix đủ 2 chiều) */
+  async getHistory(roomId: number, userId: number, cursor?: string, limit = 30) {
+    console.log(`📜 Lấy lịch sử roomId=${roomId}, userId=${userId}`);
+
+    // 🔍 Lấy thông tin room để biết seller & buyer
+    const room = await this.roomRepo.findOne({ where: { id: roomId } });
+    if (!room) {
+      console.log('⚠️ Không tìm thấy room');
+      return [];
+    }
+
+    const sellerId = room.seller_id;
+    const buyerId = room.buyer_id;
+
+    // 🔁 Lấy tin nhắn giữa 2 người bất kể chiều nào
+    const qb = this.messageRepo
+      .createQueryBuilder('m')
+      .where(
+        '(m.sender_id = :sellerId AND m.receiver_id = :buyerId) OR (m.sender_id = :buyerId AND m.receiver_id = :sellerId)',
+        { sellerId, buyerId },
+      )
+      .andWhere('m.conversation_id = :roomId', { roomId })
+      .orderBy('m.created_at', 'ASC')
+      .limit(limit);
+
+    if (cursor) qb.andWhere('m.created_at < :cursor', { cursor });
+
+    const msgs = await qb.getMany();
+    console.log('💾 Messages tìm thấy:', msgs.length);
+    return msgs;
+  }
+ /** 🔢 Đếm số người (conversation) có tin nhắn chưa đọc */
+async countUnreadMessages(userId: number): Promise<number> {
+  const result = await this.messageRepo
     .createQueryBuilder('m')
-    .where('m.conversation_id = :roomId', { roomId })
-    .orderBy('m.created_at', 'DESC')
-    .limit(limit);
+    .select('COUNT(DISTINCT m.sender_id)', 'count')
+    .where('m.receiver_id = :userId', { userId })
+    .andWhere('m.is_read = false')
+    .getRawOne();
 
-  if (cursor) qb.andWhere('m.created_at < :cursor', { cursor });
-
-  const msgs = await qb.getMany();
-  return msgs.reverse(); // để trả theo thứ tự cũ ASC
+  return Number(result?.count || 0);
 }
 
 }

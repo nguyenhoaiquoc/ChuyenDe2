@@ -9,7 +9,6 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
-
 import { User } from './user.entity';
 import { Product } from './product.entity';
 import { ConversationRoom } from './conversation-room.entity';
@@ -21,38 +20,43 @@ export type MessageType = 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM';
 @Index('idx_msg_conv_product', ['conversation_id', 'product_id', 'created_at'])
 export class Message {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id: string;
+  id: number;
 
-  @Column({ name: 'conversation_id', type: 'bigint', nullable: true })
-  conversation_id: string;
+  /** --------- Quan hệ phòng chat --------- */
+  @Column({ name: 'conversation_id', type: 'bigint', nullable: true }) // ✅ cho phép null để sync không lỗi
+  conversation_id: number | null;
 
-  @ManyToOne(() => ConversationRoom, (c) => c.messages, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ConversationRoom, (c) => c.messages, {
+    onDelete: 'CASCADE',
+    nullable: true, // ✅
+  })
   @JoinColumn({ name: 'conversation_id' })
-  conversation: ConversationRoom;
+  conversation?: ConversationRoom | null;
 
-  @Column({ name: 'sender_id', type: 'bigint' })
-  sender_id: string;
+  /** --------- Người gửi / nhận --------- */
+  @Column({ name: 'sender_id', type: 'bigint', nullable: true }) // ✅
+  sender_id: number | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true }) // ✅
   @JoinColumn({ name: 'sender_id' })
-  sender: User;
+  sender?: User | null;
 
-  // ✅ thêm phần này
-  @Column({ name: 'receiver_id', type: 'bigint' })
-  receiver_id: string;
+  @Column({ name: 'receiver_id', type: 'bigint', nullable: true }) // ✅
+  receiver_id: number | null;
 
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE', nullable: true }) // ✅
   @JoinColumn({ name: 'receiver_id' })
-  receiver: User;
+  receiver?: User | null;
 
-  // Gắn ngữ cảnh sản phẩm cho từng tin (NULL nếu tin nhắn chung)
+  /** --------- Liên kết sản phẩm --------- */
   @Column({ name: 'product_id', type: 'bigint', nullable: true })
-  product_id: string | null;
+  product_id: number | null;
 
   @ManyToOne(() => Product, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'product_id' })
   product?: Product | null;
 
+  /** --------- Nội dung tin nhắn --------- */
   @Column({ name: 'message_type', type: 'text', default: 'TEXT' })
   message_type: MessageType;
 
@@ -65,7 +69,7 @@ export class Message {
   @Column({ type: 'jsonb', nullable: true })
   meta: Record<string, any> | null;
 
-  // Cho phép EDIT
+  /** --------- Chỉnh sửa --------- */
   @Column({ name: 'is_edited', type: 'boolean', default: false })
   is_edited: boolean;
 
@@ -75,10 +79,15 @@ export class Message {
   @Column({ name: 'edit_count', type: 'int', default: 0 })
   edit_count: number;
 
-  // Optimistic lock để tránh ghi đè xung đột khi edit
-  @VersionColumn({ name: 'version', nullable: true })
+  /** --------- Version cho optimistic lock --------- */
+  @VersionColumn({ name: 'version', default: 1, nullable: true }) // ✅ thêm default và nullable để không lỗi sync
   version: number;
 
+  /** --------- Đọc tin --------- */
+  @Column({ name: 'is_read', type: 'boolean', default: false })
+  is_read: boolean;
+
+  /** --------- Thời gian tạo / cập nhật --------- */
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   created_at: Date;
 
