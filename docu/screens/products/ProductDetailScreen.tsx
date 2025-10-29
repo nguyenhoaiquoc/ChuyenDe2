@@ -45,7 +45,7 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product: Product = route.params?.product || {} as Product;
+  const product: Product = route.params?.product || ({} as Product);
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -162,54 +162,54 @@ export default function ProductDetailScreen() {
     console.log("Product detail:", product);
   }, []);
 
- const handleChatPress = async () => {
-  try {
-    if (!currentUser) {
-      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-      return;
-    }
+  const handleChatPress = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
 
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
-      return;
-    }
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
 
-    const sellerId = String(product.user_id);
-    const buyerId = String(currentUser.id);
+      const sellerId = String(product.user_id);
+      const buyerId = String(currentUser.id);
 
-    const response = await openOrCreateRoom(token, {
-      seller_id: sellerId,
-      buyer_id: buyerId,
-      room_type: "PAIR",
-      product_id: String(product.id),
-    });
+      const response = await openOrCreateRoom(token, {
+        seller_id: sellerId,
+        buyer_id: buyerId,
+        room_type: "PAIR",
+        product_id: String(product.id),
+      });
 
-    // ✅ Tùy theo backend trả về
-    const room = response.room ?? response;
-    console.log("🟢 Room nhận được:", room);
+      // ✅ Tùy theo backend trả về
+      const room = response.room ?? response;
+      console.log("🟢 Room nhận được:", room);
       const headerValue = token.startsWith("Bearer ")
-  ? token
-  : `Bearer ${token}`;
-console.log("🧾 Authorization header gửi đi:", headerValue);
-    const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
-    const otherUserName = product.authorName || "Người dùng";
+        ? token
+        : `Bearer ${token}`;
+      console.log("🧾 Authorization header gửi đi:", headerValue);
+      const otherUserId =
+        sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserName = product.authorName || "Người dùng";
 
-    navigation.navigate("ChatRoomScreen", {
-      roomId: room.id,
-      product,
-      otherUserId,
-      otherUserName,
-      currentUserId: currentUser.id,
-      currentUserName: currentUser.name,
-      token,
-    });
-  } catch (error) {
-    console.error("❌ Lỗi mở phòng chat:", error);
-    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-  }
-};
-
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        product,
+        otherUserId,
+        otherUserName,
+        currentUserId: currentUser.id,
+        currentUserName: currentUser.name,
+        token,
+      });
+    } catch (error) {
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -231,33 +231,39 @@ console.log("🧾 Authorization header gửi đi:", headerValue);
   });
 
   // 🧩 Gọi API tạo hoặc lấy phòng chat
-async function openOrCreateRoom(
-  token: string,
-  payload: {
-    seller_id: string;
-    buyer_id: string;
-    room_type: "PAIR";
-    product_id?: string;
+  async function openOrCreateRoom(
+    token: string,
+    payload: {
+      seller_id: string;
+      buyer_id: string;
+      room_type: "PAIR";
+      product_id?: string;
+    }
+  ) {
+    console.log("🪙 Token gửi đi:", token);
+    console.log("📤 Payload gửi:", payload);
+
+    try {
+      const authHeader = token?.startsWith("Bearer ")
+        ? token
+        : `Bearer ${token}`;
+
+      const res = await axios.post(`${path}/chat/room`, payload, {
+        headers: { Authorization: authHeader },
+      });
+      console.log("🧾 Header gửi đi:", authHeader);
+
+      console.log("💬 Phản hồi từ server:", res.data);
+      return res.data; // Có thể là { room: {...} } hoặc {...}
+    } catch (err: any) {
+      console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
+      throw err;
+    }
   }
-) {
-  console.log("🪙 Token gửi đi:", token);
-  console.log("📤 Payload gửi:", payload);
+  console.log("danh mục", product.category?.name);
+  console.log("TG", product.author);
+  console.log("Y", product.author);
 
-  try {
-   const authHeader = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
-
-const res = await axios.post(`${path}/chat/room`, payload, {
-  headers: { Authorization: authHeader },
-});
-  console.log("🧾 Header gửi đi:", authHeader);
-
-    console.log("💬 Phản hồi từ server:", res.data);
-    return res.data; // Có thể là { room: {...} } hoặc {...}
-  } catch (err: any) {
-    console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
-    throw err;
-  }
-}
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -390,7 +396,7 @@ const res = await axios.post(`${path}/chat/room`, payload, {
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
-            <Text className="text-gray-700 leading-6 text-sm">
+            <Text className="text-gray-700 leading-6 text-lg">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
           </View>
@@ -474,15 +480,48 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                 )}
 
               {/* Loại sản phẩm */}
-              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.productType?.name || "Chưa rõ"}
-                </Text>
-              </View>
+              {product.category?.name === "Thời trang, đồ dùng cá nhân" &&
+                product.productType?.name && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.productType.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Tác giả */}
+              {product.category?.name === "Tài liệu khoa" && product.author && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">
+                    Tác giả/ Người biên soạn
+                  </Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.author}
+                  </Text>
+                </View>
+              )}
+
+              {/* Năm xuất bản */}
+              {product.category?.name === "Tài liệu khoa" && product.year && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">
+                    Năm xuất bản/ Năm học
+                  </Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.year}
+                  </Text>
+                </View>
+              )}
 
               {/* Tình trạng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
@@ -505,19 +544,6 @@ const res = await axios.post(`${path}/chat/room`, payload, {
                   {product.images?.length || product.imageCount || 0} ảnh
                 </Text>
               </View>
-
-              {/* Địa chỉ */}
-              {product.address_json?.full && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">Địa chỉ</Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.address_json.full}
-                  </Text>
-                </View>
-              )}
 
               {/* Người đăng */}
               {product.authorName && (

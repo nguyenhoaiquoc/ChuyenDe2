@@ -129,6 +129,13 @@ export class Product {
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;
 
+  // ===== Thông tin tài liệu khoa =====
+  @Column({ type: 'varchar', length: 191, nullable: true })
+  author: string | null;
+
+  @Column({ type: 'int', nullable: true })
+  year: number | null;
+  
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

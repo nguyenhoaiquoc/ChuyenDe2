@@ -71,7 +71,12 @@ export class User {
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'reset_token_hash' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'reset_token_hash',
+  })
   resetTokenHash?: string | null;
 
   @Column({ type: 'timestamp', nullable: true, name: 'reset_token_expires_at' })
@@ -89,6 +94,9 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
+  lastOnlineAt?: Date | null;
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
