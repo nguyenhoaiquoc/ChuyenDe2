@@ -292,10 +292,8 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity
-          className="p-2"
-          // onPress={() => navigation.navigate("NotificationScreen")}
-        >
+        <TouchableOpacity className="p-2" 
+        onPress={() => navigation.navigate("NotificationScreen")}>
           <Feather name="bell" size={22} color="#333" />
         </TouchableOpacity>
       </View>

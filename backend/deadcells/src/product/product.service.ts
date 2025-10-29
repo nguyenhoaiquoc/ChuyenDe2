@@ -1,5 +1,5 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException  } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
@@ -18,9 +18,11 @@ import { DataSource } from 'typeorm';
 import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
+import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class ProductService {
+  logger: any;
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
@@ -70,6 +72,8 @@ export class ProductService {
     private readonly groupService: GroupService,
 
     private readonly dataSource: DataSource,
+
+    private readonly notificationService: NotificationService,
   ) {}
 
   // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
@@ -197,7 +201,22 @@ export class ProductService {
       console.log(
         `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
       );
+
+      if (savedProduct) {
+      // 1. Gửi cho chính người đăng
+      this.notificationService.notifyUserOfPostSuccess(savedProduct)
+        .catch(err => this.logger.error('Lỗi (từ service) notifyUserOfPostSuccess:', err.message));
+        
+      // 2. Gửi cho Admin ("tui")
+      this.notificationService.notifyAdminsOfNewPost(savedProduct)
+        .catch(err => this.logger.error('Lỗi (từ service) notifyAdminsOfNewPost:', err.message));
+      }
+      return savedProduct;
     }
+
+
+
+    
 
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
