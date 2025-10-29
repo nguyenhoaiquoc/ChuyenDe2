@@ -14,23 +14,143 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  Comment,
-  Product,
-  ProductDetailScreenNavigationProp,
-  ProductDetailScreenRouteProp,
-  ProductImage,
-  User,
-} from "../../types";
 
 const { width } = Dimensions.get("window");
 
+interface Comment {
+  id: number;
+  content: string;
+  created_at: string;
+  user: {
+    id: number;
+    fullName: string;
+    image?: string;
+  };
+}
+
+interface ProductImage {
+  id: string;
+  product_id: string;
+  name: string;
+  image_url: string;
+  created_at: string;
+}
+
+interface Condition {
+  id: string;
+  name: string;
+}
+
+interface ProductType {
+  id: string;
+  name: string;
+}
+
+interface PostType {
+  id: string;
+  name: string;
+}
+interface AddressJson {
+  full: string;
+  province?: string;
+  district?: string;
+  ward?: string;
+  village?: string;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  image: string;
+  hot?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface DealType {
+  id: string;
+  name: string;
+}
+
+interface Product {
+  id: string;
+  authorName: string;
+  name: string;
+  description: string;
+  phone?: string;
+  price: string;
+  thumbnail_url?: string;
+  images: ProductImage[];
+  user_id: string;
+  post_type_id: string;
+  dealType: DealType;
+  category_id: string;
+  category: Category;
+  sub_category_id: string | null;
+  category_change_id?: string | null;
+  sub_category_change_id?: string | null;
+
+  // Thêm đây
+  category_change?: {
+    id: string;
+    name: string;
+    image?: string;
+  };
+  sub_category_change?: {
+    id: string;
+    name: string;
+    parent_category_id?: string;
+    source_table?: string;
+    source_id?: string;
+  };
+  postType: PostType;
+  productType: ProductType;
+  condition: Condition;
+  address_json: AddressJson;
+  status_id: string;
+  visibility_type: string;
+  group_id?: string | null;
+  is_approved: boolean;
+  created_at: string;
+  updated_at: string;
+  image?: any;
+  location?: string;
+  time?: string;
+  tag?: string;
+  imageCount?: number;
+  isFavorite?: boolean;
+}
+
+type RootStackParamList = {
+  ProductDetail: { product: Product };
+  ChatRoomScreen: {
+    product: Product;
+    otherUserId: number;
+    otherUserName?: string;
+    currentUserId: number;
+    currentUserName: string;
+  };
+};
+
+type ProductDetailScreenRouteProp = RouteProp<
+  RootStackParamList,
+  "ProductDetail"
+>;
+type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ProductDetail"
+>;
+
 export default function ProductDetailScreen() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -41,11 +161,11 @@ export default function ProductDetailScreen() {
       }
     })();
   }, []);
-
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product: Product = route.params?.product || ({} as Product);
+  const product = route.params?.product || {};
+  const tagText = product.tag || "Chưa có tag";
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -79,7 +199,9 @@ export default function ProductDetailScreen() {
 
   const handleToggleFavorite = async () => {
     try {
-      await axios.post(`${path}/favorites/toggle/${product.id}`);
+      await axios.post(`${path}/favorites/toggle/${product.id}`, {
+        userId: currentUser?.id,
+      });
 
       const [countRes, statusRes] = await Promise.all([
         axios.get(`${path}/favorites/${product.id}/count`),
@@ -91,7 +213,7 @@ export default function ProductDetailScreen() {
       setFavoriteCount(countRes.data.count || 0);
       setIsFavorite(statusRes.data.isFavorite || false);
     } catch (err) {
-      console.log("Lỗi toggle yêu thích:", err);
+      console.log("Lỗi toggle yêu thích detail:", err);
     }
   };
 
@@ -164,19 +286,9 @@ export default function ProductDetailScreen() {
 
     try {
       setIsSending(true); // 🟡 Bắt đầu gửi
-
-      // Lấy user_id từ AsyncStorage
-      const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) {
-        Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
-        setIsSending(false);
-        return;
-      }
-      const userId = Number(userIdStr);
-
       const res = await axios.post(`${path}/comments`, {
         product_id: Number(product.id),
-        user_id: userId, // dùng user thật
+        user_id: 1,
         content: comment.trim(),
       });
 
@@ -279,41 +391,10 @@ const handleChatPress = async () => {
     offset: width * index,
     index,
   });
-
-  // 🧩 Gọi API tạo hoặc lấy phòng chat
-  async function openOrCreateRoom(
-    token: string,
-    payload: {
-      seller_id: string;
-      buyer_id: string;
-      room_type: "PAIR";
-      product_id?: string;
-    }
-  ) {
-    console.log("🪙 Token gửi đi:", token);
-    console.log("📤 Payload gửi:", payload);
-
-    try {
-      const authHeader = token?.startsWith("Bearer ")
-        ? token
-        : `Bearer ${token}`;
-
-      const res = await axios.post(`${path}/chat/room`, payload, {
-        headers: { Authorization: authHeader },
-      });
-      console.log("🧾 Header gửi đi:", authHeader);
-
-      console.log("💬 Phản hồi từ server:", res.data);
-      return res.data; // Có thể là { room: {...} } hoặc {...}
-    } catch (err: any) {
-      console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
-      throw err;
-    }
-  }
-  console.log("danh mục", product.category?.name);
-  console.log("TG", product.author);
-  console.log("Y", product.author);
-
+  // console.log(">>> dealType:", product.dealType);
+  // console.log(">>> category_change:", product.category_change);
+  // console.log(">>> sub_category_change:", product.sub_category_change);
+  // console.log(">>> product_type:", product.productType);
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -468,7 +549,7 @@ const handleChatPress = async () => {
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
-            <Text className="text-gray-700 leading-6 text-lg">
+            <Text className="text-gray-700 leading-6 text-sm">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
           </View>
@@ -552,48 +633,15 @@ const handleChatPress = async () => {
                 )}
 
               {/* Loại sản phẩm */}
-              {product.category?.name === "Thời trang, đồ dùng cá nhân" &&
-                product.productType?.name && (
-                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                    <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
-                    <Text
-                      className="text-gray-800 text-sm font-medium"
-                      style={{ flexShrink: 1, flexWrap: "wrap" }}
-                    >
-                      {product.productType.name}
-                    </Text>
-                  </View>
-                )}
-
-              {/* Tác giả */}
-              {product.category?.name === "Tài liệu khoa" && product.author && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">
-                    Tác giả/ Người biên soạn
-                  </Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.author}
-                  </Text>
-                </View>
-              )}
-
-              {/* Năm xuất bản */}
-              {product.category?.name === "Tài liệu khoa" && product.year && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">
-                    Năm xuất bản/ Năm học
-                  </Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.year}
-                  </Text>
-                </View>
-              )}
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
+                <Text
+                  className="text-gray-800 text-sm font-medium"
+                  style={{ flexShrink: 1, flexWrap: "wrap" }}
+                >
+                  {product.productType?.name || "Chưa rõ"}
+                </Text>
+              </View>
 
               {/* Tình trạng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
@@ -616,6 +664,19 @@ const handleChatPress = async () => {
                   {product.images?.length || product.imageCount || 0} ảnh
                 </Text>
               </View>
+
+              {/* Địa chỉ */}
+              {product.address_json?.full && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Địa chỉ</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.address_json.full}
+                  </Text>
+                </View>
+              )}
 
               {/* Người đăng */}
               {product.authorName && (
@@ -657,16 +718,7 @@ const handleChatPress = async () => {
                       {c.content}
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      {new Date(
-                        new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
-                      ).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
+                      {new Date(c.created_at).toLocaleDateString("vi-VN")}
                     </Text>
                   </View>
                 </View>

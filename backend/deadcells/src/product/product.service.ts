@@ -313,12 +313,12 @@ export class ProductService {
       }
     }
 
-    console.log('✅ userId:', userId);
-    console.log('✅ products count:', products.length);
-    console.log('✅ visibleProducts count:', visibleProducts.length);
-    for (const p of products) {
-      console.log(`🧱 Product ${p.id}: visibility_type =`, p.visibility_type);
-    }
+    // console.log('✅ userId:', userId);
+    // console.log('✅ products count:', products.length);
+    // console.log('✅ visibleProducts count:', visibleProducts.length);
+    // for (const p of products) {
+    //   console.log(`🧱 Product ${p.id}: visibility_type =`, p.visibility_type);
+    // }
 
     return this.formatProducts(visibleProducts);
   }

@@ -118,7 +118,7 @@ export type Product = {
   thumbnail_url?: string;
   images: ProductImage[];
   dealType: DealType;
-  category: Category  | undefined;
+  category: Category | undefined;
   sub_category_id?: string | null;
   category_change?: Category;
   sub_category_change?: { id: string; name: string };
