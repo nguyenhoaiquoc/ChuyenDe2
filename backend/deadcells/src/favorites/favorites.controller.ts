@@ -6,8 +6,11 @@ import {
   ParseIntPipe,
   Body,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
+
 
 @Controller('favorites')
 export class FavoritesController {

@@ -62,7 +62,91 @@ export class NotificationService {
         }
     }
 
+    /**
+   * 5. HÀM MỚI: Thông báo cho chủ sản phẩm khi có người thích
+   */
+    async notifyProductOwnerOfFavorite(actorId: number, productId: number, productOwnerId: number) {
+        try {
+            const action = await this.actionRepo.findOneByOrFail({ name: 'favorite_product' });
+            const targetType = await this.targetTypeRepo.findOneByOrFail({ name: 'product' });
 
+            const dto: CreateNotificationDto = {
+                userId: productOwnerId, // Người nhận là chủ SP
+                actorId: actorId,       // Người thực hiện là người thả tim
+                actionId: action.id,
+                targetTypeId: targetType.id,
+                targetId: productId,
+                productId: productId,
+            };
+            await this.create(dto);
+
+        } catch (error) {
+            this.logger.error(`Lỗi tạo thông báo favorite_product: ${error.message}`, error.stack);
+        }
+    }
+
+    /**
+     * 6. HÀM MỚI: Gửi xác nhận cho người vừa thả tim
+     */
+    async notifyUserOfFavoriteConfirmation(actorId: number, productId: number) {
+        try {
+            const action = await this.actionRepo.findOneByOrFail({ name: 'favorite_confirmation' });
+            const targetType = await this.targetTypeRepo.findOneByOrFail({ name: 'product' });
+
+            const dto: CreateNotificationDto = {
+                userId: actorId,         // Người nhận là người thả tim
+                actorId: actorId,        // Người thực hiện cũng là người thả tim
+                actionId: action.id,
+                targetTypeId: targetType.id,
+                targetId: productId,
+                productId: productId,
+            };
+            await this.create(dto);
+
+        } catch (error) {
+            this.logger.error(`Lỗi tạo thông báo favorite_confirmation: ${error.message}`, error.stack);
+        }
+    }
+
+
+    async deleteNotificationOnUnlike(actorId: number, productId: number, productOwnerId: number) {
+    try {
+      // 1. Lấy ID các hành động
+      const confirmAction = await this.actionRepo.findOneBy({ name: 'favorite_confirmation' });
+      const productAction = await this.actionRepo.findOneBy({ name: 'favorite_product' });
+      const targetType = await this.targetTypeRepo.findOneBy({ name: 'product' });
+
+      if (!confirmAction || !productAction || !targetType) {
+        this.logger.warn(`Không tìm thấy action/target type để xóa thông báo 'unlike'`);
+        return;
+      }
+
+      // 2. Xóa thông báo XÁC NHẬN (của người thả tim)
+      await this.notificationRepo.delete({
+        user: { id: actorId },
+        actor: { id: actorId },
+        action: { id: confirmAction.id },
+        targetType: { id: targetType.id },
+        target_id: productId,
+      });
+
+      // 3. Xóa thông báo CHO CHỦ BÀI (nếu người tim không phải là chủ)
+      if (actorId !== productOwnerId) {
+        await this.notificationRepo.delete({
+          user: { id: productOwnerId },
+          actor: { id: actorId },
+          action: { id: productAction.id },
+          targetType: { id: targetType.id },
+          target_id: productId,
+        });
+      }
+      
+      this.logger.log(`Đã xóa thông báo 'unlike' cho actor ${actorId} và product ${productId}`);
+
+    } catch (error) {
+      this.logger.error(`Lỗi khi xóa thông báo 'unlike': ${error.message}`, error.stack);
+    }
+  }
 
     // 4. HÀM : Thông báo cho (Admin)
 
