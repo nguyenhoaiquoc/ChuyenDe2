@@ -164,7 +164,8 @@ export default function SellProductScreen({ navigation }: Props) {
             productType: item.productType || { id: "1", name: "Chưa rõ" },
             condition: item.condition || { id: "1", name: "Chưa rõ" },
             dealType: item.dealType || { id: "1", name: "Bán" },
-
+            origin: item.origin || { id: "1", name: "Chưa rõ" },
+            
             address_json: item.address_json || { full: locationText }, // Gán object address_json
             phone: item.user?.phone || null, // Lấy phone từ user nếu có
             // ===== SỬA LỖI 2: year =====

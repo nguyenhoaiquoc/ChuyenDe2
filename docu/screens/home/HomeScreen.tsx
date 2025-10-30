@@ -172,6 +172,7 @@ export default function HomeScreen({ navigation }: Props) {
             productType: item.productType || { id: "1", name: "Chưa rõ" },
             condition: item.condition || { id: "1", name: "Chưa rõ" },
             dealType: item.dealType || { id: "1", name: "Bán" },
+            origin: item.origin || { id: "1", name: "Chưa rõ" },
 
             address_json: item.address_json || { full: locationText }, // Gán object address_json
             phone: item.user?.phone || null, // Lấy phone từ user nếu có
@@ -292,8 +293,10 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity className="p-2" 
-        onPress={() => navigation.navigate("NotificationScreen")}>
+        <TouchableOpacity
+          className="p-2"
+          onPress={() => navigation.navigate("NotificationScreen")}
+        >
           <Feather name="bell" size={22} color="#333" />
         </TouchableOpacity>
       </View>

@@ -44,7 +44,6 @@ export class ConversationRoom {
   @JoinColumn({ name: 'product_id' })
   product?: Product | null;
 
-
   @Column({ type: 'text', nullable: true })
   title: string | null;
 

@@ -3,8 +3,8 @@ import { Product } from './product.entity';
 import { Category } from './category.entity';
 import { SubCategory } from './sub-category.entity';
 
-@Entity('product_types')
-export class ProductType {
+@Entity('origins')
+export class Origin {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
@@ -26,13 +26,13 @@ export class ProductType {
   @Column({ type: 'bigint', nullable: true })
   sub_category_id: number | null;
 
-  @ManyToOne(() => SubCategory, (subCategory) => subCategory.productTypes, {
+  @ManyToOne(() => SubCategory, (subCategory) => subCategory.origins, {
     nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sub_category_id' })
   subCategory: SubCategory | null;
 
-  @OneToMany(() => Product, (product) => product.productType)
+  @OneToMany(() => Product, (product) => product.origin)
   products: Product[];
 }

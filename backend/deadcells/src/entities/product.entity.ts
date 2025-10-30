@@ -19,6 +19,7 @@ import { ProductType } from './product_types.entity';
 import { PostType } from './post-type.entity';
 import { Comment } from './comment.entity';
 import { Group } from './group.entity';
+import { Origin } from './origin.entity';
 
 @Entity('products')
 export class Product {
@@ -34,6 +35,13 @@ export class Product {
   @ManyToOne(() => ProductType, { nullable: true })
   @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
   productType: ProductType | null;
+
+  @Column({ name: 'origin_id', type: 'bigint', nullable: true })
+  origin_id: number | null;
+
+  @ManyToOne(() => Origin, { nullable: true })
+  @JoinColumn({ name: 'origin_id', referencedColumnName: 'id' })
+  origin: Origin | null;
 
   // ⚙️ Sửa longtext → text (Postgres không có longtext)
   @Column({ type: 'text', nullable: false })
@@ -140,7 +148,7 @@ export class Product {
 
   @Column({ type: 'int', nullable: true })
   year: number | null;
-  
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

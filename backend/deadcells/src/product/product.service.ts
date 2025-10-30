@@ -1,5 +1,5 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, NotFoundException  } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
@@ -19,6 +19,7 @@ import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { Origin } from 'src/entities/origin.entity';
 
 @Injectable()
 export class ProductService {
@@ -41,6 +42,9 @@ export class ProductService {
 
     @InjectRepository(Condition)
     private readonly conditionRepo: Repository<Condition>,
+
+    @InjectRepository(Origin)
+    private readonly originRepo: Repository<Origin>,
 
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
@@ -182,6 +186,7 @@ export class ProductService {
       condition: condition,
       postType: postType,
       product_type_id: data.product_type_id,
+      origin_id: data.origin_id,
       author: data.author,
       year: data.year,
     });
@@ -203,20 +208,28 @@ export class ProductService {
       );
 
       if (savedProduct) {
-      // 1. Gửi cho chính người đăng
-      this.notificationService.notifyUserOfPostSuccess(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyUserOfPostSuccess:', err.message));
-        
-      // 2. Gửi cho Admin ("tui")
-      this.notificationService.notifyAdminsOfNewPost(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyAdminsOfNewPost:', err.message));
+        // 1. Gửi cho chính người đăng
+        this.notificationService
+          .notifyUserOfPostSuccess(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyUserOfPostSuccess:',
+              err.message,
+            ),
+          );
+
+        // 2. Gửi cho Admin ("tui")
+        this.notificationService
+          .notifyAdminsOfNewPost(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyAdminsOfNewPost:',
+              err.message,
+            ),
+          );
       }
       return savedProduct;
     }
-
-
-
-    
 
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
@@ -231,6 +244,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
       ],
     });
 
@@ -253,6 +267,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
       ],
 
       order: { created_at: 'DESC' },
@@ -274,6 +289,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
       ],
       order: { created_at: 'DESC' },
     });
@@ -296,6 +312,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
       ],
       order: { created_at: 'DESC' },
     });
@@ -312,13 +329,6 @@ export class ProductService {
         if (isMember) visibleProducts.push(p);
       }
     }
-
-    // console.log('✅ userId:', userId);
-    // console.log('✅ products count:', products.length);
-    // console.log('✅ visibleProducts count:', visibleProducts.length);
-    // for (const p of products) {
-    //   console.log(`🧱 Product ${p.id}: visibility_type =`, p.visibility_type);
-    // }
 
     return this.formatProducts(visibleProducts);
   }
@@ -356,13 +366,14 @@ export class ProductService {
         author: p.author || null,
         year: p.year || null,
 
-        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch
+        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch, xuất xứ
         postType: p.postType
           ? { id: p.postType.id, name: p.postType.name }
           : null,
         productType: p.productType
           ? { id: p.productType.id, name: p.productType.name }
           : null,
+        origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,
@@ -511,6 +522,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
       ],
     });
 

@@ -106,6 +106,19 @@ const PostFormScreen = ({
     setShowTypeModal(false);
   };
 
+  // State cho Xuất xứ
+  const [originId, setOriginId] = useState<number | null>(null);
+  const [origins, setOrigins] = useState<{ id: number; name: string }[]>([]);
+  const [selectedOriginId, setSelectedOriginId] = useState<number | null>(null);
+  const [showOriginModal, setShowOriginModal] = useState(false);
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+
+  const handleSelectOrigin = (id: number) => {
+    setSelectedOriginId(id);
+    setOriginId(id);
+    setShowOriginModal(false);
+  };
+
   const [exchangeCategory, setExchangeCategory] = useState<{
     id: string;
     name: string;
@@ -220,12 +233,11 @@ const PostFormScreen = ({
     if (!description || description.trim() === "")
       missingFields.push("Mô tả sản phẩm");
     if (!conditionId) missingFields.push("Tình trạng sản phẩm");
-    if (
-      showProductTypeDropdown &&
-      category?.name === "Thời trang, đồ dùng cá nhân" &&
-      !productTypeId
-    ) {
+    if (showProductTypeDropdown && !productTypeId) {
       missingFields.push("Loại sản phẩm");
+    }
+    if (showOriginDropdown && !originId) {
+      missingFields.push("Xuất xứ");
     }
     if (showAcademicFields && category?.name === "Tài liệu khoa" && !author) {
       missingFields.push("Tác giả");
@@ -279,6 +291,9 @@ const PostFormScreen = ({
       // Chỉ gửi nếu chúng có giá trị
       if (productTypeId) {
         formData.append("product_type_id", String(productTypeId));
+      }
+      if (originId) {
+        formData.append("origin_id", String(originId));
       }
       if (author) {
         formData.append("author", author);
@@ -348,21 +363,14 @@ const PostFormScreen = ({
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [conditionRes, dealTypeRes, productTypeRes, postTypeRes] =
-          await Promise.all([
-            axios.get(`${path}/conditions`),
-            axios.get(`${path}/deal-types`),
-            axios.get(`${path}/product-types`),
-            axios.get(`${path}/post-types`),
-          ]);
-        // console.log("Conditions:", conditionRes.data);
-        // console.log("DealTypes:", dealTypeRes.data);
-        // console.log("ProductTypes:", productTypeRes.data);
-        // console.log("PostTypes:", postTypeRes.data);
+        const [conditionRes, dealTypeRes, postTypeRes] = await Promise.all([
+          axios.get(`${path}/conditions`),
+          axios.get(`${path}/deal-types`),
+          axios.get(`${path}/post-types`),
+        ]);
 
         if (conditionRes.status === 200) setConditions(conditionRes.data);
         if (dealTypeRes.status === 200) setDealTypes(dealTypeRes.data);
-        if (productTypeRes.status === 200) setProductTypes(productTypeRes.data);
         if (postTypeRes.status === 200) setPostTypes(postTypeRes.data);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
@@ -371,17 +379,159 @@ const PostFormScreen = ({
     fetchOptions();
   }, []);
 
-  let showProductTypeDropdown = false;
-  let showAcademicFields = false;
+  const categoryId = category?.id;
+  const subCategoryId = subCategory?.id;
 
-  if (category?.name === "Thời trang, đồ dùng cá nhân") {
-    showProductTypeDropdown = true;
-  } else if (category?.name === "Tài liệu khoa") {
-    showAcademicFields = true;
-  }
+  const [showProductTypeDropdown, setShowProductTypeDropdown] = useState(false);
+  const [showAcademicFields, setShowAcademicFields] = useState(false);
 
   const [author, setAuthor] = useState("");
   const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchProductTypes = async () => {
+      // 1. Luôn ẩn dropdown trước khi bắt đầu tìm kiếm
+      setShowProductTypeDropdown(false);
+      // Đồng thời reset giá trị đã chọn
+      setSelectedProductTypeId(null);
+      setProductTypeId(null);
+
+      // 2. Phải có categoryId mới tìm
+      if (!categoryId) {
+        return;
+      }
+
+      // 3. ƯU TIÊN 1: Tìm theo ID DANH MỤC CON (nếu có)
+      //    (Ví dụ: "Bàn ghế" subCatId = 23)
+      if (subCategoryId) {
+        try {
+          const res = await fetch(
+            `${path}/product-types/by-sub-category/${subCategoryId}`
+          );
+
+          if (res.ok) {
+            const data = await res.json();
+            // Nếu tìm thấy (mảng không rỗng)
+            if (data && data.length > 0) {
+              console.log(
+                `[Loại SP] Tìm thấy ${data.length} loại CỤ THỂ theo SubCatID ${subCategoryId}`
+              );
+              setProductTypes(data);
+              setShowTypeModal(false); // Reset modal
+              setShowProductTypeDropdown(true); // ✅ HIỂN THỊ
+              return; // Dừng lại, không tìm theo danh mục cha nữa
+            }
+          }
+          // Nếu res không ok (vd: 404) hoặc data rỗng -> sẽ tự động chạy xuống Ưu tiên 2
+        } catch (err) {
+          // Bỏ qua lỗi này, để chạy xuống Ưu tiên 2
+          console.warn(
+            `[Loại SP] Không tìm thấy loại SP cụ thể cho ${subCategoryId}, đang fallback...`
+          );
+        }
+      }
+
+      // 4. ƯU TIÊN 2: Tìm theo ID DANH MỤC CHA
+      //    (Chạy khi subCategoryId=null HOẶC khi Ưu tiên 1 không tìm thấy)
+      //    (Ví dụ: "Thời trang" catId = 2)
+      try {
+        const res = await fetch(
+          `${path}/product-types/by-category/${categoryId}`
+        );
+
+        if (res.ok) {
+          const data = await res.json();
+          // Nếu tìm thấy (mảng không rỗng)
+          if (data && data.length > 0) {
+            console.log(
+              `[Loại SP] Tìm thấy ${data.length} loại CHUNG theo CatID ${categoryId}`
+            );
+            setProductTypes(data);
+            setShowTypeModal(false); // Reset modal
+            setShowProductTypeDropdown(true); // ✅ HIỂN THỊ
+            return; // Dừng lại
+          }
+        }
+
+        // Nếu không tìm thấy ở cả 2 ưu tiên
+        console.log(
+          `[Loại SP] Không tìm thấy loại nào cho CatID ${categoryId}`
+        );
+        setShowProductTypeDropdown(false); // Đảm bảo đã ẩn
+      } catch (err) {
+        console.error("Lỗi khi fetch loại SP chung:", (err as Error).message);
+        setShowProductTypeDropdown(false); // Ẩn nếu lỗi
+      }
+    };
+
+    // --- HÀM FETCH XUẤT XỨ (MỚI) ---
+    const fetchOrigins = async () => {
+      // 1. Reset
+      setShowOriginDropdown(false);
+      setSelectedOriginId(null);
+      setOriginId(null); // 2. Phải có categoryId
+
+      if (!categoryId) return; // 3. Ưu tiên 1: Tìm theo SubCategory ID
+
+      if (subCategoryId) {
+        try {
+          const res = await fetch(
+            `${path}/origins/by-sub-category/${subCategoryId}` // <-- API Xuất xứ
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              console.log(
+                `[Xuất xứ] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
+              );
+              setOrigins(data); // <-- Set state Xuất xứ
+              setShowOriginModal(false);
+              setShowOriginDropdown(true); // <-- Hiển thị dropdown Xuất xứ
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn(
+            `[Xuất xứ] Không tìm thấy theo SubCat ${subCategoryId}, fallback...`
+          );
+        }
+      }
+
+      // --- BƯỚC 1: Xử lý logic đặc thù cho "Tài liệu khoa" ---
+      try {
+        const res = await fetch(`${path}/origins/by-category/${categoryId}`); // <-- API Xuất xứ
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            console.log(
+              `[Xuất xứ] Tìm thấy ${data.length} theo CatID ${categoryId}`
+            );
+            setOrigins(data); // <-- Set state Xuất xứ
+            setShowOriginModal(false);
+            setShowOriginDropdown(true); // <-- Hiển thị dropdown Xuất xứ
+            return;
+          }
+        }
+        console.log(`[Xuất xứ] Không tìm thấy cho CatID ${categoryId}`);
+        setShowOriginDropdown(false);
+      } catch (err) {
+        console.error("Lỗi fetch xuất xứ:", (err as Error).message);
+        setShowOriginDropdown(false);
+      }
+    };
+
+    if (category?.name === "Tài liệu khoa") {
+      setShowAcademicFields(true); // HIỂN THỊ Tác giả, Năm
+      setShowProductTypeDropdown(false); // ẨN Loại sản phẩm
+      setShowOriginDropdown(false); // ✅ ẨN Xuất xứ
+    } // --- BƯỚC 2: Xử lý tất cả các danh mục khác ---
+    else {
+      setShowAcademicFields(false); // ẨN Tác giả, Năm
+      fetchProductTypes(); // Chạy fetch Loại sản phẩm
+      fetchOrigins(); // ✅ Chạy fetch Xuất xứ
+    }
+    // --- HÀM FETCH MỚI VỚI LOGIC ƯU TIÊN ---
+  }, [category, categoryId, subCategoryId]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 60 }, (_, i) => currentYear - i);
@@ -399,7 +549,6 @@ const PostFormScreen = ({
         <Text style={styles.headerTitle}>Đăng tin</Text>
         <View style={styles.headerSpacer} />
       </View>
-
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -523,16 +672,45 @@ const PostFormScreen = ({
             >
               <Text style={styles.dropdownLabel}>Loại sản phẩm</Text>
               <View style={styles.dropdownContent}>
-                <Text style={styles.dropdownText}>
-                  {selectedProductTypeId
-                    ? (productTypes.find((t) => t.id === selectedProductTypeId)
-                        ?.name ?? "Không xác định")
-                    : "Chọn loại sản phẩm"}
-                </Text>
+                <ScrollView>
+                  <Text style={styles.dropdownText}>
+                    {selectedProductTypeId
+                      ? (productTypes.find(
+                          (t) => t.id === selectedProductTypeId
+                        )?.name ?? "Không xác định")
+                      : "Chọn loại sản phẩm"}
+                  </Text>
+                </ScrollView>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
               </View>
             </TouchableOpacity>
             <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
+          </View>
+        )}
+
+        {/* Xuất xứ */}
+        {showOriginDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowOriginModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Xuất xứ</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedOriginId
+                    ? (origins.find((t) => t.id === selectedOriginId)?.name ??
+                      "Không xác định")
+                    : "Chọn xuất xứ"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn xuất xứ của sản phẩm</Text>
           </View>
         )}
         {/* Input đặc thù Tài liệu khoa */}
@@ -593,16 +771,15 @@ const PostFormScreen = ({
                 Giá bán (VNĐ)
               </Text>
               <TextInput
-  style={styles.input}
-  placeholder="Nhập giá bán mong muốn"
-  value={price.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
-  onChangeText={(text) => {
-    const numeric = text.replace(/\D/g, "").slice(0, 9);
-    setPrice(numeric);
-  }}
-  keyboardType="numeric"
-/>
-
+                style={styles.input}
+                placeholder="Nhập giá bán mong muốn"
+                value={price.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                onChangeText={(text) => {
+                  const numeric = text.replace(/\D/g, "").slice(0, 9);
+                  setPrice(numeric);
+                }}
+                keyboardType="numeric"
+              />
             </View>
           )}
 
@@ -658,9 +835,7 @@ const PostFormScreen = ({
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Chọn địa chỉ giao dịch</Text>
           <AddressPicker onChange={(fullAddress) => setAddress(fullAddress)} />
-            <Text style={styles.helperText}>
-            Chọn địa chỉ giao dịch
-          </Text>
+          <Text style={styles.helperText}>Chọn địa chỉ giao dịch</Text>
         </View>
 
         {/* Loại bài đăng */}
@@ -721,7 +896,6 @@ const PostFormScreen = ({
           </TouchableOpacity>
         </View>
       </ScrollView>
-
       {/* Menu chọn tình trạng sản phẩm */}
       {showConditionModal && (
         <View style={styles.modalOverlay}>
@@ -748,25 +922,30 @@ const PostFormScreen = ({
           </View>
         </View>
       )}
-
       {/* Menu chọn loại sản phẩm */}
       {showTypeModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.dropdownLabel}>Chọn loại sản phẩm</Text>
-            {productTypes.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.modalOption,
-                  selectedProductTypeId === type.id &&
-                    styles.modalOptionSelected,
-                ]}
-                onPress={() => handleSelectProductType(type.id)}
-              >
-                <Text style={styles.modalOptionText}>{type.name}</Text>
-              </TouchableOpacity>
-            ))}
+
+            {/* BỌC DANH SÁCH BẰNG SCROLLVIEW */}
+            <ScrollView style={{ flexShrink: 1 }}>
+              {productTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedProductTypeId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectProductType(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {/* KẾT THÚC SCROLLVIEW */}
+
             <TouchableOpacity
               onPress={() => setShowTypeModal(false)}
               style={styles.modalCancelButton}
@@ -776,7 +955,34 @@ const PostFormScreen = ({
           </View>
         </View>
       )}
-
+      {/* Menu chọn Xuất xứ */}
+      {showOriginModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn xuất xứ</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {origins.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedOriginId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectOrigin(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowOriginModal(false)} // <-- Đóng modal Xuất xứ
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       {/* Chọn hình thức giao dịch */}
       {showDealTypeModal && (
         <View style={styles.modalOverlay}>
@@ -1014,7 +1220,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
     width: width * 0.9,
-    maxHeight: "80%",
+    maxHeight: "60%",
     padding: 20,
     elevation: 10,
     shadowColor: "#000",

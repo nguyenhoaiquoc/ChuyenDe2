@@ -25,6 +25,7 @@ import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { GroupModule } from './groups/group.module';
 import { FavoritesModule } from './favorites/favorites.module';
+import { OriginModule } from './origin/origin.module';
 
 
 @Module({
@@ -62,6 +63,7 @@ import { FavoritesModule } from './favorites/favorites.module';
     ChatModule,
     GroupModule,
     FavoritesModule,
+    OriginModule
   ],
   controllers: [AppController],
   providers: [AppService],

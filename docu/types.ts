@@ -14,11 +14,15 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen: undefined;
-  ChooseSubCategoryScreen: { category: { id: string; name: string } } | undefined;
-  PostFormScreen: {
-    category: { id: string; name: string };
-    subCategory: { id: string; name: string };
-  } | undefined;
+  ChooseSubCategoryScreen:
+    | { category: { id: string; name: string } }
+    | undefined;
+  PostFormScreen:
+    | {
+        category: { id: string; name: string };
+        subCategory: { id: string; name: string };
+      }
+    | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -29,27 +33,27 @@ export type RootStackParamList = {
   ChooseExchangeCategoryScreen: undefined;
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
-  ManagerGroupsScreen : undefined;
-  UserInforScreen : undefined;
+  ManagerGroupsScreen: undefined;
+  UserInforScreen: undefined;
   EditProfileScreen: undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   // Trong types.ts, thêm vào cuối RootStackParamList:
-ChatRoomScreen: {
-  roomId: string | number;
-  product?: Product;
-  otherUserId: string | number;
-  otherUserName?: string;
-  otherUserAvatar?: string; // ✅ thêm
-  currentUserId: string | number;
-  currentUserName: string;
-  token: string;
-};
+  ChatRoomScreen: {
+    roomId: string | number;
+    product?: Product;
+    otherUserId: string | number;
+    otherUserName?: string;
+    otherUserAvatar?: string; // ✅ thêm
+    currentUserId: string | number;
+    currentUserName: string;
+    token: string;
+  };
 
-UserDetail: {
-    userId: number | string; 
+  UserDetail: {
+    userId: number | string;
     productId: string;
     product: Product;
   };
@@ -99,7 +103,18 @@ export type Condition = { id: string; name: string };
 export type PostType = { id: string; name: string };
 export type DealType = { id: string; name: string };
 export type Category = { id: string; name: string; image?: string };
-
+export type ProductType = {
+  id: number;
+  name: string;
+  category_id: number | null;
+  sub_category_id: number | null;
+};
+export type Origin = {
+  id: number;
+  name: string;
+  category_id: number | null;
+  sub_category_id: number | null;
+};
 export type AddressJson = {
   full: string;
   province?: string;
@@ -124,6 +139,7 @@ export type Product = {
   sub_category_change?: { id: string; name: string };
   postType: PostType;
   productType: PostType;
+  origin: Origin;
   condition: Condition;
   address_json?: AddressJson;
   status_id?: string;
@@ -143,7 +159,7 @@ export type Product = {
   updated_at?: string;
   user_id: string | number;
 
-   // ✅ Thêm hai field này
+  // ✅ Thêm hai field này
   user?: {
     id?: string | number;
     name?: string;
@@ -177,7 +193,7 @@ export type FileResult = {
   uri: string;
   name: string;
   type: string;
-}
+};
 // notification
 export type Notification = {
   id: number;
@@ -197,7 +213,7 @@ export type Notification = {
     id: number;
     name: string; // 'post_success', 'admin_new_post', 'comment', v.v.
   };
-  
+
   // Quan hệ: Loại đối tượng là gì?
   targetType: {
     id: number;

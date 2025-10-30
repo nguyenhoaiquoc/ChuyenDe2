@@ -314,6 +314,9 @@ export default function ProductDetailScreen() {
 
   const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
   const priceNumber = Number(rawPrice);
+
+  console.log(product.origin?.name);
+  
   return (
     <View className="flex-1 bg-white mt-5">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -554,8 +557,8 @@ export default function ProductDetailScreen() {
                 )}
 
               {/* Loại sản phẩm */}
-              {product.category?.name === "Thời trang, đồ dùng cá nhân" &&
-                product.productType?.name && (
+              {product.productType?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
                     <Text
@@ -567,6 +570,19 @@ export default function ProductDetailScreen() {
                   </View>
                 )}
 
+              {/* Xuất xứ */}
+              {product.origin?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Xuất xứ</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.origin.name}
+                    </Text>
+                  </View>
+                )}
               {/* Tác giả */}
               {product.category?.name === "Tài liệu khoa" && product.author && (
                 <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
