@@ -100,6 +100,14 @@ export class CreateProductDto {
   origin_id: number | null;
 
   @IsOptional()
+  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  material_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  size_id: number | null;
+
+  @IsOptional()
   @Transform(transformToNumberOrNull)
   category_change_id: number | null;
 

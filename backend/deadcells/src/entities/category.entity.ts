@@ -9,6 +9,9 @@ import {
 } from 'typeorm';
 import { SubCategory } from './sub-category.entity';
 import { ProductType } from './product_types.entity';
+import { Origin } from './origin.entity';
+import { Material } from './material.entity';
+import { Size } from './size.entity';
 
 @Entity('categories')
 export class Category {
@@ -32,6 +35,15 @@ export class Category {
 
   @OneToMany(() => ProductType, (productType) => productType.category)
   productTypes: ProductType[];
+
+  @OneToMany(() => Origin, (origin) => origin.category)
+  origins: Origin[];
+
+  @OneToMany(() => Material, (material) => material.category)
+  materials: Material[];
+
+  @OneToMany(() => Size, (size) => size.category)
+  sizes: Size[];
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

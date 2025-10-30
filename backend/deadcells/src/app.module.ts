@@ -26,7 +26,8 @@ import { UsersModule } from './users/users.module';
 import { GroupModule } from './groups/group.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { OriginModule } from './origin/origin.module';
-
+import { MaterialModule } from './material/material.module';
+import { SizeModule } from './size/size.module';
 
 @Module({
   imports: [
@@ -63,7 +64,9 @@ import { OriginModule } from './origin/origin.module';
     ChatModule,
     GroupModule,
     FavoritesModule,
-    OriginModule
+    OriginModule,
+    MaterialModule,
+    SizeModule
   ],
   controllers: [AppController],
   providers: [AppService],

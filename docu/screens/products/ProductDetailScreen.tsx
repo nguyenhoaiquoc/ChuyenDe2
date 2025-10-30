@@ -315,8 +315,6 @@ export default function ProductDetailScreen() {
   const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
   const priceNumber = Number(rawPrice);
 
-  console.log(product.origin?.name);
-  
   return (
     <View className="flex-1 bg-white mt-5">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -570,6 +568,33 @@ export default function ProductDetailScreen() {
                   </View>
                 )}
 
+              {/* Chất liệu */}
+              {product.material?.name &&
+                (product.subCategory?.name === "Bàn ghế" ||
+                  product.subCategory?.name === "Tủ, kệ gia đình") && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Chất liệu</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.material.name}
+                    </Text>
+                  </View>
+                )}
+              {/* Kích thước */}
+              {product.size?.name &&
+                product.subCategory?.name === "Giường, chăn ga gối nệm" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Kích thước</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.size.name}
+                    </Text>
+                  </View>
+                )}
               {/* Xuất xứ */}
               {product.origin?.name &&
                 product.category?.name !== "Tài liệu khoa" && (

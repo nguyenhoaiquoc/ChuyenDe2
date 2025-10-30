@@ -21,6 +21,8 @@ import { ProductType } from 'src/entities/product_types.entity';
 import { GroupModule } from 'src/groups/group.module';
 import { NotificationModule } from 'src/notification/notification.module';
 import { Origin } from 'src/entities/origin.entity';
+import { Material } from 'src/entities/material.entity';
+import { Size } from 'src/entities/size.entity';
 
 @Module({
   imports: [
@@ -42,6 +44,8 @@ import { Origin } from 'src/entities/origin.entity';
       PostType,
       ProductType,
       Origin,
+      Material,
+      Size
     ]),
 
     NotificationModule,

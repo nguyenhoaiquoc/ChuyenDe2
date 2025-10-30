@@ -119,6 +119,36 @@ const PostFormScreen = ({
     setShowOriginModal(false);
   };
 
+  // State cho Chất liệu
+  const [materialId, setMaterialId] = useState<number | null>(null);
+  const [materials, setMaterials] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(
+    null
+  );
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
+
+  const handleSelectMaterial = (id: number) => {
+    setSelectedMaterialId(id);
+    setMaterialId(id);
+    setShowMaterialModal(false);
+  };
+
+  // State cho Kích thước
+  const [sizeId, setSizeId] = useState<number | null>(null);
+  const [sizes, setSizes] = useState<{ id: number; name: string }[]>([]);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [showSizeDropdown, setShowSizeDropdown] = useState(false);
+
+  const handleSelectSize = (id: number) => {
+    setSelectedSizeId(id);
+    setSizeId(id);
+    setShowSizeModal(false);
+  };
+
   const [exchangeCategory, setExchangeCategory] = useState<{
     id: string;
     name: string;
@@ -236,6 +266,12 @@ const PostFormScreen = ({
     if (showProductTypeDropdown && !productTypeId) {
       missingFields.push("Loại sản phẩm");
     }
+    if (showMaterialDropdown && !materialId) {
+      missingFields.push("Chất liệu");
+    }
+    if (showSizeDropdown && !sizeId) {
+      missingFields.push("Kích thước");
+    }
     if (showOriginDropdown && !originId) {
       missingFields.push("Xuất xứ");
     }
@@ -291,6 +327,12 @@ const PostFormScreen = ({
       // Chỉ gửi nếu chúng có giá trị
       if (productTypeId) {
         formData.append("product_type_id", String(productTypeId));
+      }
+      if (materialId) {
+        formData.append("material_id", String(materialId));
+      }
+      if (sizeId) {
+        formData.append("size_id", String(sizeId));
       }
       if (originId) {
         formData.append("origin_id", String(originId));
@@ -464,7 +506,7 @@ const PostFormScreen = ({
       }
     };
 
-    // --- HÀM FETCH XUẤT XỨ (MỚI) ---
+    // HÀM FETCH XUẤT XỨ
     const fetchOrigins = async () => {
       // 1. Reset
       setShowOriginDropdown(false);
@@ -520,17 +562,129 @@ const PostFormScreen = ({
       }
     };
 
+    // HÀM FETCH CHẤT LIỆU
+    const fetchMaterials = async () => {
+      // 1. Reset
+      setShowMaterialDropdown(false);
+      setSelectedMaterialId(null);
+      setMaterialId(null);
+      // 2. Check CatID
+      if (!categoryId) return;
+      // 3. Ưu tiên 1: Tìm theo SubCategory ID
+      if (subCategoryId) {
+        try {
+          const res = await fetch(
+            `${path}/materials/by-sub-category/${subCategoryId}` // <-- API Chất liệu
+          );
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              console.log(
+                `[Chất liệu] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
+              );
+              setMaterials(data); // <-- Set state Chất liệu
+              setShowMaterialModal(false);
+              setShowMaterialDropdown(true); // <-- Hiển thị dropdown Chất liệu
+              return;
+            }
+          }
+        } catch (err) {
+          console.warn(
+            `[Chất liệu] Không tìm thấy theo SubCat ${subCategoryId}, fallback...`
+          );
+        }
+      }
+      // 4. Ưu tiên 2: Tìm theo Category ID
+      try {
+        const res = await fetch(`${path}/materials/by-category/${categoryId}`); // <-- API Chất liệu
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            console.log(
+              `[Chất liệu] Tìm thấy ${data.length} theo CatID ${categoryId}`
+            );
+            setMaterials(data); // <-- Set state Chất liệu
+            setShowMaterialModal(false);
+            setShowMaterialDropdown(true); // <-- Hiển thị dropdown Chất liệu
+            return;
+          }
+        }
+        console.log(`[Chất liệu] Không tìm thấy cho CatID ${categoryId}`);
+        setShowMaterialDropdown(false);
+      } catch (err) {
+        console.error("Lỗi fetch chất liệu:", (err as Error).message);
+        setShowMaterialDropdown(false);
+      }
+    };
+
+    const fetchSizes = async () => {
+      // 1. Reset
+      setShowSizeDropdown(false);
+      setSelectedSizeId(null);
+      setSizeId(null);
+
+      // 2. Phải có SubCategory ID (vì nó chỉ áp dụng cho 1 subCat)
+      if (!subCategoryId) return;
+
+      // 3. Chỉ fetch theo SubCategory ID (API /sizes/by-sub-category/:id)
+      try {
+        const res = await fetch(
+          `${path}/sizes/by-sub-category/${subCategoryId}` // <-- API Kích thước
+        );
+        if (res.ok) {
+          const data = await res.json();
+          // Nếu tìm thấy (cho subCat 25)
+          if (data && data.length > 0) {
+            console.log(
+              `[Kích thước] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
+            );
+            setSizes(data); // <-- Set state Kích thước
+            setShowSizeModal(false);
+            setShowSizeDropdown(true); // <-- Hiển thị dropdown Kích thước
+            return;
+          }
+        }
+        // Nếu không tìm thấy (ví dụ subCat 23, 24...)
+        console.log(
+          `[Kích thước] Không tìm thấy cho SubCatID ${subCategoryId}`
+        );
+        setShowSizeDropdown(false);
+      } catch (err) {
+        console.error("Lỗi fetch kích thước:", (err as Error).message);
+        setShowSizeDropdown(false);
+      }
+    };
+
     if (category?.name === "Tài liệu khoa") {
       setShowAcademicFields(true); // HIỂN THỊ Tác giả, Năm
       setShowProductTypeDropdown(false); // ẨN Loại sản phẩm
-      setShowOriginDropdown(false); // ✅ ẨN Xuất xứ
-    } // --- BƯỚC 2: Xử lý tất cả các danh mục khác ---
+      setShowOriginDropdown(false); // ẨN Xuất xứ
+      setShowMaterialDropdown(false); // ẨN Chất liệu
+      setShowSizeDropdown(false); // ✅ ẨN Kích thước
+    }
+    // 2. Nếu là danh mục khác
     else {
       setShowAcademicFields(false); // ẨN Tác giả, Năm
       fetchProductTypes(); // Chạy fetch Loại sản phẩm
-      fetchOrigins(); // ✅ Chạy fetch Xuất xứ
+      fetchOrigins(); // Chạy fetch Xuất xứ
+
+      // Logic cho Chất liệu (chỉ CatID 3)
+      if (Number(categoryId) === 3) {
+        fetchMaterials(); // Chạy fetch Chất liệu
+      } else {
+        setShowMaterialDropdown(false);
+        setMaterialId(null);
+      }
+
+      // ✅ LOGIC MỚI CHO KÍCH THƯỚC
+      // Chỉ hiển thị nếu SubCategory ID là 25 ("Giường, chăn ga gối nệm")
+      if (Number(subCategoryId) === 25) {
+        fetchSizes(); // Chạy fetch Kích thước
+      } else {
+        setShowSizeDropdown(false);
+        setSizeId(null);
+      }
     }
-    // --- HÀM FETCH MỚI VỚI LOGIC ƯU TIÊN ---
   }, [category, categoryId, subCategoryId]);
 
   const currentYear = new Date().getFullYear();
@@ -685,6 +839,57 @@ const PostFormScreen = ({
               </View>
             </TouchableOpacity>
             <Text style={styles.helperText}>Chọn loại sản phẩm của bạn</Text>
+          </View>
+        )}
+
+        {showSizeDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowSizeModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Kích thước</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedSizeId
+                    ? (sizes.find((t) => t.id === selectedSizeId)?.name ??
+                      "Không xác định")
+                    : "Chọn kích thước"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn kích thước (nếu có)</Text>
+          </View>
+        )}
+
+        {/* Chất liệu */}
+        {showMaterialDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowMaterialModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Chất liệu</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedMaterialId
+                    ? (materials.find((t) => t.id === selectedMaterialId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn chất liệu"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn chất liệu của sản phẩm</Text>
           </View>
         )}
 
@@ -944,8 +1149,6 @@ const PostFormScreen = ({
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            {/* KẾT THÚC SCROLLVIEW */}
-
             <TouchableOpacity
               onPress={() => setShowTypeModal(false)}
               style={styles.modalCancelButton}
@@ -955,6 +1158,66 @@ const PostFormScreen = ({
           </View>
         </View>
       )}
+
+      {/* Menu chọn Kích thước */}
+      {showSizeModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn kích thước</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {sizes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedSizeId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectSize(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowSizeModal(false)} // <-- Đóng modal Kích thước
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Chất liệu */}
+      {showMaterialModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn chất liệu</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {materials.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedMaterialId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectMaterial(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowMaterialModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Menu chọn Xuất xứ */}
       {showOriginModal && (
         <View style={styles.modalOverlay}>
@@ -975,7 +1238,7 @@ const PostFormScreen = ({
               ))}
             </ScrollView>
             <TouchableOpacity
-              onPress={() => setShowOriginModal(false)} // <-- Đóng modal Xuất xứ
+              onPress={() => setShowOriginModal(false)}
               style={styles.modalCancelButton}
             >
               <Text style={styles.modalCancelText}>Hủy</Text>

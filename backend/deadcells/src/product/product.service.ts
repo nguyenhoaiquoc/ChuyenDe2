@@ -20,6 +20,8 @@ import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Origin } from 'src/entities/origin.entity';
+import { Material } from 'src/entities/material.entity';
+import { Size } from 'src/entities/size.entity';
 
 @Injectable()
 export class ProductService {
@@ -45,6 +47,12 @@ export class ProductService {
 
     @InjectRepository(Origin)
     private readonly originRepo: Repository<Origin>,
+
+    @InjectRepository(Material)
+    private readonly materialRepo: Repository<Material>,
+
+    @InjectRepository(Size)
+    private readonly sizeRepo: Repository<Size>,
 
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
@@ -187,6 +195,8 @@ export class ProductService {
       postType: postType,
       product_type_id: data.product_type_id,
       origin_id: data.origin_id,
+      material_id: data.material_id,
+      size_id: data.size_id,
       author: data.author,
       year: data.year,
     });
@@ -245,6 +255,8 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
+        'material',
+        'size',
       ],
     });
 
@@ -268,6 +280,8 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
+        'material',
+        'size',
       ],
 
       order: { created_at: 'DESC' },
@@ -290,6 +304,8 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
+        'material',
+        'size',
       ],
       order: { created_at: 'DESC' },
     });
@@ -313,6 +329,8 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
+        'material',
+        'size',
       ],
       order: { created_at: 'DESC' },
     });
@@ -374,6 +392,8 @@ export class ProductService {
           ? { id: p.productType.id, name: p.productType.name }
           : null,
         origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
+        material: p.material ? { id: p.material_id, name: p.material.name } : null,
+        size: p.size ? { id: p.size_id, name: p.size.name } : null,
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,
@@ -523,6 +543,8 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
+        'material',
+        'size',
       ],
     });
 

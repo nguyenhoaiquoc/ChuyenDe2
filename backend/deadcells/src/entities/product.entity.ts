@@ -20,6 +20,8 @@ import { PostType } from './post-type.entity';
 import { Comment } from './comment.entity';
 import { Group } from './group.entity';
 import { Origin } from './origin.entity';
+import { Material } from './material.entity';
+import { Size } from './size.entity';
 
 @Entity('products')
 export class Product {
@@ -42,6 +44,20 @@ export class Product {
   @ManyToOne(() => Origin, { nullable: true })
   @JoinColumn({ name: 'origin_id', referencedColumnName: 'id' })
   origin: Origin | null;
+
+  @Column({ name: 'material_id', type: 'bigint', nullable: true })
+  material_id: number | null;
+
+  @ManyToOne(() => Material, { nullable: true })
+  @JoinColumn({ name: 'material_id', referencedColumnName: 'id' })
+  material: Material | null;
+
+  @Column({ name: 'size_id', type: 'bigint', nullable: true })
+  size_id: number | null;
+
+  @ManyToOne(() => Size, { nullable: true })
+  @JoinColumn({ name: 'size_id', referencedColumnName: 'id' })
+  size: Material | null;
 
   // ⚙️ Sửa longtext → text (Postgres không có longtext)
   @Column({ type: 'text', nullable: false })

@@ -103,17 +103,28 @@ export type Condition = { id: string; name: string };
 export type PostType = { id: string; name: string };
 export type DealType = { id: string; name: string };
 export type Category = { id: string; name: string; image?: string };
-export type ProductType = {
-  id: number;
+export type SubCategory = {
+  id: string | number;
   name: string;
-  category_id: number | null;
-  sub_category_id: number | null;
+  parent_category_id?: number | null; // (Trường này API có gửi)
+  source_table?: string | null;       // (Trường này API có gửi)
+  source_id?: number | null;          // (Trường này API có gửi)
+};
+export type ProductType = {
+  id: string | number;
+  name: string;
 };
 export type Origin = {
-  id: number;
+  id: string | number;
   name: string;
-  category_id: number | null;
-  sub_category_id: number | null;
+};
+export type Material = {
+  id: string | number;
+  name: string;
+};
+export type Size = {
+  id: string | number;
+  name: string;
 };
 export type AddressJson = {
   full: string;
@@ -132,15 +143,20 @@ export type Product = {
   price: string;
   thumbnail_url?: string;
   images: ProductImage[];
-  dealType: DealType;
+  dealType: DealType | null;
   category: Category | undefined;
+  subCategory: SubCategory | null;
   sub_category_id?: string | null;
-  category_change?: Category;
-  sub_category_change?: { id: string; name: string };
-  postType: PostType;
-  productType: PostType;
-  origin: Origin;
-  condition: Condition;
+  category_change?: Category | null;
+  sub_category_change?: { id: string; name: string } | null;
+  postType: PostType | null;
+
+  productType: ProductType | null;
+  origin: Origin | null;
+  material: Material | null;
+  size: Size | null;
+
+  condition: Condition | null;
   address_json?: AddressJson;
   status_id?: string;
   visibility_type?: string;
@@ -153,13 +169,12 @@ export type Product = {
   imageCount?: number;
   isFavorite?: boolean;
   file?: FileResult;
-  author: string;
-  year: number;
+  author: string | null;
+  year: number | null;
   created_at: string;
   updated_at?: string;
   user_id: string | number;
 
-  // ✅ Thêm hai field này
   user?: {
     id?: string | number;
     name?: string;

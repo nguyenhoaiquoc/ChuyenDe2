@@ -12,6 +12,8 @@ import { Category } from './category.entity';
 import { Product } from './product.entity';
 import { ProductType } from './product_types.entity';
 import { Origin } from './origin.entity';
+import { Material } from './material.entity';
+import { Size } from './size.entity';
 
 @Entity('sub_categories')
 export class SubCategory {
@@ -51,6 +53,12 @@ export class SubCategory {
 
   @OneToMany(() => Origin, (origin) => origin.subCategory)
   origins: Origin[];
+
+  @OneToMany(() => Material, (material) => material.subCategory)
+  materials: Origin[];
+
+  @OneToMany(() => Size, (size) => size.subCategory)
+  sizes: Size[];
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
