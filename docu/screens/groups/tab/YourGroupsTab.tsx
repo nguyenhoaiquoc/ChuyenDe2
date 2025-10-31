@@ -8,10 +8,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from "react-native";
 import { RootStackParamList } from "../../../types";
 import axios from "axios";
 import { path } from "../../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // const groups = [
 //   {
@@ -25,20 +27,33 @@ import { path } from "../../../config";
 
 type YourGroupsTabProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  onJoinMorePress: () => void;
 };
 
-export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
+export default function YourGroupsTab({
+  navigation,
+  onJoinMorePress,
+}: YourGroupsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchGroups = async () => {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Thông báo", "Vui lòng đăng nhập để xem nhóm đã tham gia.");
+        return;
+      }
+
       try {
-        const res = await axios.get(`${path}/groups`);
-        setGroups(res.data); // ✅ Không cần xử lý ảnh nữa
+        const res = await axios.get(`${path}/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setGroups(res.data);
       } catch (err) {
-        console.error("❌ Lỗi khi lấy nhóm:", err);
+        console.error(" Lỗi khi lấy nhóm đã tham gia:", err);
       } finally {
         setLoading(false);
       }
@@ -103,9 +118,11 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
             </TouchableOpacity>
           ))}
           <View className="items-center py-20">
-            <Text className="text-gray-500">
-              Nhóm của bạn đã hết, hãy gia nhập thêm nhóm!
-            </Text>
+            <TouchableOpacity onPress={onJoinMorePress} className="mt-4 mb-3">
+              <Text className="text-blue-500 text-sm font-medium text-center">
+                Xem các nhóm có thể bạn thích
+              </Text>
+            </TouchableOpacity>
           </View>
         </>
       ) : (

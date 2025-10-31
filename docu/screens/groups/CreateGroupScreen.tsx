@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { path } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function CreateGroupScreen() {
   const navigation = useNavigation();
@@ -74,17 +75,27 @@ export default function CreateGroupScreen() {
         thumbnail_url = await uploadGroupImage(images[0]); // ✅ upload ảnh trước
       }
 
-      const res = await axios.post(`${path}/groups`, {
-        name: groupName,
-        isPublic: privacy === "public",
-        thumbnail_url,
-      });
+      const token = await AsyncStorage.getItem("token");
 
-      console.log("✅ Nhóm đã tạo:", res.data);
+      const res = await axios.post(
+        `${path}/groups`,
+        {
+          name: groupName,
+          isPublic: privacy === "public",
+          thumbnail_url,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ thêm token vào header
+          },
+        }
+      );
+
+      // console.log("✅ Nhóm đã tạo:", res.data);
       Alert.alert("Thành công", "Nhóm đã được tạo.");
       navigation.goBack();
     } catch (err) {
-      console.error("❌ Lỗi tạo nhóm:", err);
+      console.error("Lỗi tạo nhóm:", err);
       Alert.alert("Lỗi", "Không thể tạo nhóm. Vui lòng thử lại.");
     }
   };

@@ -12,32 +12,40 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { path } from "../../../config";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ForYouTabProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
   onViewAllPress: () => void;
+  onJoinMorePress: () => void;
 };
 
 export default function ForYouTab({
   navigation,
   onViewAllPress,
+  onJoinMorePress,
 }: ForYouTabProps) {
   const [groups, setGroups] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const userId = 1;
-
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const token = await AsyncStorage.getItem("token");
+
         const [groupRes, postRes] = await Promise.all([
-          axios.get(`${path}/groups/latest`), // 5 nhóm mới nhất
-          axios.get(`${path}/groups/users/${userId}/group-posts?limit=4`), // 4 bài viết mới nhất
+          axios.get(`${path}/groups/latest`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          axios.get(`${path}/groups/my/group-posts?limit=4`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
+
         setGroups(groupRes.data);
         setPosts(postRes.data);
       } catch (err) {
-        console.error(" Lỗi khi lấy dữ liệu:", err);
+        console.error("❌ Lỗi khi lấy dữ liệu:", err);
       } finally {
         setLoading(false);
       }
@@ -57,14 +65,16 @@ export default function ForYouTab({
   return (
     <ScrollView className="flex-1 px-4">
       {/* Nhóm mới nhất */}
-      <View>
-        <View className="flex-row justify-between items-center mb-2 mt-3">
-          <Text className="text-base font-semibold">Nhóm mới nhất</Text>
-          <TouchableOpacity onPress={onViewAllPress}>
-            <Text className="text-blue-500 text-sm font-medium">
-              Xem tất cả
-            </Text>
-          </TouchableOpacity>
+      <View className=" mb-2 mt-7 ">
+        <View className="flex-row justify-between items-center mb-2">
+          <Text className="text-base font-semibold">Nhóm của bạn</Text>
+          {groups.length >= 5 ? (
+            <TouchableOpacity onPress={onViewAllPress}>
+              <Text className="text-blue-500 text-sm font-medium">
+                Xem tất cả
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {groups.map((g) => (
@@ -82,6 +92,14 @@ export default function ForYouTab({
             </View>
           </View>
         ))}
+
+        {groups.length < 5 ? (
+          <TouchableOpacity onPress={onJoinMorePress} className="mt-4 mb-3">
+            <Text className="text-blue-500 text-sm font-medium text-center">
+              Xem các nhóm có thể bạn thích
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       {/* Bài viết mới nhất từ nhóm */}

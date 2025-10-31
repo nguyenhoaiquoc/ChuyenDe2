@@ -6,11 +6,13 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import axios from "axios";
 import { path } from "../../../config";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface PostsTabProps {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -20,13 +22,22 @@ interface PostsTabProps {
 export default function PostsTab({ limit, navigation }: PostsTabProps) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const userId = 1;
 
   useEffect(() => {
     const fetchPosts = async () => {
+      const token = await AsyncStorage.getItem("token");
+
+      if (!token) {
+        Alert.alert("Thông báo", "Vui lòng đăng nhập để xem nhóm đã tham gia.");
+        return;
+      }
+
       try {
         const res = await axios.get(
-          `${path}/groups/users/${userId}/group-posts${limit ? `?limit=${limit}` : ""}`
+          `${path}/groups/my/group-posts?limit=${limit}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
         setPosts(res.data);
       } catch (err) {
@@ -87,8 +98,6 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-
-              
             </View>
           )}
         />
