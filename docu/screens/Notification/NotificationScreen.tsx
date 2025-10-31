@@ -74,7 +74,7 @@ export default function NotificationScreen({ navigation }: Props) {
         fetchNotifications();
     }, [activeTab]);
 
-    // ✅ HÀM XỬ LÝ KHI BẤM (Code của ông)
+    //  HÀM XỬ LÝ KHI BẤM 
     const handleNotificationPress = async (item: Notification) => {
         if (isNavigating) return;
         setIsNavigating(true);
@@ -105,7 +105,49 @@ export default function NotificationScreen({ navigation }: Props) {
         }
     };
 
-    // ✅ HÀM RENDER ITEM (Code của ông)
+    //  HÀM : XỬ LÝ XÓA TẤT CẢ
+    const handleDeleteAll = async () => {
+        // 1. Lấy userId
+        const userId = await AsyncStorage.getItem("userId");
+        if (!userId) {
+            return Alert.alert("Lỗi", "Không tìm thấy người dùng.");
+        }
+
+        try {
+            // 2. Gọi API DELETE (endpoint ông vừa tạo)
+            await axios.delete(
+                `${path}/notifications/user/${userId}`
+            );
+            
+            // 3. Xóa thành công, cập nhật UI
+            setNotifications([]); // Set list rỗng
+
+        } catch (error: any) {
+            console.error("Lỗi khi xóa thông báo:", error.response?.data || error.message);
+            Alert.alert("Lỗi", "Không thể xóa thông báo.");
+        }
+    };
+
+    //  HÀM  HIỆN CẢNH BÁO XÁC NHẬN
+    const showConfirmDeleteAlert = () => {
+        Alert.alert(
+            "Xóa tất cả thông báo?",
+            "Hành động này không thể hoàn tác.", 
+            [
+                {
+                    text: "Hủy",
+                    style: "cancel", 
+                },
+                {
+                    text: "Xóa",
+                    onPress: handleDeleteAll, 
+                    style: "destructive", 
+                },
+            ]
+        );
+    };
+
+    //  HÀM RENDER ITEM 
     const renderNotificationItem = ({ item }: { item: Notification }) => {
         const formatMessage = (item: Notification) => {
             const actorName = <Text className="font-bold">{item.actor?.fullName || 'Một người'}</Text>;
@@ -162,7 +204,10 @@ export default function NotificationScreen({ navigation }: Props) {
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold">Thông báo</Text>
-                <View className="w-6" />
+                <TouchableOpacity onPress={showConfirmDeleteAlert}> 
+                    <Text className="text-sm text-red-500">Xóa tất cả</Text>
+                </TouchableOpacity> 
+                
             </View>
 
             {/* Tab Navigator */}

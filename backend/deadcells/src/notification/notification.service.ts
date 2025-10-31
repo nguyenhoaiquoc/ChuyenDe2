@@ -108,6 +108,23 @@ export class NotificationService {
         }
     }
 
+    // hàm xóa tất cả thông báo 
+    async deleteAllForUser(userId: number) {
+    try {
+      // Xóa tất cả bản ghi có user_id khớp
+      const deleteResult = await this.notificationRepo.delete({
+        user: { id: userId },
+      });
+
+      this.logger.log(`Đã xóa ${deleteResult.affected} thông báo cho user ${userId}`);
+      return { message: 'Đã xóa tất cả thông báo.', count: deleteResult.affected };
+
+    } catch (error) {
+      this.logger.error(`Lỗi khi xóa thông báo cho user ${userId}: ${error.message}`, error.stack);
+      throw error;
+    }
+}
+
 
     async deleteNotificationOnUnlike(actorId: number, productId: number, productOwnerId: number) {
     try {

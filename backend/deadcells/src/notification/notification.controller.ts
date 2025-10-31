@@ -5,6 +5,7 @@ import {
   Param,
   ParseIntPipe, 
   Query,
+  Delete,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 
@@ -30,5 +31,12 @@ export class NotificationController {
   ) {
    
     return this.notificationService.markAsRead(notificationId, userId);
+  }
+
+  @Delete('user/:userId')
+  async deleteAll(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.notificationService.deleteAllForUser(userId);
   }
 }
