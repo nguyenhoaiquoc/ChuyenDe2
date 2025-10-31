@@ -80,10 +80,11 @@ export class CreateProductDto {
   @Min(1)
   sub_category_id: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  condition_id: number; // Entity của bạn có 'condition'
+  condition_id: number | null;
 
   // ===== CÁC TRƯỜNG TÙY CHỌN (có thể là null) =====
 
@@ -92,20 +93,68 @@ export class CreateProductDto {
    * Chúng ta dùng @Transform để xử lý nó một cách an toàn.
    */
   @IsOptional()
-  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  @Transform(transformToNumberOrNull)
   product_type_id: number | null;
 
   @IsOptional()
-  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  @Transform(transformToNumberOrNull)
   origin_id: number | null;
 
   @IsOptional()
-  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  @Transform(transformToNumberOrNull)
   material_id: number | null;
 
   @IsOptional()
-  @Transform(transformToNumberOrNull) // Dùng hàm trợ giúp
+  @Transform(transformToNumberOrNull)
   size_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  brand_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  color_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  capacity_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  warranty_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  product_model_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  processor_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  ram_option_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  storage_type_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  graphics_card_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  breed_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  age_range_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  gender_id: number | null;
 
   @IsOptional()
   @Transform(transformToNumberOrNull)

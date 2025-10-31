@@ -23,6 +23,18 @@ import { NotificationModule } from 'src/notification/notification.module';
 import { Origin } from 'src/entities/origin.entity';
 import { Material } from 'src/entities/material.entity';
 import { Size } from 'src/entities/size.entity';
+import { Brand } from 'src/entities/brand.entity';
+import { Color } from 'src/entities/color.entity';
+import { Warranty } from 'src/entities/warranty.entity';
+import { Capacity } from 'src/entities/capacity.entity';
+import { ProductModel } from 'src/entities/product-model.entity';
+import { Processor } from 'src/entities/processor.entity';
+import { RamOption } from 'src/entities/ram-option.entity';
+import { StorageType } from 'src/entities/storage-type.entity';
+import { GraphicsCard } from 'src/entities/graphics-card.entity';
+import { Breed } from 'src/entities/breed.entity';
+import { AgeRange } from 'src/entities/age-range.entity';
+import { Gender } from 'src/entities/gender.entity';
 
 @Module({
   imports: [
@@ -45,7 +57,19 @@ import { Size } from 'src/entities/size.entity';
       ProductType,
       Origin,
       Material,
-      Size
+      Size,
+      Brand,
+      Color,
+      Capacity,
+      Warranty,
+      ProductModel,
+      Processor,
+      RamOption,
+      StorageType,
+      GraphicsCard,
+      Breed,
+      AgeRange,
+      Gender,
     ]),
 
     NotificationModule,

@@ -126,6 +126,54 @@ export type Size = {
   id: string | number;
   name: string;
 };
+export type Brand = {
+  id: string | number;
+  name: string;
+};
+export type Color = {
+  id: string | number;
+  name: string;
+};
+export type Capacity = {
+  id: string | number;
+  name: string;
+};
+export type Warranty = {
+  id: string | number;
+  name: string;
+};
+export type ProductModel = {
+  id: string | number;
+  name: string;
+};
+export type Processor = {
+  id: string | number;
+  name: string;
+};
+export type RamOption = {
+  id: string | number;
+  name: string;
+};
+export type StorageType = {
+  id: string | number;
+  name: string;
+};
+export type GraphicsCard = {
+  id: string | number;
+  name: string;
+};
+export type Breed = {
+  id: string | number;
+  name: string;
+};
+export type AgeRange = {
+  id: string | number;
+  name: string;
+};
+export type Gender = {
+  id: string | number;
+  name: string;
+};
 export type AddressJson = {
   full: string;
   province?: string;
@@ -155,6 +203,18 @@ export type Product = {
   origin: Origin | null;
   material: Material | null;
   size: Size | null;
+  brand: Brand | null;
+  color: Color | null;
+  capacity: Capacity  | null;
+  warranty: Warranty  | null;
+  productModel: ProductModel  | null;
+  processor: Processor | null;
+  ramOption: RamOption | null;
+  storageType: StorageType | null;
+  graphicsCard: GraphicsCard | null;
+  breed: Breed | null;
+  ageRange: AgeRange | null;
+  gender: Gender | null;
 
   condition: Condition | null;
   address_json?: AddressJson;

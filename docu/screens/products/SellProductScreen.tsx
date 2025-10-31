@@ -94,9 +94,9 @@ export default function SellProductScreen({ navigation }: Props) {
             user_id: item.user?.id ?? item.user_id ?? 0,
 
             // === SỬA LỖI LOGIC ===
-            
+
             category: item.category || null, // Dùng null
-            
+
             // Sửa logic 'subCategory' cho đúng với 'types.ts'
             subCategory: item.subCategory
               ? {
@@ -120,20 +120,42 @@ export default function SellProductScreen({ navigation }: Props) {
             postType: item.postType || null,
             condition: item.condition || null,
             dealType: item.dealType || null,
-            
+
             // Sửa logic fallback (kiểm tra .name)
-            productType: (item.productType && item.productType.name)
-              ? item.productType
-              : null,
-            origin: (item.origin && item.origin.name) 
-              ? item.origin 
-              : null,
-            material: (item.material && item.material.name)
-              ? item.material
-              : null,
-            size: (item.size && item.size.name)
-              ? item.size
-              : null,
+            productType:
+              item.productType && item.productType.name
+                ? item.productType
+                : null,
+            origin: item.origin && item.origin.name ? item.origin : null,
+            material:
+              item.material && item.material.name ? item.material : null,
+            size: item.size && item.size.name ? item.size : null,
+            brand: item.brand && item.brand.name ? item.brand : null,
+            color: item.color && item.color.name ? item.color : null,
+            capacity:
+              item.capacity && item.capacity.name ? item.capacity : null,
+            warranty:
+              item.warranty && item.warranty.name ? item.warranty : null,
+            productModel:
+              item.productModel && item.productModel.name
+                ? item.productModel
+                : null,
+            processor:
+              item.processor && item.processor.name ? item.processor : null,
+            ramOption:
+              item.ramOption && item.ramOption.name ? item.ramOption : null,
+            storageType:
+              item.storageType && item.storageType.name
+                ? item.storageType
+                : null,
+            graphicsCard:
+              item.graphicsCard && item.graphicsCard.name
+                ? item.graphicsCard
+                : null,
+            breed: item.breed && item.breed.name ? item.breed : null,
+            ageRange:
+              item.ageRange && item.ageRange.name ? item.ageRange : null,
+            gender: item.gender && item.gender.name ? item.gender : null,
 
             address_json: item.address_json || { full: locationText },
             phone: item.user?.phone || null,

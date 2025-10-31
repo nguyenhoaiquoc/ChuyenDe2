@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -136,7 +136,7 @@ const PostFormScreen = ({
     setShowMaterialModal(false);
   };
 
-  // State cho Kích thước
+  // State cho Kích cỡ
   const [sizeId, setSizeId] = useState<number | null>(null);
   const [sizes, setSizes] = useState<{ id: number; name: string }[]>([]);
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
@@ -148,6 +148,145 @@ const PostFormScreen = ({
     setSizeId(id);
     setShowSizeModal(false);
   };
+
+  // State cho Hãng
+  const [brandId, setBrandId] = useState<number | null>(null);
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+
+  // State cho Dòng máy
+  const [productModelId, setProductModelId] = useState<number | null>(null);
+  const [productModels, setProductModels] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedProductModelId, setSelectedProductModelId] = useState<
+    number | null
+  >(null);
+  const [showProductModelModal, setShowProductModelModal] = useState(false);
+  const [showProductModelDropdown, setShowProductModelDropdown] =
+    useState(false);
+
+  // State cho Màu sắc
+  const [colorId, setColorId] = useState<number | null>(null);
+  const [colors, setColors] = useState<{ id: number; name: string }[]>([]);
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [showColorDropdown, setShowColorDropdown] = useState(false);
+
+  // State cho Dung lượng
+  const [capacityId, setCapacityId] = useState<number | null>(null);
+  const [capacities, setCapacities] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedCapacityId, setSelectedCapacityId] = useState<number | null>(
+    null
+  );
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [showCapacityDropdown, setShowCapacityDropdown] = useState(false);
+
+  // State cho Bảo hành
+  const [warrantyId, setWarrantyId] = useState<number | null>(null);
+  const [warranties, setWarranties] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedWarrantyId, setSelectedWarrantyId] = useState<number | null>(
+    null
+  );
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [showWarrantyDropdown, setShowWarrantyDropdown] = useState(false);
+
+  // ===== BẮT ĐẦU THÊM 4 STATE MỚI (LAPTOP) =====
+  // State cho Bộ vi xử lý
+  const [processorId, setProcessorId] = useState<number | null>(null);
+  const [processors, setProcessors] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedProcessorId, setSelectedProcessorId] = useState<number | null>(
+    null
+  );
+  const [showProcessorModal, setShowProcessorModal] = useState(false);
+  const [showProcessorDropdown, setShowProcessorDropdown] = useState(false);
+
+  // State cho RAM
+  const [ramOptionId, setRamOptionId] = useState<number | null>(null);
+  const [ramOptions, setRamOptions] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedRamOptionId, setSelectedRamOptionId] = useState<number | null>(
+    null
+  );
+  const [showRamOptionModal, setShowRamOptionModal] = useState(false);
+  const [showRamOptionDropdown, setShowRamOptionDropdown] = useState(false);
+
+  // State cho Loại ổ cứng
+  const [storageTypeId, setStorageTypeId] = useState<number | null>(null);
+  const [storageTypes, setStorageTypes] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedStorageTypeId, setSelectedStorageTypeId] = useState<
+    number | null
+  >(null);
+  const [showStorageTypeModal, setShowStorageTypeModal] = useState(false);
+  const [showStorageTypeDropdown, setShowStorageTypeDropdown] = useState(false);
+
+  // State cho Card màn hình
+  const [graphicsCardId, setGraphicsCardId] = useState<number | null>(null);
+  const [graphicsCards, setGraphicsCards] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedGraphicsCardId, setSelectedGraphicsCardId] = useState<
+    number | null
+  >(null);
+  const [showGraphicsCardModal, setShowGraphicsCardModal] = useState(false);
+  const [showGraphicsCardDropdown, setShowGraphicsCardDropdown] =
+    useState(false);
+
+  // State cho Giống (Thú cưng)
+  const [breedId, setBreedId] = useState<number | null>(null);
+  const [breeds, setBreeds] = useState<{ id: number; name: string }[]>([]);
+  const [selectedBreedId, setSelectedBreedId] = useState<number | null>(null);
+  const [showBreedModal, setShowBreedModal] = useState(false);
+  const [showBreedDropdown, setShowBreedDropdown] = useState(false);
+
+  // State cho Độ tuổi (Thú cưng)
+  const [ageRangeId, setAgeRangeId] = useState<number | null>(null);
+  const [ageRanges, setAgeRanges] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [selectedAgeRangeId, setSelectedAgeRangeId] = useState<number | null>(
+    null
+  );
+  const [showAgeRangeModal, setShowAgeRangeModal] = useState(false);
+  const [showAgeRangeDropdown, setShowAgeRangeDropdown] = useState(false);
+
+  // State cho Giới tính (Thú cưng)
+  const [genderId, setGenderId] = useState<number | null>(null);
+  const [genders, setGenders] = useState<{ id: number; name: string }[]>([]);
+  const [selectedGenderId, setSelectedGenderId] = useState<number | null>(null);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  // Loaders
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [isLoadingProductTypes, setIsLoadingProductTypes] = useState(false);
+  const [isLoadingOrigins, setIsLoadingOrigins] = useState(false);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [isLoadingSizes, setIsLoadingSizes] = useState(false);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
+  const [isLoadingColors, setIsLoadingColors] = useState(false);
+  const [isLoadingCapacities, setIsLoadingCapacities] = useState(false);
+  const [isLoadingWarranties, setIsLoadingWarranties] = useState(false);
+
+  const [isLoadingProcessors, setIsLoadingProcessors] = useState(false);
+  const [isLoadingRamOptions, setIsLoadingRamOptions] = useState(false);
+  const [isLoadingStorageTypes, setIsLoadingStorageTypes] = useState(false);
+  const [isLoadingGraphicsCards, setIsLoadingGraphicsCards] = useState(false);
+
+  const [isLoadingBreeds, setIsLoadingBreeds] = useState(false);
+  const [isLoadingAgeRanges, setIsLoadingAgeRanges] = useState(false);
+  const [isLoadingGenders, setIsLoadingGenders] = useState(false);
 
   const [exchangeCategory, setExchangeCategory] = useState<{
     id: string;
@@ -162,7 +301,9 @@ const PostFormScreen = ({
     []
   );
   const [showDealTypeModal, setShowDealTypeModal] = useState(false);
-  // Hàm chọn hình thức giao dịch
+
+  // === CÁC HÀM HANDLE SELECT ===
+
   const handleSelectDealType = (id: number) => {
     setDealTypeId(id);
     setShowDealTypeModal(false);
@@ -176,6 +317,85 @@ const PostFormScreen = ({
       setPrice("0");
       setIsFree(false);
     }
+  };
+
+  const handleSelectBrand = (id: number) => {
+    setSelectedBrandId(id);
+    setShowBrandModal(false);
+
+    if (id === brandId) {
+      console.log("Đã chọn lại cùng hãng, tự gọi fetch...");
+      fetchProductModels(id);
+    } else {
+      setBrandId(id);
+    }
+  };
+
+  const handleSelectProductModel = (id: number) => {
+    setSelectedProductModelId(id);
+    setProductModelId(id);
+    setShowProductModelModal(false);
+  };
+
+  const handleSelectColor = (id: number) => {
+    setSelectedColorId(id);
+    setColorId(id);
+    setShowColorModal(false);
+  };
+
+  const handleSelectCapacity = (id: number) => {
+    setSelectedCapacityId(id);
+    setCapacityId(id);
+    setShowCapacityModal(false);
+  };
+
+  const handleSelectWarranty = (id: number) => {
+    setSelectedWarrantyId(id);
+    setWarrantyId(id);
+    setShowWarrantyModal(false);
+  };
+
+  // ===== BẮT ĐẦU THÊM 4 HÀM HANDLE MỚI (LAPTOP) =====
+  const handleSelectProcessor = (id: number) => {
+    setSelectedProcessorId(id);
+    setProcessorId(id);
+    setShowProcessorModal(false);
+  };
+
+  const handleSelectRamOption = (id: number) => {
+    setSelectedRamOptionId(id);
+    setRamOptionId(id);
+    setShowRamOptionModal(false);
+  };
+
+  const handleSelectStorageType = (id: number) => {
+    setSelectedStorageTypeId(id);
+    setStorageTypeId(id);
+    setShowStorageTypeModal(false);
+  };
+
+  const handleSelectGraphicsCard = (id: number) => {
+    setSelectedGraphicsCardId(id);
+    setGraphicsCardId(id);
+    setShowGraphicsCardModal(false);
+  };
+
+  const handleSelectBreed = (id: number) => {
+    setSelectedBreedId(id);
+    setBreedId(id);
+    setShowBreedModal(false);
+  };
+
+  const handleSelectAgeRange = (id: number) => {
+    setSelectedAgeRangeId(id);
+    setAgeRangeId(id);
+    setShowAgeRangeModal(false);
+  };
+
+  const handleSelectGender = (id: number) => {
+    setSelectedGenderId(id);
+    setGenderId(id);
+    setShowGenderModal(false);
   };
 
   const handleUploadImage = async (useCamera: boolean) => {
@@ -256,31 +476,44 @@ const PostFormScreen = ({
           ? name.trim()
           : "";
 
+    // VALIDATION (Kiểm tra thiếu trường)
     const missingFields: string[] = [];
     if (!category) missingFields.push("Danh mục cha");
     if (!subCategory) missingFields.push("Danh mục con");
     if (!finalName) missingFields.push("Tên sản phẩm");
     if (!description || description.trim() === "")
       missingFields.push("Mô tả sản phẩm");
-    if (!conditionId) missingFields.push("Tình trạng sản phẩm");
-    if (showProductTypeDropdown && !productTypeId) {
+    if (category?.name !== "Thú cưng" && !conditionId) {
+      missingFields.push("Tình trạng sản phẩm");
+    }
+    if (showProductTypeDropdown && !productTypeId)
       missingFields.push("Loại sản phẩm");
-    }
-    if (showMaterialDropdown && !materialId) {
-      missingFields.push("Chất liệu");
-    }
-    if (showSizeDropdown && !sizeId) {
-      missingFields.push("Kích thước");
-    }
-    if (showOriginDropdown && !originId) {
-      missingFields.push("Xuất xứ");
-    }
-    if (showAcademicFields && category?.name === "Tài liệu khoa" && !author) {
+    if (showMaterialDropdown && !materialId) missingFields.push("Chất liệu");
+    if (showSizeDropdown && !sizeId) missingFields.push("Kích cỡ");
+    if (showBrandDropdown && !brandId) missingFields.push("Hãng");
+    if (showProductModelDropdown && !productModelId)
+      missingFields.push("Dòng máy");
+    if (showColorDropdown && !colorId) missingFields.push("Màu sắc");
+    if (showCapacityDropdown && !capacityId) missingFields.push("Dung lượng");
+    if (showWarrantyDropdown && !warrantyId) missingFields.push("Bảo hành");
+    if (showOriginDropdown && !originId) missingFields.push("Xuất xứ");
+
+    if (showProcessorDropdown && !processorId)
+      missingFields.push("Bộ vi xử lý");
+    if (showRamOptionDropdown && !ramOptionId) missingFields.push("RAM");
+    if (showStorageTypeDropdown && !storageTypeId)
+      missingFields.push("Loại ổ cứng");
+    if (showGraphicsCardDropdown && !graphicsCardId)
+      missingFields.push("Card màn hình");
+
+    if (showBreedDropdown && !breedId) missingFields.push("Giống");
+    if (showAgeRangeDropdown && !ageRangeId) missingFields.push("Độ tuổi");
+    if (showGenderDropdown && !genderId) missingFields.push("Giới tính");
+
+    if (showAcademicFields && category?.name === "Tài liệu khoa" && !author)
       missingFields.push("Tác giả");
-    }
-    if (showAcademicFields && category?.name === "Tài liệu khoa" && !year) {
+    if (showAcademicFields && category?.name === "Tài liệu khoa" && !year)
       missingFields.push("Năm xuất bản");
-    }
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
     if (!postTypeId) missingFields.push("Loại bài đăng");
     if (images.length === 0)
@@ -305,7 +538,6 @@ const PostFormScreen = ({
     try {
       const formData = new FormData();
 
-      // XÂY DỰNG FORMDATA
       // 1. Các trường bắt buộc (String)
       formData.append("name", finalName);
       formData.append("description", description);
@@ -318,31 +550,39 @@ const PostFormScreen = ({
       formData.append("deal_type_id", String(dealTypeId));
       formData.append("category_id", String((category as any)?.id));
       formData.append("sub_category_id", String(subCategory?.id));
-      formData.append("condition_id", String(conditionId));
+      if (conditionId) {
+        formData.append("condition_id", String(conditionId));
+      }
 
       // 3. Trường bắt buộc (Boolean)
       formData.append("is_approved", "false");
 
       // 4. Các trường tùy chọn (Optional)
-      // Chỉ gửi nếu chúng có giá trị
-      if (productTypeId) {
+      if (productTypeId)
         formData.append("product_type_id", String(productTypeId));
-      }
-      if (materialId) {
-        formData.append("material_id", String(materialId));
-      }
-      if (sizeId) {
-        formData.append("size_id", String(sizeId));
-      }
-      if (originId) {
-        formData.append("origin_id", String(originId));
-      }
-      if (author) {
-        formData.append("author", author);
-      }
-      if (year) {
-        formData.append("year", String(year));
-      }
+      if (materialId) formData.append("material_id", String(materialId));
+      if (sizeId) formData.append("size_id", String(sizeId));
+      if (brandId) formData.append("brand_id", String(brandId));
+      if (productModelId)
+        formData.append("product_model_id", String(productModelId));
+      if (colorId) formData.append("color_id", String(colorId));
+      if (capacityId) formData.append("capacity_id", String(capacityId));
+      if (warrantyId) formData.append("warranty_id", String(warrantyId));
+      if (originId) formData.append("origin_id", String(originId));
+      if (author) formData.append("author", author);
+      if (year) formData.append("year", String(year));
+
+      if (processorId) formData.append("processor_id", String(processorId));
+      if (ramOptionId) formData.append("ram_option_id", String(ramOptionId));
+      if (storageTypeId)
+        formData.append("storage_type_id", String(storageTypeId));
+      if (graphicsCardId)
+        formData.append("graphics_card_id", String(graphicsCardId));
+
+      if (breedId) formData.append("breed_id", String(breedId));
+      if (ageRangeId) formData.append("age_range_id", String(ageRangeId));
+      if (genderId) formData.append("gender_id", String(genderId));
+
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
         formData.append("category_change_id", String(exchangeCategory.id));
         formData.append(
@@ -404,6 +644,7 @@ const PostFormScreen = ({
 
   useEffect(() => {
     const fetchOptions = async () => {
+      setIsLoadingOptions(true); // Bật loading
       try {
         const [conditionRes, dealTypeRes, postTypeRes] = await Promise.all([
           axios.get(`${path}/conditions`),
@@ -416,6 +657,9 @@ const PostFormScreen = ({
         if (postTypeRes.status === 200) setPostTypes(postTypeRes.data);
       } catch (err) {
         console.error("Lỗi tải dữ liệu:", err);
+        Alert.alert("Lỗi", "Không thể tải các tùy chọn cơ bản.");
+      } finally {
+        setIsLoadingOptions(false); // Tắt loading
       }
     };
     fetchOptions();
@@ -431,104 +675,75 @@ const PostFormScreen = ({
   const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
+    // --- HÀM FETCH LOẠI SẢN PHẨM ---
     const fetchProductTypes = async () => {
-      // 1. Luôn ẩn dropdown trước khi bắt đầu tìm kiếm
       setShowProductTypeDropdown(false);
-      // Đồng thời reset giá trị đã chọn
       setSelectedProductTypeId(null);
       setProductTypeId(null);
-
-      // 2. Phải có categoryId mới tìm
-      if (!categoryId) {
-        return;
-      }
-
-      // 3. ƯU TIÊN 1: Tìm theo ID DANH MỤC CON (nếu có)
-      //    (Ví dụ: "Bàn ghế" subCatId = 23)
+      if (!categoryId) return;
+      setIsLoadingProductTypes(true);
       if (subCategoryId) {
         try {
           const res = await fetch(
             `${path}/product-types/by-sub-category/${subCategoryId}`
           );
-
           if (res.ok) {
             const data = await res.json();
-            // Nếu tìm thấy (mảng không rỗng)
             if (data && data.length > 0) {
-              console.log(
-                `[Loại SP] Tìm thấy ${data.length} loại CỤ THỂ theo SubCatID ${subCategoryId}`
-              );
               setProductTypes(data);
-              setShowTypeModal(false); // Reset modal
-              setShowProductTypeDropdown(true); // ✅ HIỂN THỊ
-              return; // Dừng lại, không tìm theo danh mục cha nữa
+              setShowTypeModal(false);
+              setShowProductTypeDropdown(true);
+              setIsLoadingProductTypes(false);
+              return;
             }
           }
-          // Nếu res không ok (vd: 404) hoặc data rỗng -> sẽ tự động chạy xuống Ưu tiên 2
         } catch (err) {
-          // Bỏ qua lỗi này, để chạy xuống Ưu tiên 2
           console.warn(
-            `[Loại SP] Không tìm thấy loại SP cụ thể cho ${subCategoryId}, đang fallback...`
+            `[Loại SP] Không tìm thấy CỤ THỂ cho ${subCategoryId}, fallback...`
           );
         }
       }
-
-      // 4. ƯU TIÊN 2: Tìm theo ID DANH MỤC CHA
-      //    (Chạy khi subCategoryId=null HOẶC khi Ưu tiên 1 không tìm thấy)
-      //    (Ví dụ: "Thời trang" catId = 2)
       try {
         const res = await fetch(
           `${path}/product-types/by-category/${categoryId}`
         );
-
         if (res.ok) {
           const data = await res.json();
-          // Nếu tìm thấy (mảng không rỗng)
           if (data && data.length > 0) {
-            console.log(
-              `[Loại SP] Tìm thấy ${data.length} loại CHUNG theo CatID ${categoryId}`
-            );
             setProductTypes(data);
-            setShowTypeModal(false); // Reset modal
-            setShowProductTypeDropdown(true); // ✅ HIỂN THỊ
-            return; // Dừng lại
+            setShowTypeModal(false);
+            setShowProductTypeDropdown(true);
+          } else {
+            setShowProductTypeDropdown(false);
           }
         }
-
-        // Nếu không tìm thấy ở cả 2 ưu tiên
-        console.log(
-          `[Loại SP] Không tìm thấy loại nào cho CatID ${categoryId}`
-        );
-        setShowProductTypeDropdown(false); // Đảm bảo đã ẩn
       } catch (err) {
-        console.error("Lỗi khi fetch loại SP chung:", (err as Error).message);
-        setShowProductTypeDropdown(false); // Ẩn nếu lỗi
+        console.error("Lỗi fetch loại SP chung:", (err as Error).message);
+        setShowProductTypeDropdown(false);
+      } finally {
+        setIsLoadingProductTypes(false);
       }
     };
 
-    // HÀM FETCH XUẤT XỨ
+    // --- HÀM FETCH XUẤT XỨ ---
     const fetchOrigins = async () => {
-      // 1. Reset
       setShowOriginDropdown(false);
       setSelectedOriginId(null);
-      setOriginId(null); // 2. Phải có categoryId
-
-      if (!categoryId) return; // 3. Ưu tiên 1: Tìm theo SubCategory ID
-
+      setOriginId(null);
+      if (!categoryId) return;
+      setIsLoadingOrigins(true);
       if (subCategoryId) {
         try {
           const res = await fetch(
-            `${path}/origins/by-sub-category/${subCategoryId}` // <-- API Xuất xứ
+            `${path}/origins/by-sub-category/${subCategoryId}`
           );
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-              console.log(
-                `[Xuất xứ] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
-              );
-              setOrigins(data); // <-- Set state Xuất xứ
+              setOrigins(data);
               setShowOriginModal(false);
-              setShowOriginDropdown(true); // <-- Hiển thị dropdown Xuất xứ
+              setShowOriginDropdown(true);
+              setIsLoadingOrigins(false);
               return;
             }
           }
@@ -538,53 +753,45 @@ const PostFormScreen = ({
           );
         }
       }
-
-      // --- BƯỚC 1: Xử lý logic đặc thù cho "Tài liệu khoa" ---
       try {
-        const res = await fetch(`${path}/origins/by-category/${categoryId}`); // <-- API Xuất xứ
+        const res = await fetch(`${path}/origins/by-category/${categoryId}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            console.log(
-              `[Xuất xứ] Tìm thấy ${data.length} theo CatID ${categoryId}`
-            );
-            setOrigins(data); // <-- Set state Xuất xứ
+            setOrigins(data);
             setShowOriginModal(false);
-            setShowOriginDropdown(true); // <-- Hiển thị dropdown Xuất xứ
-            return;
+            setShowOriginDropdown(true);
+          } else {
+            setShowOriginDropdown(false);
           }
         }
-        console.log(`[Xuất xứ] Không tìm thấy cho CatID ${categoryId}`);
-        setShowOriginDropdown(false);
       } catch (err) {
         console.error("Lỗi fetch xuất xứ:", (err as Error).message);
         setShowOriginDropdown(false);
+      } finally {
+        setIsLoadingOrigins(false);
       }
     };
 
-    // HÀM FETCH CHẤT LIỆU
+    // --- HÀM FETCH CHẤT LIỆU ---
     const fetchMaterials = async () => {
-      // 1. Reset
       setShowMaterialDropdown(false);
       setSelectedMaterialId(null);
       setMaterialId(null);
-      // 2. Check CatID
       if (!categoryId) return;
-      // 3. Ưu tiên 1: Tìm theo SubCategory ID
+      setIsLoadingMaterials(true);
       if (subCategoryId) {
         try {
           const res = await fetch(
-            `${path}/materials/by-sub-category/${subCategoryId}` // <-- API Chất liệu
+            `${path}/materials/by-sub-category/${subCategoryId}`
           );
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
-              console.log(
-                `[Chất liệu] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
-              );
-              setMaterials(data); // <-- Set state Chất liệu
+              setMaterials(data);
               setShowMaterialModal(false);
-              setShowMaterialDropdown(true); // <-- Hiển thị dropdown Chất liệu
+              setShowMaterialDropdown(true);
+              setIsLoadingMaterials(false);
               return;
             }
           }
@@ -594,98 +801,549 @@ const PostFormScreen = ({
           );
         }
       }
-      // 4. Ưu tiên 2: Tìm theo Category ID
       try {
-        const res = await fetch(`${path}/materials/by-category/${categoryId}`); // <-- API Chất liệu
+        const res = await fetch(`${path}/materials/by-category/${categoryId}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            console.log(
-              `[Chất liệu] Tìm thấy ${data.length} theo CatID ${categoryId}`
-            );
-            setMaterials(data); // <-- Set state Chất liệu
+            setMaterials(data);
             setShowMaterialModal(false);
-            setShowMaterialDropdown(true); // <-- Hiển thị dropdown Chất liệu
-            return;
+            setShowMaterialDropdown(true);
+          } else {
+            setShowMaterialDropdown(false);
           }
         }
-        console.log(`[Chất liệu] Không tìm thấy cho CatID ${categoryId}`);
-        setShowMaterialDropdown(false);
       } catch (err) {
         console.error("Lỗi fetch chất liệu:", (err as Error).message);
         setShowMaterialDropdown(false);
+      } finally {
+        setIsLoadingMaterials(false);
       }
     };
 
+    // --- HÀM FETCH KÍCH CỠ ---
     const fetchSizes = async () => {
-      // 1. Reset
       setShowSizeDropdown(false);
       setSelectedSizeId(null);
       setSizeId(null);
-
-      // 2. Phải có SubCategory ID (vì nó chỉ áp dụng cho 1 subCat)
       if (!subCategoryId) return;
-
-      // 3. Chỉ fetch theo SubCategory ID (API /sizes/by-sub-category/:id)
+      setIsLoadingSizes(true);
       try {
         const res = await fetch(
-          `${path}/sizes/by-sub-category/${subCategoryId}` // <-- API Kích thước
+          `${path}/sizes/by-sub-category/${subCategoryId}`
         );
         if (res.ok) {
           const data = await res.json();
-          // Nếu tìm thấy (cho subCat 25)
           if (data && data.length > 0) {
-            console.log(
-              `[Kích thước] Tìm thấy ${data.length} theo SubCatID ${subCategoryId}`
-            );
-            setSizes(data); // <-- Set state Kích thước
+            setSizes(data);
             setShowSizeModal(false);
-            setShowSizeDropdown(true); // <-- Hiển thị dropdown Kích thước
-            return;
+            setShowSizeDropdown(true);
+          } else {
+            setShowSizeDropdown(false);
           }
         }
-        // Nếu không tìm thấy (ví dụ subCat 23, 24...)
-        console.log(
-          `[Kích thước] Không tìm thấy cho SubCatID ${subCategoryId}`
-        );
-        setShowSizeDropdown(false);
       } catch (err) {
-        console.error("Lỗi fetch kích thước:", (err as Error).message);
+        console.error("Lỗi fetch kích cỡ:", (err as Error).message);
         setShowSizeDropdown(false);
+      } finally {
+        setIsLoadingSizes(false);
       }
     };
 
+    // --- HÀM FETCH HÃNG ---
+    const fetchBrands = async () => {
+      setShowBrandDropdown(false);
+      setSelectedBrandId(null);
+      setBrandId(null);
+      if (!subCategoryId) return;
+      setIsLoadingBrands(true);
+      try {
+        const res = await fetch(
+          `${path}/brands/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setBrands(data);
+            setShowBrandModal(false);
+            setShowBrandDropdown(true);
+          } else {
+            setShowBrandDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch hãng:", (err as Error).message);
+        setShowBrandDropdown(false);
+      } finally {
+        setIsLoadingBrands(false);
+      }
+    };
+
+    // --- HÀM FETCH MÀU SẮC ---
+    const fetchColors = async () => {
+      setShowColorDropdown(false);
+      setSelectedColorId(null);
+      setColorId(null);
+      if (!subCategoryId) return;
+      setIsLoadingColors(true);
+      try {
+        const res = await fetch(
+          `${path}/colors/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setColors(data);
+            setShowColorModal(false);
+            setShowColorDropdown(true);
+          } else {
+            setShowColorDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch màu:", (err as Error).message);
+        setShowColorDropdown(false);
+      } finally {
+        setIsLoadingColors(false);
+      }
+    };
+
+    // --- HÀM FETCH DUNG LƯỢNG ---
+    const fetchCapacities = async () => {
+      setShowCapacityDropdown(false);
+      setSelectedCapacityId(null);
+      setCapacityId(null);
+      if (!subCategoryId) return;
+      setIsLoadingCapacities(true);
+      try {
+        const res = await fetch(
+          `${path}/capacities/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setCapacities(data);
+            setShowCapacityModal(false);
+            setShowCapacityDropdown(true);
+          } else {
+            setShowCapacityDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch dung lượng:", (err as Error).message);
+        setShowCapacityDropdown(false);
+      } finally {
+        setIsLoadingCapacities(false);
+      }
+    };
+
+    // --- HÀM FETCH BẢO HÀNH ---
+    const fetchWarranties = async () => {
+      setShowWarrantyDropdown(false);
+      setSelectedWarrantyId(null);
+      setWarrantyId(null);
+      if (!subCategoryId) return;
+      setIsLoadingWarranties(true);
+      try {
+        const res = await fetch(
+          `${path}/warranties/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setWarranties(data);
+            setShowWarrantyModal(false);
+            setShowWarrantyDropdown(true);
+            setIsLoadingWarranties(false);
+          } else {
+            setShowWarrantyDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch bảo hành:", (err as Error).message);
+        setShowWarrantyDropdown(false);
+      } finally {
+        setIsLoadingWarranties(false);
+      }
+    };
+
+    // ===== BẮT ĐẦU THÊM 4 HÀM FETCH MỚI (LAPTOP) =====
+    // --- HÀM FETCH BỘ VI XỬ LÝ ---
+    const fetchProcessors = async () => {
+      setShowProcessorDropdown(false);
+      setSelectedProcessorId(null);
+      setProcessorId(null);
+      if (!subCategoryId) return;
+      setIsLoadingProcessors(true);
+      try {
+        const res = await fetch(
+          `${path}/processors/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setProcessors(data);
+            setShowProcessorModal(false);
+            setShowProcessorDropdown(true);
+          } else {
+            setShowProcessorDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch BXL:", (err as Error).message);
+        setShowProcessorDropdown(false);
+      } finally {
+        setIsLoadingProcessors(false);
+      }
+    };
+
+    // --- HÀM FETCH RAM ---
+    const fetchRamOptions = async () => {
+      setShowRamOptionDropdown(false);
+      setSelectedRamOptionId(null);
+      setRamOptionId(null);
+      if (!subCategoryId) return;
+      setIsLoadingRamOptions(true);
+      try {
+        const res = await fetch(
+          `${path}/ram-options/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setRamOptions(data);
+            setShowRamOptionModal(false);
+            setShowRamOptionDropdown(true);
+          } else {
+            setShowRamOptionDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch RAM:", (err as Error).message);
+        setShowRamOptionDropdown(false);
+      } finally {
+        setIsLoadingRamOptions(false);
+      }
+    };
+
+    // --- HÀM FETCH LOẠI Ổ CỨNG ---
+    const fetchStorageTypes = async () => {
+      setShowStorageTypeDropdown(false);
+      setSelectedStorageTypeId(null);
+      setStorageTypeId(null);
+      if (!subCategoryId) return;
+      setIsLoadingStorageTypes(true);
+      try {
+        const res = await fetch(
+          `${path}/storage-types/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setStorageTypes(data);
+            setShowStorageTypeModal(false);
+            setShowStorageTypeDropdown(true);
+          } else {
+            setShowStorageTypeDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch loại ổ cứng:", (err as Error).message);
+        setShowStorageTypeDropdown(false);
+      } finally {
+        setIsLoadingStorageTypes(false);
+      }
+    };
+
+    // --- HÀM FETCH CARD MÀN HÌNH ---
+    const fetchGraphicsCards = async () => {
+      setShowGraphicsCardDropdown(false);
+      setSelectedGraphicsCardId(null);
+      setGraphicsCardId(null);
+      if (!subCategoryId) return;
+      setIsLoadingGraphicsCards(true);
+      try {
+        const res = await fetch(
+          `${path}/graphics-cards/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setGraphicsCards(data);
+            setShowGraphicsCardModal(false);
+            setShowGraphicsCardDropdown(true);
+          } else {
+            setShowGraphicsCardDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch card MH:", (err as Error).message);
+        setShowGraphicsCardDropdown(false);
+      } finally {
+        setIsLoadingGraphicsCards(false);
+      }
+    };
+
+    // --- HÀM FETCH GIỐNG THÚ CƯNG ---
+    const fetchBreeds = async () => {
+      setShowBreedDropdown(false);
+      setSelectedBreedId(null);
+      setBreedId(null);
+      if (!subCategoryId) return;
+      setIsLoadingBreeds(true);
+      try {
+        const res = await fetch(
+          `${path}/breeds/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setBreeds(data);
+            setShowBreedModal(false);
+            setShowBreedDropdown(true);
+          } else {
+            setShowBreedDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch giống thú cưng:", (err as Error).message);
+        setShowBreedDropdown(false);
+      } finally {
+        setIsLoadingBreeds(false);
+      }
+    };
+
+    // --- HÀM FETCH ĐỘ TUỔI ---
+    const fetchAgeRanges = async () => {
+      setShowAgeRangeDropdown(false);
+      setSelectedAgeRangeId(null);
+      setAgeRangeId(null);
+      if (!subCategoryId) return;
+      setIsLoadingAgeRanges(true);
+      try {
+        const res = await fetch(
+          `${path}/age-ranges/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setAgeRanges(data);
+            setShowAgeRangeModal(false);
+            setShowAgeRangeDropdown(true);
+          } else {
+            setShowAgeRangeDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch độ tuổi:", (err as Error).message);
+        setShowAgeRangeDropdown(false);
+      } finally {
+        setIsLoadingAgeRanges(false);
+      }
+    };
+
+    // --- HÀM FETCH GIỚI TÍNH ---
+    const fetchGenders = async () => {
+      setShowGenderDropdown(false);
+      setSelectedGenderId(null);
+      setGenderId(null);
+      if (!subCategoryId) return;
+      setIsLoadingGenders(true);
+      try {
+        const res = await fetch(
+          `${path}/genders/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setGenders(data);
+            setShowGenderModal(false);
+            setShowGenderDropdown(true);
+          } else {
+            setShowGenderDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch giới tính:", (err as Error).message);
+        setShowGenderDropdown(false);
+      } finally {
+        setIsLoadingGenders(false);
+      }
+    };
+
+    // 1. Nếu là "Tài liệu khoa"
     if (category?.name === "Tài liệu khoa") {
-      setShowAcademicFields(true); // HIỂN THỊ Tác giả, Năm
-      setShowProductTypeDropdown(false); // ẨN Loại sản phẩm
-      setShowOriginDropdown(false); // ẨN Xuất xứ
-      setShowMaterialDropdown(false); // ẨN Chất liệu
-      setShowSizeDropdown(false); // ✅ ẨN Kích thước
+      setShowAcademicFields(true);
+      setShowProductTypeDropdown(false);
+      setShowOriginDropdown(false);
+      setShowMaterialDropdown(false);
+      setShowSizeDropdown(false);
+      setShowBrandDropdown(false);
+      setShowColorDropdown(false);
+      setShowCapacityDropdown(false);
+      setShowWarrantyDropdown(false);
+      // Tắt hết loading nếu đang chạy
+      setIsLoadingProductTypes(false);
+      setIsLoadingOrigins(false);
+      setIsLoadingMaterials(false);
+      setIsLoadingSizes(false);
+      setIsLoadingBrands(false);
+      setIsLoadingColors(false);
+      setIsLoadingCapacities(false);
+      setIsLoadingWarranties(false);
+      // Tắt loading laptop
+      setIsLoadingProcessors(false);
+      setIsLoadingRamOptions(false);
+      setIsLoadingStorageTypes(false);
+      setIsLoadingGraphicsCards(false);
+
+      setShowBreedDropdown(false);
+      setShowAgeRangeDropdown(false);
+      setShowGenderDropdown(false);
+      setIsLoadingBreeds(false);
+      setIsLoadingAgeRanges(false);
+      setIsLoadingGenders(false);
     }
     // 2. Nếu là danh mục khác
     else {
-      setShowAcademicFields(false); // ẨN Tác giả, Năm
-      fetchProductTypes(); // Chạy fetch Loại sản phẩm
-      fetchOrigins(); // Chạy fetch Xuất xứ
+      setShowAcademicFields(false);
+      fetchProductTypes();
+      fetchOrigins();
 
-      // Logic cho Chất liệu (chỉ CatID 3)
-      if (Number(categoryId) === 3) {
-        fetchMaterials(); // Chạy fetch Chất liệu
+      // Logic Chất liệu
+      if ([23, 24].includes(Number(subCategoryId))) {
+        fetchMaterials();
       } else {
         setShowMaterialDropdown(false);
         setMaterialId(null);
       }
 
-      // ✅ LOGIC MỚI CHO KÍCH THƯỚC
-      // Chỉ hiển thị nếu SubCategory ID là 25 ("Giường, chăn ga gối nệm")
-      if (Number(subCategoryId) === 25) {
-        fetchSizes(); // Chạy fetch Kích thước
+      // Logic Kích cỡ
+      if ([25, 39, 40, 41, 44, 53, 54, 55, 56, 57].includes(Number(subCategoryId))) {
+        fetchSizes();
       } else {
         setShowSizeDropdown(false);
         setSizeId(null);
       }
+
+      // LOGIC MỚI CHO ĐỒ ĐIỆN TỬ
+      const subIdNum = Number(subCategoryId);
+
+      // Hãng: Hiển thị cho 38, 39, 40
+      if ([38, 39, 40, 46].includes(subIdNum)) {
+        fetchBrands();
+      } else {
+        setShowBrandDropdown(false);
+        setBrandId(null);
+      }
+
+      // Màu, Dung lượng, Bảo hành:
+      if ([38, 39, 40, 41].includes(subIdNum)) {
+        fetchColors();
+        fetchCapacities();
+        fetchWarranties();
+      } else {
+        setShowColorDropdown(false);
+        setColorId(null);
+        setShowCapacityDropdown(false);
+        setCapacityId(null);
+        setShowWarrantyDropdown(false);
+        setWarrantyId(null);
+      }
+
+      //  Bảo hành:
+      if ([42, 43, 44, 45, 46, 47, 48].includes(subIdNum)) {
+        fetchWarranties();
+      } else {
+        setShowWarrantyDropdown(false);
+        setWarrantyId(null);
+      }
+
+      // Bộ vi xử lý, ram, loại ổ cứng, card màn hình
+      if ([40, 41].includes(subIdNum)) {
+        fetchProcessors();
+        fetchRamOptions();
+        fetchStorageTypes();
+        fetchGraphicsCards();
+      } else {
+        setShowProcessorDropdown(false);
+        setProcessorId(null);
+        setShowRamOptionDropdown(false);
+        setRamOptionId(null);
+        setShowStorageTypeDropdown(false);
+        setStorageTypeId(null);
+        setShowGraphicsCardDropdown(false);
+        setGraphicsCardId(null);
+      }
+
+      const petSubIds = [53, 54, 55, 56, 57];
+      if (petSubIds.includes(subIdNum)) {
+        fetchBreeds();
+        fetchAgeRanges();
+        fetchGenders();
+      } else {
+        setShowBreedDropdown(false);
+        setBreedId(null);
+        setShowAgeRangeDropdown(false);
+        setAgeRangeId(null);
+        setShowGenderDropdown(false);
+        setGenderId(null);
+      }
     }
   }, [category, categoryId, subCategoryId]);
+
+  const fetchProductModels = useCallback(
+    async (currentBrandId: number | null) => {
+      // 1. Reset
+      setShowProductModelDropdown(false);
+      setSelectedProductModelId(null);
+      setProductModelId(null);
+
+      // 2. Nếu không có brandId, thì dừng lại
+      if (!currentBrandId) return;
+
+      // 3. Bật loading
+      setIsLoadingModels(true);
+
+      console.log(
+        `[Dòng máy] Đang tìm dòng máy cho BrandID ${currentBrandId}...`
+      );
+      try {
+        const res = await fetch(
+          `${path}/product-models/by-brand/${currentBrandId}` // <-- API DÒNG MÁY
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            console.log(`[Dòng máy] Tìm thấy ${data.length} dòng máy.`);
+            setProductModels(data);
+            setShowProductModelModal(false);
+            setShowProductModelDropdown(true); // ✅ HIỂN THỊ
+          } else {
+            console.log(
+              `[Dòng máy] Không tìm thấy cho BrandID ${currentBrandId}`
+            );
+            setShowProductModelDropdown(false); // ẨN
+          }
+        } else {
+          console.log(
+            `[Dòng máy] Không tìm thấy (non-ok) cho BrandID ${currentBrandId}`
+          );
+          setShowProductModelDropdown(false); // ẨN
+        }
+      } catch (err) {
+        console.error("Lỗi fetch dòng máy:", (err as Error).message);
+        setShowProductModelDropdown(false);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    },
+    [path]
+  );
+
+  useEffect(() => {
+    fetchProductModels(brandId);
+  }, [brandId, fetchProductModels]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 60 }, (_, i) => currentYear - i);
@@ -721,7 +1379,9 @@ const PostFormScreen = ({
                 ellipsizeMode="tail"
               >
                 {category
-                  ? `${category.name}${subCategory ? ` - ${subCategory.name || subCategory}` : ""}`
+                  ? `${category.name}${
+                      subCategory ? ` - ${subCategory.name || subCategory}` : ""
+                    }`
                   : "Chọn danh mục"}
               </Text>
 
@@ -794,29 +1454,143 @@ const PostFormScreen = ({
           />
           <Text style={styles.helperText}>Nhập tên sản phẩm của bạn</Text>
         </View>
+        {isLoadingOptions && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải tùy chọn...</Text>
+          </View>
+        )}
 
         {/* Tình trạng sản phẩm */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            style={styles.dropdown}
-            onPress={() => setShowConditionModal(true)}
-          >
-            <Text style={styles.dropdownLabel}>Tình trạng sản phẩm</Text>
-            <View style={styles.dropdownContent}>
-              <Text style={styles.dropdownText}>
-                {conditionId
-                  ? conditions.find((item) => item.id === conditionId)?.name ||
-                    "Không xác định"
-                  : "Chọn tình trạng"}
-              </Text>
-              <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
-            </View>
-          </TouchableOpacity>
-          <Text style={styles.helperText}>
-            Chọn tình trạng sản phẩm của bạn
-          </Text>
-        </View>
+        {!isLoadingOptions && category?.name !== "Thú cưng" && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowConditionModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Tình trạng sản phẩm</Text>
+              <View style={styles.dropdownContent}>
+                <Text style={styles.dropdownText}>
+                  {conditionId
+                    ? conditions.find((item) => item.id === conditionId)
+                        ?.name || "Không xác định"
+                    : "Chọn tình trạng"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>
+              Chọn tình trạng sản phẩm của bạn
+            </Text>
+          </View>
+        )}
 
+        {/* Loading Giống */}
+        {isLoadingBreeds && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải danh sách giống...</Text>
+          </View>
+        )}
+        {/* Giống (Thú cưng) */}
+        {showBreedDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowBreedModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Giống thú cưng</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedBreedId
+                    ? (breeds.find((t) => t.id === selectedBreedId)?.name ??
+                      "Không xác định")
+                    : "Chọn giống"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn giống của thú cưng</Text>
+          </View>
+        )}
+
+        {/* Loading Độ tuổi */}
+        {isLoadingAgeRanges && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải độ tuổi...</Text>
+          </View>
+        )}
+        {/* Độ tuổi (Thú cưng) */}
+        {showAgeRangeDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowAgeRangeModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Độ tuổi</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedAgeRangeId
+                    ? (ageRanges.find((t) => t.id === selectedAgeRangeId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn độ tuổi"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn độ tuổi của thú cưng</Text>
+          </View>
+        )}
+
+        {/* Loading Giới tính */}
+        {isLoadingGenders && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải giới tính...</Text>
+          </View>
+        )}
+        {/* Giới tính (Thú cưng) */}
+        {showGenderDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowGenderModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Giới tính</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedGenderId
+                    ? (genders.find((t) => t.id === selectedGenderId)?.name ??
+                      "Không xác định")
+                    : "Chọn giới tính"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn giới tính của thú cưng</Text>
+          </View>
+        )}
+
+        {/* Loading Loại sản phẩm */}
+        {isLoadingProductTypes && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải loại sản phẩm...</Text>
+          </View>
+        )}
         {/* Loại sản phẩm */}
         {showProductTypeDropdown && (
           <View style={styles.section}>
@@ -842,13 +1616,324 @@ const PostFormScreen = ({
           </View>
         )}
 
+        {/* Loading Hãng */}
+        {isLoadingBrands && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải danh sách hãng...</Text>
+          </View>
+        )}
+        {/* Hãng */}
+        {showBrandDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowBrandModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Hãng</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedBrandId
+                    ? (brands.find((t) => t.id === selectedBrandId)?.name ??
+                      "Không xác định")
+                    : "Chọn hãng"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn hãng sản xuất</Text>
+          </View>
+        )}
+
+        {/* Loading Dòng máy */}
+        {isLoadingModels && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải dòng máy...</Text>
+          </View>
+        )}
+        {/* Dòng máy */}
+        {showProductModelDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowProductModelModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Dòng máy</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedProductModelId
+                    ? (productModels.find(
+                        (t) => t.id === selectedProductModelId
+                      )?.name ?? "Không xác định")
+                    : "Chọn dòng máy"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn dòng máy (model)</Text>
+          </View>
+        )}
+
+        {/* ===== BẮT ĐẦU THÊM 4 JSX MỚI (LAPTOP) ===== */}
+
+        {/* Loading Bộ vi xử lý */}
+        {isLoadingProcessors && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải bộ vi xử lý...</Text>
+          </View>
+        )}
+        {/* Bộ vi xử lý */}
+        {showProcessorDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowProcessorModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Bộ vi xử lý</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedProcessorId
+                    ? (processors.find((t) => t.id === selectedProcessorId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn bộ vi xử lý"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn bộ vi xử lý (CPU)</Text>
+          </View>
+        )}
+
+        {/* Loading RAM */}
+        {isLoadingRamOptions && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải tùy chọn RAM...</Text>
+          </View>
+        )}
+        {/* RAM */}
+        {showRamOptionDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowRamOptionModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>RAM</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedRamOptionId
+                    ? (ramOptions.find((t) => t.id === selectedRamOptionId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn dung lượng RAM"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn dung lượng RAM</Text>
+          </View>
+        )}
+
+        {/* Loading Loại ổ cứng */}
+        {isLoadingStorageTypes && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải loại ổ cứng...</Text>
+          </View>
+        )}
+        {/* Loại ổ cứng */}
+        {showStorageTypeDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowStorageTypeModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Loại ổ cứng</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedStorageTypeId
+                    ? (storageTypes.find((t) => t.id === selectedStorageTypeId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn loại ổ cứng"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn loại ổ cứng (SSD, HDD)</Text>
+          </View>
+        )}
+
+        {/* Loading Card màn hình */}
+        {isLoadingGraphicsCards && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải card màn hình...</Text>
+          </View>
+        )}
+        {/* Card màn hình */}
+        {showGraphicsCardDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowGraphicsCardModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Card màn hình</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedGraphicsCardId
+                    ? (graphicsCards.find(
+                        (t) => t.id === selectedGraphicsCardId
+                      )?.name ?? "Không xác định")
+                    : "Chọn card màn hình"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn card màn hình (GPU)</Text>
+          </View>
+        )}
+
+        {/* ===== KẾT THÚC THÊM 4 JSX MỚI (LAPTOP) ===== */}
+
+        {/* Loading Màu sắc */}
+        {isLoadingColors && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải màu sắc...</Text>
+          </View>
+        )}
+        {/* Màu sắc */}
+        {showColorDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowColorModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Màu sắc</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedColorId
+                    ? (colors.find((t) => t.id === selectedColorId)?.name ??
+                      "Không xác định")
+                    : "Chọn màu sắc"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn màu sắc sản phẩm</Text>
+          </View>
+        )}
+
+        {/* Loading Dung lượng */}
+        {isLoadingCapacities && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải dung lượng...</Text>
+          </View>
+        )}
+        {/* Dung lượng */}
+        {showCapacityDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowCapacityModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Dung lượng</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedCapacityId
+                    ? (capacities.find((t) => t.id === selectedCapacityId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn dung lượng"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn dung lượng (ROM)</Text>
+          </View>
+        )}
+
+        {/* Loading Bảo hành */}
+        {isLoadingWarranties && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải bảo hành...</Text>
+          </View>
+        )}
+        {/* Bảo hành */}
+        {showWarrantyDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowWarrantyModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Bảo hành</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedWarrantyId
+                    ? (warranties.find((t) => t.id === selectedWarrantyId)
+                        ?.name ?? "Không xác định")
+                    : "Chọn tình trạng bảo hành"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn tình trạng bảo hành</Text>
+          </View>
+        )}
+
+        {/* Loading Kích cỡ */}
+        {isLoadingSizes && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải kích cỡ...</Text>
+          </View>
+        )}
+        {/* Kích cỡ */}
         {showSizeDropdown && (
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.dropdown}
               onPress={() => setShowSizeModal(true)}
             >
-              <Text style={styles.dropdownLabel}>Kích thước</Text>
+              <Text style={styles.dropdownLabel}>Kích cỡ</Text>
               <View style={styles.dropdownContent}>
                 <Text
                   style={styles.dropdownText}
@@ -858,15 +1943,22 @@ const PostFormScreen = ({
                   {selectedSizeId
                     ? (sizes.find((t) => t.id === selectedSizeId)?.name ??
                       "Không xác định")
-                    : "Chọn kích thước"}
+                    : "Chọn kích cỡ"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.helperText}>Chọn kích thước (nếu có)</Text>
+            <Text style={styles.helperText}>Chọn kích cỡ</Text>
           </View>
         )}
 
+        {/* Loading Chất liệu */}
+        {isLoadingMaterials && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải chất liệu...</Text>
+          </View>
+        )}
         {/* Chất liệu */}
         {showMaterialDropdown && (
           <View style={styles.section}>
@@ -893,6 +1985,13 @@ const PostFormScreen = ({
           </View>
         )}
 
+        {/* Loading Xuất xứ */}
+        {isLoadingOrigins && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải xuất xứ...</Text>
+          </View>
+        )}
         {/* Xuất xứ */}
         {showOriginDropdown && (
           <View style={styles.section}>
@@ -969,7 +2068,6 @@ const PostFormScreen = ({
           </TouchableOpacity>
 
           {/* Giá bán - Chỉ hiển thị nếu chọn "Giá bán" */}
-          {/* Nếu chọn "Giá bán" (id = 1) thì hiện input giá */}
           {dealTypeId === 1 && (
             <View style={{ marginTop: 8 }}>
               <Text style={[styles.dropdownLabel, { marginBottom: 4 }]}>
@@ -1044,63 +2142,65 @@ const PostFormScreen = ({
         </View>
 
         {/* Loại bài đăng */}
-        <View style={styles.section}>
-          <Text style={styles.dropdownLabel}>Loại bài đăng *</Text>
-          <View style={styles.radioContainer}>
-            {postTypes.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.radioOption,
-                  Number(postTypeId) === Number(type.id) &&
-                    styles.radioOptionSelected,
-                ]}
-                onPress={() => handleSelectPostType(Number(type.id))}
-              >
-                <Text
+        {!isLoadingOptions && (
+          <View style={styles.section}>
+            <Text style={styles.dropdownLabel}>Loại bài đăng *</Text>
+            <View style={styles.radioContainer}>
+              {postTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
                   style={[
-                    styles.radioOptionText,
+                    styles.radioOption,
                     Number(postTypeId) === Number(type.id) &&
-                      styles.radioOptionTextSelected,
+                      styles.radioOptionSelected,
                   ]}
+                  onPress={() => handleSelectPostType(Number(type.id))}
                 >
-                  {type.name}
-                </Text>
-                {Number(postTypeId) === Number(type.id) && (
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={20}
-                    color="#8c7ae6"
-                  />
-                )}
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.radioOptionText,
+                      Number(postTypeId) === Number(type.id) &&
+                        styles.radioOptionTextSelected,
+                    ]}
+                  >
+                    {type.name}
+                  </Text>
+                  {Number(postTypeId) === Number(type.id) && (
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={20}
+                      color="#8c7ae6"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.helperText}>
+              Chọn loại bài đăng (Đăng bán hoặc Đăng mua)
+            </Text>
           </View>
-          <Text style={styles.helperText}>
-            Chọn loại bài đăng (Đăng bán hoặc Đăng mua)
-          </Text>
-        </View>
-
+        )}
         {/* Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.postButton, isLoading && { opacity: 0.7 }]}
             onPress={handlePost}
-            disabled={isLoading} // 💡 KHÔNG CHO PHÉP NHẤN NÚT KHI ĐANG TẢI
+            disabled={isLoading}
           >
             {isLoading ? (
-              // 💡 HIỂN THỊ ICON TẢI VÀ TEXT
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
                 <Text style={styles.postButtonText}>Đang đăng tin...</Text>
               </View>
             ) : (
-              // 💡 HIỂN THỊ TEXT BÌNH THƯỜNG
               <Text style={styles.postButtonText}>Đăng tin</Text>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* === MODALS === */}
+
       {/* Menu chọn tình trạng sản phẩm */}
       {showConditionModal && (
         <View style={styles.modalOverlay}>
@@ -1127,13 +2227,12 @@ const PostFormScreen = ({
           </View>
         </View>
       )}
+
       {/* Menu chọn loại sản phẩm */}
       {showTypeModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <Text style={styles.dropdownLabel}>Chọn loại sản phẩm</Text>
-
-            {/* BỌC DANH SÁCH BẰNG SCROLLVIEW */}
             <ScrollView style={{ flexShrink: 1 }}>
               {productTypes.map((type) => (
                 <TouchableOpacity
@@ -1159,11 +2258,366 @@ const PostFormScreen = ({
         </View>
       )}
 
-      {/* Menu chọn Kích thước */}
+      {/* Menu chọn Hãng */}
+      {showBrandModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn hãng</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {brands.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedBrandId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectBrand(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowBrandModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Dòng máy */}
+      {showProductModelModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn dòng máy</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {productModels.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedProductModelId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectProductModel(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowProductModelModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Bộ vi xử lý */}
+      {showProcessorModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn bộ vi xử lý</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {processors.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedProcessorId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectProcessor(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowProcessorModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn RAM */}
+      {showRamOptionModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn RAM</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {ramOptions.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedRamOptionId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectRamOption(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowRamOptionModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Loại ổ cứng */}
+      {showStorageTypeModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn loại ổ cứng</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {storageTypes.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedStorageTypeId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectStorageType(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowStorageTypeModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Card màn hình */}
+      {showGraphicsCardModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn card màn hình</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {graphicsCards.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedGraphicsCardId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectGraphicsCard(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowGraphicsCardModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Giống */}
+      {showBreedModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn giống thú cưng</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {breeds.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedBreedId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectBreed(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowBreedModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Độ tuổi */}
+      {showAgeRangeModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn độ tuổi</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {ageRanges.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedAgeRangeId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectAgeRange(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowAgeRangeModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Giới tính */}
+      {showGenderModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn giới tính</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {genders.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedGenderId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectGender(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowGenderModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Màu sắc */}
+      {showColorModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn màu sắc</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {colors.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedColorId === type.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectColor(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowColorModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Dung lượng */}
+      {showCapacityModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn dung lượng</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {capacities.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedCapacityId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectCapacity(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowCapacityModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Menu chọn Bảo hành */}
+      {showWarrantyModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn bảo hành</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {warranties.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedWarrantyId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectWarranty(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowWarrantyModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {/* Menu chọn Kích cỡ */}
       {showSizeModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.dropdownLabel}>Chọn kích thước</Text>
+            <Text style={styles.dropdownLabel}>Chọn kích cỡ</Text>
             <ScrollView style={{ flexShrink: 1 }}>
               {sizes.map((type) => (
                 <TouchableOpacity
@@ -1179,7 +2633,7 @@ const PostFormScreen = ({
               ))}
             </ScrollView>
             <TouchableOpacity
-              onPress={() => setShowSizeModal(false)} // <-- Đóng modal Kích thước
+              onPress={() => setShowSizeModal(false)}
               style={styles.modalCancelButton}
             >
               <Text style={styles.modalCancelText}>Hủy</Text>
@@ -1280,6 +2734,21 @@ const PostFormScreen = ({
 export default PostFormScreen;
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    backgroundColor: "#f8fafc", // Nền nhạt
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+  },
+  loadingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: "#64748b", // Màu xám
+  },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",

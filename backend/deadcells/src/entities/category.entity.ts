@@ -12,6 +12,17 @@ import { ProductType } from './product_types.entity';
 import { Origin } from './origin.entity';
 import { Material } from './material.entity';
 import { Size } from './size.entity';
+import { Brand } from './brand.entity';
+import { Color } from './color.entity';
+import { Warranty } from './warranty.entity';
+import { Capacity } from './capacity.entity';
+import { Processor } from './processor.entity';
+import { RamOption } from './ram-option.entity';
+import { GraphicsCard } from './graphics-card.entity';
+import { StorageType } from './storage-type.entity';
+import { Breed } from './breed.entity';
+import { AgeRange } from './age-range.entity';
+import { Gender } from './gender.entity';
 
 @Entity('categories')
 export class Category {
@@ -44,6 +55,39 @@ export class Category {
 
   @OneToMany(() => Size, (size) => size.category)
   sizes: Size[];
+
+  @OneToMany(() => Brand, (brand) => brand.category)
+  brands: Brand[];
+
+  @OneToMany(() => Color, (color) => color.category)
+  colors: Color[];
+
+  @OneToMany(() => Capacity, (capacity) => capacity.category)
+  capacitys: Capacity[];
+
+  @OneToMany(() => Warranty, (warranty) => warranty.category)
+  warrantys: Warranty[];
+
+  @OneToMany(() => Processor, (processor) => processor.category)
+  processors: Processor[];
+
+  @OneToMany(() => RamOption, (ramOption) => ramOption.category)
+  ramOptions: RamOption[];
+
+  @OneToMany(() => StorageType, (storageType) => storageType.category)
+  storageTypes: StorageType[];
+
+  @OneToMany(() => GraphicsCard, (graphicsCard) => graphicsCard.category)
+  graphicsCards: GraphicsCard[];
+
+  @OneToMany(() => Breed, (breed) => breed.category)
+  breeds: Breed[];
+
+  @OneToMany(() => AgeRange, (ageRange) => ageRange.category)
+  ageRanges: AgeRange[];
+
+  @OneToMany(() => Gender, (gender) => gender.category)
+  genders: Gender[];
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

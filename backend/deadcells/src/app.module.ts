@@ -28,6 +28,18 @@ import { FavoritesModule } from './favorites/favorites.module';
 import { OriginModule } from './origin/origin.module';
 import { MaterialModule } from './material/material.module';
 import { SizeModule } from './size/size.module';
+import { BrandModule } from './brands/brand.module';
+import { ColorModule } from './colors/color.module';
+import { WarrantyModule } from './warrantys/warranty.module';
+import { CapacityModule } from './capacitys/capacity.module';
+import { ProductModelModule } from './product-models/product-model.module';
+import { ProcessorModule } from './processors/processor.module';
+import { RamOptionModule } from './ram-options/ram-option.module';
+import { StorageTypeModule } from './storage-types/storage-type.module';
+import { GraphicsCardModule } from './graphics-cards/graphics-card.module';
+import { BreedModule } from './breeds/breed.module';
+import { AgeRangeModule } from './age-ranges/age-range.module';
+import { GenderModule } from './genders/gender.module';
 
 @Module({
   imports: [
@@ -66,7 +78,19 @@ import { SizeModule } from './size/size.module';
     FavoritesModule,
     OriginModule,
     MaterialModule,
-    SizeModule
+    SizeModule,
+    BrandModule,
+    ColorModule,
+    CapacityModule,
+    WarrantyModule,
+    ProductModelModule,
+    ProcessorModule,
+    RamOptionModule,
+    StorageTypeModule,
+    GraphicsCardModule,
+    BreedModule,
+    AgeRangeModule,
+    GenderModule
   ],
   controllers: [AppController],
   providers: [AppService],
