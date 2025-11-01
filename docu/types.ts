@@ -40,6 +40,7 @@ export type RootStackParamList = {
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
+  GroupDetailScreen: { group: GroupType };
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
     roomId: string | number;

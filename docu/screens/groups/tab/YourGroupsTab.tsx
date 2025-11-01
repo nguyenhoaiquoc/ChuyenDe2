@@ -96,9 +96,9 @@ export default function YourGroupsTab({
             <TouchableOpacity
               key={g.id}
               className="flex-row items-center mb-4 p-2 bg-gray-50 rounded-lg"
-              // onPress={() =>
-              //   navigation.navigate("GroupDetailScreen", { group: g })
-              // }
+              onPress={() =>
+                navigation.navigate("GroupDetailScreen", { group: g })
+              }
             >
               <Image
                 source={

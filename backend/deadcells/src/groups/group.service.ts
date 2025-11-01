@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Group } from '../entities/group.entity';
 import { FindManyOptions, In, Repository } from 'typeorm';
@@ -89,6 +89,30 @@ export class GroupService {
     }));
   }
 
+  async getGroupProducts(groupId: number, userId: number) {
+    const isMember = await this.isMember(groupId, userId);
+    if (!isMember) {
+      throw new ForbiddenException('Bạn không phải thành viên của nhóm này');
+    }
+
+    const products = await this.productRepo.find({
+      where: { group_id: groupId },
+      order: { created_at: 'DESC' },
+      take: 20,
+    });
+
+    return products.map((p) => ({
+      id: p.id,
+      title: p.name,
+      image: p.thumbnail_url,
+      price: p.price,
+      location: this.formatAddress(p.address_json),
+      time: p.created_at,
+      imageCount: p.images?.length || 0,
+      isFavorite: false,
+    }));
+  }
+
   //KT thành vien
   async isMember(groupId: number, userId: number): Promise<boolean> {
     const count = await this.groupMemberRepo.count({
@@ -123,39 +147,6 @@ export class GroupService {
   //  User rời group
   async leaveGroup(groupId: number, userId: number): Promise<void> {
     await this.groupMemberRepo.delete({ group_id: groupId, user_id: userId });
-  }
-
-  // 🔧 Hàm format dùng chung
-  private formatPost(p: Product) {
-    return {
-      id: String(p.id),
-      image:
-        p.images?.find((img) => !!img.image_url)?.image_url ||
-        p.thumbnail_url ||
-        null,
-      name: p.name,
-      authorName: p.user?.fullName || 'Ẩn danh',
-      price: p.price ? `${p.price.toLocaleString('vi-VN')} đ` : 'Thỏa thuận',
-      location:
-        (p.address_json as any)?.ward ||
-        (p.address_json as any)?.district ||
-        'Không rõ',
-      time: new Date(p.created_at).toLocaleString('vi-VN'),
-      tag: p.subCategory?.name || '',
-      category: p.category?.name,
-      subCategory: p.subCategory
-        ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            source_table: p.subCategory.source_table,
-            source_detail: p.subCategory.source_table,
-          }
-        : undefined,
-      imageCount: p.images?.length || 0,
-      isFavorite: false,
-      groupName: p.group?.name || 'Không rõ nhóm',
-      groupImage: p.group?.thumbnail_url || null,
-    };
   }
 
   async findGroupsOfUser(userId: number): Promise<Group[]> {
@@ -228,5 +219,51 @@ export class GroupService {
       //   avatars: [],
       // },
     }));
+  }
+
+  // Format địa chỉ
+  private formatAddress(addressJson: any): string {
+    try {
+      const addr =
+        typeof addressJson === 'string' ? JSON.parse(addressJson) : addressJson;
+      if (addr.full) return addr.full; // ✅ Ưu tiên trường "full"
+      const parts = [addr.ward, addr.district, addr.province].filter(Boolean);
+      return parts.length > 0 ? parts.join(', ') : 'Không rõ địa chỉ';
+    } catch {
+      return 'Không rõ địa chỉ';
+    }
+  }
+
+  //  Hàm format dùng chung
+  private formatPost(p: Product) {
+    return {
+      id: String(p.id),
+      image:
+        p.images?.find((img) => !!img.image_url)?.image_url ||
+        p.thumbnail_url ||
+        null,
+      name: p.name,
+      authorName: p.user?.fullName || 'Ẩn danh',
+      price: p.price ? `${p.price.toLocaleString('vi-VN')} đ` : 'Thỏa thuận',
+      location:
+        (p.address_json as any)?.ward ||
+        (p.address_json as any)?.district ||
+        'Không rõ',
+      time: new Date(p.created_at).toLocaleString('vi-VN'),
+      tag: p.subCategory?.name || '',
+      category: p.category?.name,
+      subCategory: p.subCategory
+        ? {
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            source_table: p.subCategory.source_table,
+            source_detail: p.subCategory.source_table,
+          }
+        : undefined,
+      imageCount: p.images?.length || 0,
+      isFavorite: false,
+      groupName: p.group?.name || 'Không rõ nhóm',
+      groupImage: p.group?.thumbnail_url || null,
+    };
   }
 }

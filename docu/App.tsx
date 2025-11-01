@@ -77,7 +77,7 @@ export default function App() {
         <Stack.Screen name="SellProductScreen" component={SellProductScreen} />
         <Stack.Screen name="PurchaseRequestScreen" component={PurchaseRequestScreen} />
         <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
-         {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
+        <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> 
         <Stack.Screen name="NotificationScreen" component={NotificationScreen} 
         />
       </Stack.Navigator>

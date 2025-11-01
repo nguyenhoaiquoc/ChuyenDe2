@@ -66,6 +66,13 @@ export class GroupController {
     return this.groupService.getFeaturedGroups();
   }
 
+  @Get(':groupId/products')
+  @UseGuards(JwtAuthGuard)
+  async getGroupProducts(@Param('groupId') groupId: number, @Req() req) {
+    const userId = req.user.id;
+    return this.groupService.getGroupProducts(groupId, userId);
+  }
+  
   @Post('upload-image')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', CloudinaryMulter))
@@ -95,6 +102,7 @@ export class GroupController {
 
   // Check user có trong group không
   @Get(':groupId/is-member/:userId')
+  @UseGuards(JwtAuthGuard)
   async checkMember(
     @Param('groupId') groupId: number,
     @Param('userId') userId: number,
