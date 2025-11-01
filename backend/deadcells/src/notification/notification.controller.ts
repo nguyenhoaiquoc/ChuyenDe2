@@ -5,6 +5,9 @@ import {
   Param,
   ParseIntPipe, 
   Query,
+  Delete,
+  HttpCode,
+  HttpStatus
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 
@@ -30,5 +33,27 @@ export class NotificationController {
   ) {
    
     return this.notificationService.markAsRead(notificationId, userId);
+  }
+
+  @Delete('user/:userId')
+  async deleteAll(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.notificationService.deleteAllForUser(userId);
+  }
+
+  @Patch('user/:userId/mark-all-read')
+  @HttpCode(HttpStatus.OK) // Trả về 200
+  async markAllAsRead(  
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.notificationService.markAllAsRead(userId);
+  }
+
+  @Get('user/:userId/unread-count')
+  async getUnreadCount(
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.notificationService.getUnreadCount(userId);
   }
 }

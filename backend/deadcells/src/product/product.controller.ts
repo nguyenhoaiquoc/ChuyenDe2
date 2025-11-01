@@ -7,6 +7,7 @@ import {
   Get,
   NotFoundException,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Req,
@@ -48,4 +49,11 @@ export class ProductController {
     console.log('✅ products count:', result.length);
     return result;
   }
+
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    // Gọi hàm "findById" mà ông nói đã có trong service
+    return this.productService.findById(id); 
+  }
+  
 }

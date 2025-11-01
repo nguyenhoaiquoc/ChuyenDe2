@@ -51,7 +51,7 @@ export default function UserScreen() {
     };
     fetchUser();
   }, []);
-  
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
       <StatusBar barStyle="dark-content" />
@@ -85,10 +85,10 @@ export default function UserScreen() {
                 source={
                   avatar
                     ? {
-                        uri: avatar.startsWith("http")
-                          ? avatar
-                          : `${path}${avatar}`,
-                      }
+                      uri: avatar.startsWith("http")
+                        ? avatar
+                        : `${path}${avatar}`,
+                    }
                     : require("../../assets/meo.jpg")
                 }
                 style={{ width: "100%", height: "100%", borderRadius: 48 }}
@@ -146,8 +146,8 @@ export default function UserScreen() {
             />
             <UtilityItem
               icon="heart-outline"
-              title="Tin đăng đã lưu "
-              onPress={() => navigation.navigate("ViewHistory")}
+              title="Tin đăng đã thích "
+              onPress={() => navigation.navigate("SavedPostsScreen")}
             />
             <UtilityItem
               icon="trash-outline"
@@ -164,32 +164,32 @@ export default function UserScreen() {
               title="Đánh giá từ tôi"
               onPress={() => navigation.navigate("FeedbackScreen")}
             />
-          <UtilityItem
-  icon="log-out-outline"
-  title="Đăng xuất"
-  isLast={true}
-  color="red"
-onPress={async () => {
-  try {
-    const socket = getSocket();
-    if (socket) {
-      console.log("⚠️ Gửi sự kiện logout");
-      socket.emit("logout");  // Gửi sự kiện logout đến backend
-      disconnectSocket();     // Ngắt kết nối socket hiện tại
-      console.log("✅ Socket đã ngắt kết nối!");
-    }
-  } catch (err) {
-    console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
-  }
+            <UtilityItem
+              icon="log-out-outline"
+              title="Đăng xuất"
+              isLast={true}
+              color="red"
+              onPress={async () => {
+                try {
+                  const socket = getSocket();
+                  if (socket) {
+                    console.log("⚠️ Gửi sự kiện logout");
+                    socket.emit("logout");  // Gửi sự kiện logout đến backend
+                    disconnectSocket();     // Ngắt kết nối socket hiện tại
+                    console.log("✅ Socket đã ngắt kết nối!");
+                  }
+                } catch (err) {
+                  console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
+                }
 
-  // Xoá thông tin người dùng và chuyển hướng
-  await AsyncStorage.multiRemove(["token", "userId", "userName", "userAvatar"]);
-  navigation.reset({
-    index: 0,
-    routes: [{ name: "LoginScreen" }],
-  });
-}}
-/>
+                // Xoá thông tin người dùng và chuyển hướng
+                await AsyncStorage.multiRemove(["token", "userId", "userName", "userAvatar"]);
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: "LoginScreen" }],
+                });
+              }}
+            />
 
           </View>
         </View>

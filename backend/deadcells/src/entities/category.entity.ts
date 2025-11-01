@@ -98,4 +98,5 @@ export class Category {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+    productTypes: any;
 }
