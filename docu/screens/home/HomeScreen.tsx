@@ -7,6 +7,7 @@ import {
   Text,
   StatusBar,
   FlatList,
+  GestureResponderEvent,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -19,6 +20,9 @@ import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNotification } from "../Notification/NotificationContext";
+import { useIsFocused } from '@react-navigation/native';
+
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -42,6 +46,9 @@ export default function HomeScreen({ navigation }: Props) {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  const isFocused = useIsFocused();
+  const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
   useEffect(() => {
     axios
@@ -150,13 +157,13 @@ export default function HomeScreen({ navigation }: Props) {
 
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
-                  name: item.subCategory.name,
-                  source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
-                }
+                id: item.subCategory.id
+                  ? parseInt(item.subCategory.id)
+                  : undefined,
+                name: item.subCategory.name,
+                source_table: item.subCategory.source_table,
+                source_detail: item.subCategory.source_detail,
+              }
               : undefined,
             // Giữ nguyên category_change và sub_category_change
             category_change: item.category_change || undefined,
@@ -225,6 +232,13 @@ export default function HomeScreen({ navigation }: Props) {
 
     fetchFavorites(); // gọi hàm async
   }, []);
+  
+  useEffect(() => {
+    if (isFocused) {
+      console.log("HomeScreen đang focus, gọi fetchUnreadCount...");
+      fetchUnreadCount(); // Gọi API lấy số lượng
+    }
+  }, [isFocused, fetchUnreadCount]); // Chạy lại khi isFocused
 
   const handleToggleFavorite = async (productId: string) => {
     try {
@@ -267,6 +281,20 @@ export default function HomeScreen({ navigation }: Props) {
     interval = seconds / 60;
     return Math.floor(interval) + " phút trước";
   };
+  const handleBellPress = async () => {
+    const userId = await AsyncStorage.getItem("userId");
+    if (!userId) {
+      return navigation.navigate("NotificationScreen");
+    }
+    try {
+      await axios.patch(`${path}/notifications/user/${userId}/mark-all-read`);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Lỗi khi mark all as read:", error);
+    } finally {
+      navigation.navigate("NotificationScreen");
+    }
+  };
   return (
     <View className="flex-1 bg-[#f5f6fa] mt-6">
       <StatusBar className="auto" />
@@ -292,9 +320,20 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity className="p-2" 
-        onPress={() => navigation.navigate("NotificationScreen")}>
+        <TouchableOpacity
+          className="p-2 relative"
+          onPress={handleBellPress}
+        >
           <Feather name="bell" size={22} color="#333" />
+
+          {/* 3. Thêm cái badge (chấm đỏ) */}
+          {unreadCount > 0 && (
+            <View className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
+              <Text className="text-white text-[10px] font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -367,11 +406,10 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${
-                  selectedFilter === item.label
-                    ? "bg-blue-500 border-blue-500"
-                    : "bg-white border-gray-300"
-                }`}
+                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
+                  ? "bg-blue-500 border-blue-500"
+                  : "bg-white border-gray-300"
+                  }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);

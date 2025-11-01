@@ -247,6 +247,38 @@ export class NotificationService {
         );
     }
 
+    // Đánh dấu TẤT CẢ là đã đọc
+  async markAllAsRead(userId: number) {
+    try {
+      // Cập nhật tất cả thông báo 'chưa đọc' (is_read: false) của user
+      const updateResult = await this.notificationRepo.update(
+        { user: { id: userId }, is_read: false },
+        { is_read: true },
+      );
+      this.logger.log(`Đã đánh dấu ${updateResult.affected} thông báo là đã đọc cho user ${userId}`);
+      return { message: 'Đã đánh dấu tất cả là đã đọc.', count: updateResult.affected };
+    } catch (error) {
+      this.logger.error(`Lỗi khi đánh dấu tất cả là đã đọc: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  //  Lấy SỐ LƯỢNG chưa đọc
+  async getUnreadCount(userId: number): Promise<{ count: number }> {
+    try {
+      const count = await this.notificationRepo.count({
+        where: {
+          user: { id: userId },
+          is_read: false,
+        },
+      });
+      return { count };
+    } catch (error) {
+      this.logger.error(`Lỗi khi đếm thông báo chưa đọc: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
 
 
 
