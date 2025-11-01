@@ -110,9 +110,35 @@ export class FavoritesService {
     productId: number,
   ): Promise<{ isFavorite: boolean }> {
     const existing = await this.favoriteRepo.findOne({
-      where: { user_id: userId, product_id: productId },
+      where: { user_id: userId, product_id: productId },  
     });
 
     return { isFavorite: !!existing };
+  }
+
+  // * Lấy danh sách SẢN PHẨM đầy đủ mà user đã thích
+  //  */
+  async getFavoriteProductsByUser(userId: number): Promise<Product[]> {
+    const favorites = await this.favoriteRepo.find({
+      where: { user_id: userId },
+      // Dùng 'relations' để TypeORM tự động JOIN bảng 'products'
+      // Thêm 'images', 'user' để ProductCard có đủ thông tin
+      relations: [
+        'product', 
+        'product.images', 
+        'product.user',
+        'product.dealType',
+        'product.category',
+      ], 
+      order: {
+        created_at: 'DESC', 
+      },
+    });
+    const products = favorites
+      .map(fav => fav.product)
+      .filter(product => product != null); 
+
+    return products; 
+    
   }
 }

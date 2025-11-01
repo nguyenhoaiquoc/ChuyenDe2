@@ -38,6 +38,7 @@ import CreateGroupScreen from './screens/groups/CreateGroupScreen';
 import GroupDetailScreen from './screens/groups/GroupDetailScreen';
 import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
+import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -79,8 +80,9 @@ export default function App() {
           <Stack.Screen name="SellProductScreen" component={SellProductScreen} />
           <Stack.Screen name="PurchaseRequestScreen" component={PurchaseRequestScreen} />
           <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
+          <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
-          <Stack.Screen name="NotificationScreen" component={NotificationScreen}
+          <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
           />
         </Stack.Navigator>
       </NavigationContainer>

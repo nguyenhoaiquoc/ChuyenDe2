@@ -114,7 +114,7 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => {}, [product]);
+  useEffect(() => { }, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
@@ -133,27 +133,27 @@ export default function ProductDetailScreen() {
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-          ...img,
-          id: img.id.toString(),
-          product_id: img.product_id.toString(),
-          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-          image_url:
-            img.image_url.startsWith("file://") ||
+        ...img,
+        id: img.id.toString(),
+        product_id: img.product_id.toString(),
+        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
+        image_url:
+          img.image_url.startsWith("file://") ||
             img.image_url.startsWith("http")
-              ? img.image_url
-              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-        })) // Cast string nếu cần
+            ? img.image_url
+            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+      })) // Cast string nếu cần
       : [
-          {
-            id: "1",
-            product_id: product.id || "1",
-            name: "Default",
-            image_url:
-              product.image ||
-              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
-            created_at: new Date().toISOString(),
-          },
-        ];
+        {
+          id: "1",
+          product_id: product.id || "1",
+          name: "Default",
+          image_url:
+            product.image ||
+            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+          created_at: new Date().toISOString(),
+        },
+      ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -359,13 +359,23 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
-            <Text className="ml-1 text-xs text-black">Lưu</Text>
+          <TouchableOpacity
+            onPress={handleToggleFavorite} 
+            className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={16}
+              color={isFavorite ? "red" : "black"} 
+            />
+            <Text className="ml-1 text-xs text-black">
+              {isFavorite ? "Đã lưu" : "Lưu"} 
+            </Text>
           </TouchableOpacity>
         </View>
         {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
         {currentUser &&
-        Number(product.user_id) === Number(currentUser.id) ? null : (
+          Number(product.user_id) === Number(currentUser.id) ? null : (
           <View className="bg-green-500 self-end rounded-md my-2 mr-4">
             <TouchableOpacity
               onPress={handleChatPress}
@@ -424,13 +434,13 @@ export default function ProductDetailScreen() {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                  "vi-VN",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}`
+                "vi-VN",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}`
               : product.time || "1 tuần trước"}
           </Text>
 
@@ -692,9 +702,8 @@ export default function ProductDetailScreen() {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${
-                  isSending ? "bg-gray-400" : "bg-blue-500"
-                }`}
+                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
+                  }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">
