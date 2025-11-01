@@ -21,7 +21,6 @@ import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNotification } from "../Notification/NotificationContext";
-import { useIsFocused } from '@react-navigation/native';
 
 
 type Props = {
@@ -47,7 +46,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
-  const isFocused = useIsFocused();
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
   useEffect(() => {
@@ -232,13 +230,10 @@ export default function HomeScreen({ navigation }: Props) {
 
     fetchFavorites(); // gọi hàm async
   }, []);
-  
+
   useEffect(() => {
-    if (isFocused) {
-      console.log("HomeScreen đang focus, gọi fetchUnreadCount...");
-      fetchUnreadCount(); // Gọi API lấy số lượng
-    }
-  }, [isFocused, fetchUnreadCount]); // Chạy lại khi isFocused
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
 
   const handleToggleFavorite = async (productId: string) => {
     try {
