@@ -47,8 +47,6 @@ export class ProductController {
 
     const result = await this.productService.findAllFormatted(userId);
     console.log('✅ products count:', result.length);
-
-    
     return result;
   }
 

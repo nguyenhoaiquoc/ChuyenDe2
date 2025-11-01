@@ -28,8 +28,6 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
-  
-
   useEffect(() => {
     const endpointKey = categoryEndpoints[Number(category.id)];
     if (!endpointKey) {
@@ -49,7 +47,6 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
           id: item.id,
         }));
         setSubCategories(subData);
-        console.log(subData);
       })
 
       .catch((err) => {

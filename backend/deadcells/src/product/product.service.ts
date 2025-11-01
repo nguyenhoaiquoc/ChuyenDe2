@@ -1,5 +1,5 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, NotFoundException  } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
@@ -19,6 +19,22 @@ import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { Origin } from 'src/entities/origin.entity';
+import { Material } from 'src/entities/material.entity';
+import { Size } from 'src/entities/size.entity';
+import { Brand } from 'src/entities/brand.entity';
+import { Color } from 'src/entities/color.entity';
+import { Capacity } from 'src/entities/capacity.entity';
+import { Warranty } from 'src/entities/warranty.entity';
+import { ProductModel } from 'src/entities/product-model.entity';
+import { Processor } from 'src/entities/processor.entity';
+import { RamOption } from 'src/entities/ram-option.entity';
+import { StorageType } from 'src/entities/storage-type.entity';
+import { GraphicsCard } from 'src/entities/graphics-card.entity';
+import { Breed } from 'src/entities/breed.entity';
+import { AgeRange } from 'src/entities/age-range.entity';
+import { Gender } from 'src/entities/gender.entity';
+import { EngineCapacity } from 'src/entities/engine-capacity.entity';
 
 @Injectable()
 export class ProductService {
@@ -41,6 +57,54 @@ export class ProductService {
 
     @InjectRepository(Condition)
     private readonly conditionRepo: Repository<Condition>,
+
+    @InjectRepository(Origin)
+    private readonly originRepo: Repository<Origin>,
+
+    @InjectRepository(Material)
+    private readonly materialRepo: Repository<Material>,
+
+    @InjectRepository(Size)
+    private readonly sizeRepo: Repository<Size>,
+
+    @InjectRepository(Processor)
+    private readonly processorRepo: Repository<Processor>,
+
+    @InjectRepository(RamOption)
+    private readonly ramOptionRepo: Repository<RamOption>,
+
+    @InjectRepository(StorageType)
+    private readonly storageTypeRepo: Repository<StorageType>,
+
+    @InjectRepository(GraphicsCard)
+    private readonly graphicsCardRepo: Repository<GraphicsCard>,
+
+    @InjectRepository(Brand)
+    private readonly brandRepo: Repository<Brand>,
+
+    @InjectRepository(Color)
+    private readonly colorRepo: Repository<Color>,
+
+    @InjectRepository(Capacity)
+    private readonly capacityRepo: Repository<Capacity>,
+
+    @InjectRepository(Warranty)
+    private readonly warrantyRepo: Repository<Warranty>,
+
+    @InjectRepository(ProductModel)
+    private readonly productModelRepo: Repository<ProductModel>,
+
+    @InjectRepository(Breed)
+    private readonly breedRepo: Repository<Breed>,
+
+    @InjectRepository(AgeRange)
+    private readonly ageRangeRepo: Repository<AgeRange>,
+
+    @InjectRepository(Gender) 
+    private readonly genderRepo: Repository<Gender>,
+
+        @InjectRepository(EngineCapacity) 
+    private readonly egineCapacityRepo: Repository<EngineCapacity>,
 
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
@@ -182,6 +246,23 @@ export class ProductService {
       condition: condition,
       postType: postType,
       product_type_id: data.product_type_id,
+      origin_id: data.origin_id,
+      material_id: data.material_id,
+      size_id: data.size_id,
+      brand_id: data.brand_id,
+      color_id: data.color_id,
+      capacity_id: data.capacity_id,
+      warranty_id: data.warranty_id,
+      product_model_id: data.product_model_id,
+      processor_id: data.processor_id,
+      ram_option_id: data.ram_option_id,
+      storage_type_id: data.storage_type_id,
+      graphics_card_id: data.graphics_card_id,
+      breed_id: data.breed_id,
+      age_range_id: data.age_range_id,
+      gender_id: data.gender_id,
+      engine_capacity_id: data.engine_capacity_id,
+      mileage: data.mileage,
       author: data.author,
       year: data.year,
     });
@@ -203,20 +284,28 @@ export class ProductService {
       );
 
       if (savedProduct) {
-      // 1. Gửi cho chính người đăng
-      this.notificationService.notifyUserOfPostSuccess(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyUserOfPostSuccess:', err.message));
-        
-      // 2. Gửi cho Admin ("tui")
-      this.notificationService.notifyAdminsOfNewPost(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyAdminsOfNewPost:', err.message));
+        // 1. Gửi cho chính người đăng
+        this.notificationService
+          .notifyUserOfPostSuccess(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyUserOfPostSuccess:',
+              err.message,
+            ),
+          );
+
+        // 2. Gửi cho Admin ("tui")
+        this.notificationService
+          .notifyAdminsOfNewPost(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyAdminsOfNewPost:',
+              err.message,
+            ),
+          );
       }
       return savedProduct;
     }
-
-
-
-    
 
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
@@ -231,6 +320,22 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
       ],
     });
 
@@ -253,6 +358,22 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
       ],
 
       order: { created_at: 'DESC' },
@@ -274,6 +395,22 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
       ],
       order: { created_at: 'DESC' },
     });
@@ -296,6 +433,22 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
       ],
       order: { created_at: 'DESC' },
     });
@@ -312,13 +465,6 @@ export class ProductService {
         if (isMember) visibleProducts.push(p);
       }
     }
-
-    // console.log('✅ userId:', userId);
-    // console.log('✅ products count:', products.length);
-    // console.log('✅ visibleProducts count:', visibleProducts.length);
-    // for (const p of products) {
-    //   console.log(`🧱 Product ${p.id}: visibility_type =`, p.visibility_type);
-    // }
 
     return this.formatProducts(visibleProducts);
   }
@@ -356,13 +502,32 @@ export class ProductService {
         author: p.author || null,
         year: p.year || null,
 
-        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch
+        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch, xuất xứ
         postType: p.postType
           ? { id: p.postType.id, name: p.postType.name }
           : null,
         productType: p.productType
           ? { id: p.productType.id, name: p.productType.name }
           : null,
+        origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
+        material: p.material
+          ? { id: p.material_id, name: p.material.name }
+          : null,
+        size: p.size ? { id: p.size_id, name: p.size.name } : null,
+        brand: p.brand ? { id: p.brand, name: p.brand.name } : null,
+        color: p.color ? { id: p.color, name: p.color.name } : null,
+        capacity: p.capacity ? { id: p.capacity, name: p.capacity.name } : null,
+        warranty: p.warranty ? { id: p.warranty, name: p.warranty.name } : null,
+        productModel: p.productModel ? { id: p.productModel, name: p.productModel.name } : null,
+        processor: p.processor ? { id: p.processor, name: p.processor.name } : null,
+        ramOption: p.ramOption ? { id: p.ramOption, name: p.ramOption.name } : null,
+        storageType: p.storageType ? { id: p.storageType, name: p.storageType.name } : null,
+        graphicsCard: p.graphicsCard ? { id: p.graphicsCard, name: p.graphicsCard.name } : null,
+        breed: p.breed ? { id: p.breed, name: p.breed.name } : null,
+        ageRange: p.ageRange ? { id: p.ageRange, name: p.ageRange.name } : null,
+        gender: p.gender ? { id: p.gender, name: p.gender.name } : null,
+        engineCapacity: p.engineCapacity ? { id: p.engineCapacity, name: p.engineCapacity.name } : null,
+        mileage: p.mileage ?? null,
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,
@@ -511,6 +676,19 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'engineCapacity',
       ],
     });
 
