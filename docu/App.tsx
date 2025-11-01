@@ -35,7 +35,8 @@ import EditProfileScreen from './screens/profile/EditProfileScreen';
 import PurchaseRequestScreen from './screens/products/PurchaseRequestScreen';
 import SellProductScreen from './screens/products/SellProductScreen';
 import CreateGroupScreen from './screens/groups/CreateGroupScreen';
-
+import SearchResultScreen from './screens/products/SearchResultScreen';
+import SearchProduct from './screens/products/SearchProduct';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -75,6 +76,9 @@ export default function App() {
         <Stack.Screen name="SellProductScreen" component={SellProductScreen} />
         <Stack.Screen name="PurchaseRequestScreen" component={PurchaseRequestScreen} />
         <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
+        <Stack.Screen name="SearchProduct"component={SearchProduct} options={{ headerShown: false }}/>
+        <Stack.Screen name="SearchResultScreen" component={SearchResultScreen} options={{ headerShown: false }}/>
+
       </Stack.Navigator>
     </NavigationContainer>
   );

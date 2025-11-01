@@ -1,7 +1,7 @@
-import { Product } from './product.entity'; // 👈 thêm dòng này
+import { Product } from './product.entity'; // 
 import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'; // 👈 đã có nhưng nhắc lại cho chắc
 import { SubCategory } from './sub-category.entity';
-
+import { ProductType } from './product_types.entity';
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
@@ -27,4 +27,6 @@ export class Category {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+  @OneToMany(() => ProductType, (productType) => productType.category)
+  productTypes: ProductType[];
 }

@@ -12,8 +12,7 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute, RouteProp } from "@react-navigation/native";
-import { useNavigation } from "@react-navigation/native";
+import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import "../../global.css";
 import { path } from "../../config";
@@ -22,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 
+// ************************ INTERFACES (Giữ nguyên) ************************
 interface Comment {
   id: number;
   content: string;
@@ -95,7 +95,6 @@ interface Product {
   category_change_id?: string | null;
   sub_category_change_id?: string | null;
 
-  // Thêm đây
   category_change?: {
     id: string;
     name: string;
@@ -123,7 +122,7 @@ interface Product {
   time?: string;
   tag?: string;
   imageCount?: number;
-  isFavorite?: boolean;
+  isFavorite?: boolean; // Giữ lại thuộc tính này (tùy chọn)
 }
 
 type RootStackParamList = {
@@ -152,6 +151,83 @@ export default function ProductDetailScreen() {
     name: string;
   } | null>(null);
 
+  const route = useRoute<ProductDetailScreenRouteProp>();
+  const navigation = useNavigation<ProductDetailScreenNavigationProp>();
+
+  const product = route.params?.product || {};
+
+  // ****************** LOGIC LƯU SẢN PHẨM MỚI ******************
+  const [isFavorite, setIsFavorite] = useState<boolean>(
+    product.isFavorite || false
+  );
+  const [loadingFavorite, setLoadingFavorite] = useState<boolean>(false);
+
+  // 1. Hàm kiểm tra trạng thái lưu khi tải trang
+  const checkFavoriteStatus = async () => {
+    if (!product.id || !currentUser?.id) return;
+    try {
+      // ✅ Gọi endpoint mới /favorites/by-user/:userId để lấy danh sách ID
+      // Sau đó kiểm tra xem product.id có trong danh sách đó không.
+      const response = await axios.get(
+        `${path}/favorites/by-user/${currentUser.id}`
+      );
+      const favoriteIds: string[] = response.data.map((id: number | string) => id.toString());
+      
+      setIsFavorite(favoriteIds.includes(product.id));
+    } catch (error) {
+      console.log("Không thể kiểm tra trạng thái lưu ban đầu.", error);
+    }
+  };
+
+  // 2. Hàm xử lý Lưu/Bỏ lưu (TOGGLE)
+  const handleToggleFavorite = async () => {
+    if (!product.id || !currentUser?.id) {
+        Alert.alert("Lỗi", "Vui lòng đăng nhập để lưu sản phẩm.");
+        return;
+    }
+    if (loadingFavorite) return;
+    
+    setLoadingFavorite(true);
+
+    try {
+      // ✅ Gửi yêu cầu đúng route và body theo NestJS Controller: POST /favorites/toggle
+      const response = await axios.post(`${path}/favorites/toggle`, {
+        // Tên trường phải khớp: userId và productId
+        userId: currentUser.id, 
+        productId: Number(product.id), // Đảm bảo gửi kiểu Number theo yêu cầu của ParseIntPipe
+      });
+
+      // Backend trả về { favorited: true/false, message: ... }
+      const { favorited, message } = response.data;
+      
+      // Cập nhật state và hiển thị thông báo
+      setIsFavorite(favorited);
+      Alert.alert("Thông báo", message);
+      
+    } catch (error) {
+      const err = error as any;
+      console.error("Lỗi API Lưu/Bỏ lưu:", err.response?.data || err.message);
+      
+      // Thêm kiểm tra lỗi 404/Network để giúp debug
+      const status = err.response?.status;
+      if (status === 404 || status === 0) {
+        Alert.alert("Lỗi kết nối", "Kiểm tra IP/Port hoặc route Backend /favorites/toggle");
+      } else {
+        Alert.alert("Lỗi", "Không thể thay đổi trạng thái lưu sản phẩm.");
+      }
+      
+    } finally {
+      setLoadingFavorite(false);
+    }
+  };
+
+  // ****************** LOGIC BÌNH LUẬN VÀ KHÁC (Giữ nguyên) ******************
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [comment, setComment] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [isPhoneVisible, setIsPhoneVisible] = useState(false);
+
   useEffect(() => {
     (async () => {
       const id = await AsyncStorage.getItem("userId");
@@ -161,23 +237,19 @@ export default function ProductDetailScreen() {
       }
     })();
   }, []);
-  const route = useRoute<ProductDetailScreenRouteProp>();
-  const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product = route.params?.product || {};
-  const tagText = product.tag || "Chưa có tag";
-
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [comment, setComment] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  useEffect(() => {
+    // 3. Gọi hàm kiểm tra trạng thái lưu khi currentUser/product.id thay đổi
+    if (currentUser?.id && product.id) {
+        checkFavoriteStatus();
+    }
+  }, [product.id, currentUser?.id]);
 
   useEffect(() => {
     const fetchComments = async () => {
       try {
         setLoadingComments(true);
         const res = await axios.get(`${path}/comments/${product.id}`);
-        // API trả về mảng comments
         setComments(res.data);
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
@@ -189,13 +261,8 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => {}, [product]);
-
-  const [isPhoneVisible, setIsPhoneVisible] = useState(false);
-
   const handleCall = async () => {
     if (product.phone) {
-      // Kiểm tra SĐT có tồn tại không
       try {
         await Linking.openURL(`tel:${product.phone}`);
       } catch (error) {
@@ -203,26 +270,19 @@ export default function ProductDetailScreen() {
       }
     }
   };
-  console.log({
-    product_id: Number(product.id),
-    user_id: 1,
-    content: comment.trim(),
-  });
 
-  // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
           ...img,
           id: img.id.toString(),
           product_id: img.product_id.toString(),
-          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
           image_url:
             img.image_url.startsWith("file://") ||
             img.image_url.startsWith("http")
               ? img.image_url
-              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-        })) // Cast string nếu cần
+              : `${path}${img.image_url}`,
+        }))
       : [
           {
             id: "1",
@@ -230,7 +290,7 @@ export default function ProductDetailScreen() {
             name: "Default",
             image_url:
               product.image ||
-              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+              "https://via.placeholder.com/400x300?text=No+Image",
             created_at: new Date().toISOString(),
           },
         ];
@@ -245,10 +305,10 @@ export default function ProductDetailScreen() {
     }
 
     try {
-      setIsSending(true); // 🟡 Bắt đầu gửi
+      setIsSending(true);
       const res = await axios.post(`${path}/comments`, {
         product_id: Number(product.id),
-        user_id: 1,
+        user_id: currentUser?.id || 1, // Dùng currentUser.id
         content: comment.trim(),
       });
 
@@ -258,27 +318,15 @@ export default function ProductDetailScreen() {
       Alert.alert("Lỗi", "Không gửi được bình luận. Vui lòng thử lại!");
       console.error("Gửi bình luận lỗi:", error);
     } finally {
-      setIsSending(false); // 🟢 Cho phép gửi lại
+      setIsSending(false);
     }
   };
 
-  // ✅ Render dots indicator (cho tất cả ảnh)
-  const renderDots = () => (
-    <View className="flex-row items-center justify-center mt-2">
-      {productImages.map((_, index) => (
-        <View
-          key={index}
-          className={`w-2 h-2 rounded-full mx-1 ${index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"}`}
-        />
-      ))}
-    </View>
-  );
-  useEffect(() => {
-    console.log("Product detail:", product);
-  }, []);
-
   const handleChatPress = async () => {
-    if (!currentUser) return;
+    if (!currentUser) {
+        Alert.alert("Lỗi", "Vui lòng đăng nhập để chat.");
+        return;
+    }
 
     try {
       const res = await fetch(`${path}/products/${product.id}`);
@@ -296,15 +344,14 @@ export default function ProductDetailScreen() {
     }
   };
 
-  // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
-    const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
+    const imageSource = { uri: item.image_url };
     return (
       <View style={{ width, height: 280 }}>
         <Image
           source={imageSource}
           style={{ width: "100%", height: "100%" }}
-          resizeMode="contain" // ✅ Sửa: "contain" để giữ nét, full ảnh không crop, cùng kích thước frame nhưng scale fit
+          resizeMode="contain"
         />
       </View>
     );
@@ -314,10 +361,6 @@ export default function ProductDetailScreen() {
     offset: width * index,
     index,
   });
-  console.log(">>> dealType:", product.dealType);
-  console.log(">>> category_change:", product.category_change);
-  console.log(">>> sub_category_change:", product.sub_category_change);
-  console.log(">>> product_type:", product.productType);
 
   return (
     <View className="flex-1 bg-white mt-5">
@@ -325,7 +368,7 @@ export default function ProductDetailScreen() {
         {/* Ảnh sản phẩm - Swipe horizontal để xem hết ảnh */}
         <View className="relative">
           <TouchableOpacity
-            onPress={() => navigation.goBack()} // ✅ Nút back để quay lại screen trước
+            onPress={() => navigation.goBack()}
             className="absolute top-3 left-3 bg-white p-2 rounded-full z-10 shadow-md"
           >
             <Ionicons name="arrow-back" size={20} color="black" />
@@ -335,7 +378,7 @@ export default function ProductDetailScreen() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            snapToInterval={width} // ✅ Snap full width
+            snapToInterval={width}
             decelerationRate="fast"
             keyExtractor={(item) => item.id}
             renderItem={renderImageItem}
@@ -349,29 +392,41 @@ export default function ProductDetailScreen() {
               }
             }}
           />
-          {/* ✅ Dots indicator - Di chuyển ra ngoài, absolute dưới ảnh, luôn visible */}
+          {/* ✅ Dots indicator */}
           <View className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex-row items-center">
             {productImages.map((_, index) => (
               <View
                 key={index}
-                className={`w-2 h-2 rounded-full mx-1 ${index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"}`}
+                className={`w-2 h-2 rounded-full mx-1 ${
+                  index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"
+                }`}
               />
             ))}
           </View>
-          {/* Counter 1/N (1/4 nếu 4 ảnh) */}
+          {/* Counter 1/N */}
           <View className="absolute bottom-2 left-2 bg-black/50 rounded px-2 py-1">
             <Text className="text-white text-sm font-medium">
               {currentImageIndex + 1}/{productImages.length}
             </Text>
           </View>
-          {/* Nút Lưu */}
-          <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
+          {/* Nút Lưu Sản Phẩm MỚI */}
+          <TouchableOpacity
+            onPress={handleToggleFavorite}
+            disabled={loadingFavorite}
+            className="absolute top-4 right-4 bg-white px-3 py-2 rounded-full flex-row items-center shadow"
+          >
             <Ionicons
-              name={product.isFavorite ? "heart" : "heart-outline"}
-              size={16}
-              color={product.isFavorite ? "red" : "black"}
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={18}
+              color={isFavorite ? "red" : "black"}
             />
-            <Text className="ml-1 text-xs text-black">Lưu</Text>
+            <Text className="ml-1 text-xs text-black">
+              {loadingFavorite
+                ? "..."
+                : isFavorite
+                ? "Đã lưu"
+                : "Lưu"}
+            </Text>
           </TouchableOpacity>
         </View>
         <View className="bg-green-500 self-end rounded-md ">
@@ -398,10 +453,10 @@ export default function ProductDetailScreen() {
             {product.dealType?.name === "Miễn phí"
               ? "Miễn phí"
               : product.dealType?.name === "Trao đổi"
-                ? "Trao đổi"
-                : parseFloat(product.price || "0") > 0
-                  ? `${parseFloat(product.price).toLocaleString()} đ`
-                  : null}
+              ? "Trao đổi"
+              : parseFloat(product.price || "0") > 0
+              ? `${parseFloat(product.price).toLocaleString()} đ`
+              : null}
           </Text>
 
           {/* Địa chỉ */}
@@ -661,4 +716,4 @@ export default function ProductDetailScreen() {
       </ScrollView>
     </View>
   );
-} 
+}

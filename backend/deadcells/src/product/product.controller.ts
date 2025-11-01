@@ -1,14 +1,14 @@
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Post,
-  Query,
-  UploadedFiles,
-  UseInterceptors,
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { Product } from 'src/entities/product.entity';
@@ -17,29 +17,60 @@ import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
 
 @Controller('products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService) {}
 
-  // Upload ảnh lên Cloudinary và tạo sản phẩm
-  @Post()
-  @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter))
-  async create(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() body: Partial<Product>,
-  ) {
-    // console.log("🔥 Body nhận từ frontend:", body);
-    // console.log("📸 Files nhận:", files?.length || 0);
+  // 1. TẠO SẢN PHẨM
+  @Post()
+  @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter))
+  async create(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Body() body: Partial<Product>,
+  ) {
+    // Cloudinary trả về URL trong file.path
+    const imageUrls = files.map((file) => file.path);
 
-    // Cloudinary trả về URL trong file.path
-    const imageUrls = files.map((file) => file.path);
+    // Bạn nên truyền imageUrls vào service, không phải 'files'
+    return await this.productService.create(body, imageUrls); // <<< Sửa ở đây
+  }
 
-    return await this.productService.create(body, files);
-  }
+  // 2. LẤY SẢN PHẨM (TẤT CẢ, TÌM KIẾM, LỌC)
+  @Get()
+  async searchAndFilterProducts(
+    // Đổi tên 'q' thành 'search' để thống nhất
+    @Query('search') search?: string, 
+    @Query('category_id') categoryId?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('condition') condition?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const filters = {
+      q: search, // Gán 'search' vào 'q' để tương thích với service
+      category_id: categoryId,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
+      condition,
+      sortBy,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
+    };
 
-  @Get()
-  async findAll(@Query('category_id') category_id?: string) {
-    if (category_id) {
-      return await this.productService.findByCategoryId(Number(category_id));
+    // Dùng một hàm service duy nhất
+    return this.productService.searchAndFilter(filters);
+  }
+ 
+  // 3. LẤY CHI TIẾT SẢN PHẨM (Ví dụ)
+  // Bạn có thể sẽ cần hàm này
+  /*
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const product = await this.productService.findOneById(Number(id));
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
     }
-    return await this.productService.findAllFormatted(); 
+    return product;
   }
+  */
 }

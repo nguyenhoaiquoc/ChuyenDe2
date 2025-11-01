@@ -7,9 +7,6 @@ export type RootStackParamList = {
   ForgotPasswordScreen: undefined;
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
-  ChatRoomScreen: { product: ProductType; otherUserId: number; otherUserName?: string; currentUserId: number; currentUserName: string; token: string;  }; 
-   OTPVerifyScreen: { email: string,
- };
   ChatRoomScreen: {
     product: ProductType;
     otherUserId: number;
@@ -48,6 +45,8 @@ export type RootStackParamList = {
   SellProductScreen: undefined; 
   PurchaseRequestScreen: undefined;
   CreateGroupScreen: undefined;
+  SearchResultScreen: { query: string };
+  SearchProduct: undefined;
   // TestApi: undefined;
 };
 

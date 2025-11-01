@@ -24,7 +24,7 @@ import { CommentModule } from './comment/comment.module';
 import { ChatModule } from './chat/chat.module';
 import { UsersModule } from './users/users.module';
 import { GroupModule } from './groups/group.module';
-
+import { FavoritesModule } from './favorites/favorites.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -59,6 +59,7 @@ import { GroupModule } from './groups/group.module';
     UsersModule,
     ChatModule,
     GroupModule,
+    FavoritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

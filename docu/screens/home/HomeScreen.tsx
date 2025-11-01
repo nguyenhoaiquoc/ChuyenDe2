@@ -184,13 +184,13 @@ export default function HomeScreen({ navigation }: Props) {
             category: categoryName || null,
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
-                  name: item.subCategory.name,
-                  source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
-                }
+                id: item.subCategory.id
+                  ? parseInt(item.subCategory.id)
+                  : undefined,
+                name: item.subCategory.name,
+                source_table: item.subCategory.source_table,
+                source_detail: item.subCategory.source_detail,
+              }
               : undefined,
             category_change_id: item.category_change_id || null,
             sub_category_change_id: item.sub_category_change_id || null,
@@ -268,12 +268,12 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Thanh tìm kiếm */}
-        <View className="flex-1 mx-2">
-          <TextInput
-            placeholder="Tìm kiếm sản phẩm..."
-            className="bg-gray-100 rounded-full px-4 py-2 text-sm text-gray-700"
-          />
-        </View>
+        <TouchableOpacity
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 justify-center"
+          onPress={() => navigation.navigate("SearchProduct")}
+        >
+          <Text className="text-gray-500 text-sm">Tìm kiếm sản phẩm...</Text>
+        </TouchableOpacity>
 
         {/* Icon trái tim */}
         <TouchableOpacity className="p-2">
@@ -355,11 +355,10 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${
-                  selectedFilter === item.label
+                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
                     ? "bg-blue-500 border-blue-500"
                     : "bg-white border-gray-300"
-                }`}
+                  }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);
@@ -427,7 +426,7 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
       </ScrollView>
-      {/* Menu dưới */} 
+      {/* Menu dưới */}
       <Menu />
     </View>
   );

@@ -18,7 +18,7 @@ import { DataSource } from 'typeorm';
 import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
-
+import { InternalServerErrorException } from '@nestjs/common';
 @Injectable()
 export class ProductService {
   constructor(
@@ -636,4 +636,77 @@ export class ProductService {
         : null,
     };
   }
+   // Tìm kiếm + lọc + sắp xếp
+  async searchProducts(search: string): Promise<Product[]> {
+    return this.productRepo
+      .createQueryBuilder('product')
+      .where(
+        '(product.title LIKE :search OR product.description LIKE :search OR product.condition LIKE :search)',
+        { search: `%${search}%` },
+      )
+      .getMany();
+  }
+
+  async searchAndFilter(filters: any): Promise<Product[]> {
+  try {
+    const {
+      q,
+      category_id,
+      minPrice,
+      maxPrice,
+      condition,
+      sortBy,
+      page = 1,
+      limit = 20,
+    } = filters;
+
+    const query = this.productRepo.createQueryBuilder('product');
+
+    if (q) {
+      query.andWhere(
+        '(product.name  LIKE :q OR product.description LIKE :q)',
+        { q: `%${q}%` },
+      );
+    }
+
+    if (category_id) {
+      const catId = Number(category_id);
+      if (!isNaN(catId)) {
+        query.andWhere('product.category_id = :category_id', { category_id: catId });
+      }
+    }
+
+    if (minPrice && maxPrice) {
+      const min = Number(minPrice);
+      const max = Number(maxPrice);
+      if (!isNaN(min) && !isNaN(max)) {
+        query.andWhere('product.price BETWEEN :minPrice AND :maxPrice', {
+          minPrice: min,
+          maxPrice: max,
+        });
+      }
+    }
+
+    if (condition) {
+      query.andWhere('product.condition = :condition', { condition });
+    }
+
+    const sortOptions: Record<string, { field: string; order: 'ASC' | 'DESC' }> = {
+      newest: { field: 'product.created_at', order: 'DESC' },
+      price_asc: { field: 'product.price', order: 'ASC' },
+      price_desc: { field: 'product.price', order: 'DESC' },
+      popular: { field: 'product.popularity', order: 'DESC' },
+    };
+
+    const sort = sortOptions[sortBy] || { field: 'product.id', order: 'DESC' };
+    query.orderBy(sort.field, sort.order);
+
+    query.skip((page - 1) * limit).take(limit);
+
+    return await query.getMany();
+  } catch (error) {
+    console.error('Lỗi khi tìm kiếm và lọc sản phẩm:', error);
+    throw new InternalServerErrorException('Không thể xử lý yêu cầu tìm kiếm.');
+  }
+}
 }
