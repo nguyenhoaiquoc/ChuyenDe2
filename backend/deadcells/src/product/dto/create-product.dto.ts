@@ -158,6 +158,14 @@ export class CreateProductDto {
 
   @IsOptional()
   @Transform(transformToNumberOrNull)
+  engine_capacity_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
+  mileage: number | null;
+  
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
   category_change_id: number | null;
 
   @IsOptional()

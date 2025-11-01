@@ -25,6 +25,7 @@ import { StorageType } from './storage-type.entity';
 import { Breed } from './breed.entity';
 import { AgeRange } from './age-range.entity';
 import { Gender } from './gender.entity';
+import { EngineCapacity } from './engine-capacity.entity';
 
 @Entity('sub_categories')
 export class SubCategory {
@@ -103,6 +104,9 @@ export class SubCategory {
 
   @OneToMany(() => Gender, (gender) => gender.subCategory)
   genders: Gender[];
+
+  @OneToMany(() => EngineCapacity, (engineCapacitie) => engineCapacitie.subCategory)
+  engineCapacities: EngineCapacity[];
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

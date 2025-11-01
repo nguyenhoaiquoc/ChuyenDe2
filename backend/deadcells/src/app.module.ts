@@ -40,6 +40,7 @@ import { GraphicsCardModule } from './graphics-cards/graphics-card.module';
 import { BreedModule } from './breeds/breed.module';
 import { AgeRangeModule } from './age-ranges/age-range.module';
 import { GenderModule } from './genders/gender.module';
+import { EngineCapacityModule } from './engine-capacities/engine-capacity.module';
 
 @Module({
   imports: [
@@ -90,7 +91,8 @@ import { GenderModule } from './genders/gender.module';
     GraphicsCardModule,
     BreedModule,
     AgeRangeModule,
-    GenderModule
+    GenderModule,
+    EngineCapacityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

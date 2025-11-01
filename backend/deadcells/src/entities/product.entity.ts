@@ -34,6 +34,7 @@ import { StorageType } from './storage-type.entity';
 import { Breed } from './breed.entity';
 import { AgeRange } from './age-range.entity';
 import { Gender } from './gender.entity';
+import { EngineCapacity } from './engine-capacity.entity';
 
 @Entity('products')
 export class Product {
@@ -126,34 +127,44 @@ export class Product {
   @ManyToOne(() => StorageType, { nullable: true })
   @JoinColumn({ name: 'storage_type_id', referencedColumnName: 'id' })
   storageType: StorageType | null;
-  
+
   @Column({ name: 'graphics_card_id', type: 'bigint', nullable: true })
   graphics_card_id: number | null;
 
   @ManyToOne(() => GraphicsCard, { nullable: true })
   @JoinColumn({ name: 'graphics_card_id', referencedColumnName: 'id' })
   graphicsCard: GraphicsCard | null;
-  
+
   @Column({ name: 'breed_id', type: 'bigint', nullable: true })
   breed_id: number | null;
 
   @ManyToOne(() => Breed, { nullable: true })
   @JoinColumn({ name: 'breed_id', referencedColumnName: 'id' })
   breed: Breed | null;
-  
+
   @Column({ name: 'age_range_id', type: 'bigint', nullable: true })
   age_range_id: number | null;
 
   @ManyToOne(() => AgeRange, { nullable: true })
   @JoinColumn({ name: 'age_range_id', referencedColumnName: 'id' })
   ageRange: AgeRange | null;
-  
+
   @Column({ name: 'gender_id', type: 'bigint', nullable: true })
   gender_id: number | null;
 
   @ManyToOne(() => Gender, { nullable: true })
   @JoinColumn({ name: 'gender_id', referencedColumnName: 'id' })
   gender: Gender | null;
+
+  @Column({ name: 'engine_capacity_id', type: 'bigint', nullable: true })
+  engine_capacity_id: number | null;
+
+  @ManyToOne(() => EngineCapacity, { nullable: true })
+  @JoinColumn({ name: 'engine_capacity_id', referencedColumnName: 'id' })
+  engineCapacity: EngineCapacity | null;
+
+  @Column({ name: 'mileage', type: 'bigint', nullable: true })
+  mileage: number | null;
 
   @Column({ type: 'text', nullable: false })
   description: string;

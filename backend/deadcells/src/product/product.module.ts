@@ -35,6 +35,7 @@ import { GraphicsCard } from 'src/entities/graphics-card.entity';
 import { Breed } from 'src/entities/breed.entity';
 import { AgeRange } from 'src/entities/age-range.entity';
 import { Gender } from 'src/entities/gender.entity';
+import { EngineCapacity } from 'src/entities/engine-capacity.entity';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { Gender } from 'src/entities/gender.entity';
       Breed,
       AgeRange,
       Gender,
+      EngineCapacity,
     ]),
 
     NotificationModule,

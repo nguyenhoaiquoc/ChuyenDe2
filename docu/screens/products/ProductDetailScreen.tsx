@@ -620,10 +620,13 @@ export default function ProductDetailScreen() {
 
               {/* Hãng */}
               {product.brand?.name &&
-                (product.subCategory?.id == 38 || // Điện thoại
-                  product.subCategory?.id == 39 || // Máy tính bảng
-                  product.subCategory?.id == 40 || // Máy tính bảng
-                  product.subCategory?.id == 46) && ( // Laptop
+                (product.subCategory?.id == 38 ||
+                  product.subCategory?.id == 39 ||
+                  product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 46 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Hãng</Text>
                     <Text
@@ -635,10 +638,10 @@ export default function ProductDetailScreen() {
                   </View>
                 )}
 
-              {/* Dòng máy */}
+              {/* Dòng */}
               {product.productModel?.name && (
                 <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">Dòng máy</Text>
+                  <Text className="text-gray-600 text-sm">Dòng</Text>
                   <Text
                     className="text-gray-800 text-sm font-medium"
                     style={{ flexShrink: 1, flexWrap: "wrap" }}
@@ -653,7 +656,10 @@ export default function ProductDetailScreen() {
                 (product.subCategory?.id == 38 || // Điện thoại
                   product.subCategory?.id == 39 || // Máy tính bảng
                   product.subCategory?.id == 40 || // Laptop
-                  product.subCategory?.id == 41) && ( // Máy tính để bàn
+                  product.subCategory?.id == 41 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && ( // Máy tính để bàn
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Màu sắc</Text>
                     <Text
@@ -694,7 +700,10 @@ export default function ProductDetailScreen() {
                   product.subCategory?.id == 45 ||
                   product.subCategory?.id == 46 ||
                   product.subCategory?.id == 47 ||
-                  product.subCategory?.id == 48) && (
+                  product.subCategory?.id == 48 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Bảo hành</Text>
                     <Text
@@ -829,21 +838,51 @@ export default function ProductDetailScreen() {
                   </Text>
                 </View>
               )}
+              {/* Dung tích xe (Xe máy) */}
+              {product.engineCapacity?.name &&
+                product.subCategory?.id == 60 && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Dung tích xe</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.engineCapacity.name}
+                    </Text>
+                  </View>
+                )}
 
+              {/* Số km đã đi (Xe cộ) */}
+              {product.mileage != null && // Dùng '!= null' để cho phép 0km
+                [60, 61, 62].includes(Number(product.subCategory?.id)) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Số km đã đi</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {Number(product.mileage).toLocaleString("vi-VN")} km
+                    </Text>
+                  </View>
+                )}
               {/* Năm xuất bản */}
-              {product.category?.name === "Tài liệu khoa" && product.year && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">
-                    Năm xuất bản/ Năm học
-                  </Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.year}
-                  </Text>
-                </View>
-              )}
+              {product.year &&
+                (product.category?.name === "Tài liệu khoa" || // Tài liệu
+                  [60, 61, 62].includes(Number(product.subCategory?.id))) && ( // Xe cộ
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">
+                      {product.category?.name === "Tài liệu khoa"
+                        ? "Năm xuất bản/ Năm học"
+                        : "Năm sản xuất"}
+                    </Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.year}
+                    </Text>
+                  </View>
+                )}
 
               {/* Tình trạng */}
               {product.condition?.name &&

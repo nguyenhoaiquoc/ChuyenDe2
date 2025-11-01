@@ -200,6 +200,11 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             ageRange:
               item.ageRange && item.ageRange.name ? item.ageRange : null,
             gender: item.gender && item.gender.name ? item.gender : null,
+            engineCapacity:
+              item.engineCapacity && item.engineCapacity.name
+                ? item.engineCapacity
+                : null,
+            mileage: item.mileage || null,
 
             address_json: item.address_json || { full: locationText },
             phone: item.user?.phone || null,

@@ -107,8 +107,8 @@ export type SubCategory = {
   id: string | number;
   name: string;
   parent_category_id?: number | null; // (Trường này API có gửi)
-  source_table?: string | null;       // (Trường này API có gửi)
-  source_id?: number | null;          // (Trường này API có gửi)
+  source_table?: string | null; // (Trường này API có gửi)
+  source_id?: number | null; // (Trường này API có gửi)
 };
 export type ProductType = {
   id: string | number;
@@ -174,6 +174,10 @@ export type Gender = {
   id: string | number;
   name: string;
 };
+export type EngineCapacity = {
+  id: string | number;
+  name: string;
+};
 export type AddressJson = {
   full: string;
   province?: string;
@@ -205,9 +209,9 @@ export type Product = {
   size: Size | null;
   brand: Brand | null;
   color: Color | null;
-  capacity: Capacity  | null;
-  warranty: Warranty  | null;
-  productModel: ProductModel  | null;
+  capacity: Capacity | null;
+  warranty: Warranty | null;
+  productModel: ProductModel | null;
   processor: Processor | null;
   ramOption: RamOption | null;
   storageType: StorageType | null;
@@ -215,6 +219,8 @@ export type Product = {
   breed: Breed | null;
   ageRange: AgeRange | null;
   gender: Gender | null;
+  engineCapacity: EngineCapacity | null;
+  mileage: string | number | null;
 
   condition: Condition | null;
   address_json?: AddressJson;

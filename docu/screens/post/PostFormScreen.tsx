@@ -156,7 +156,7 @@ const PostFormScreen = ({
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
 
-  // State cho Dòng máy
+  // State cho Dòng
   const [productModelId, setProductModelId] = useState<number | null>(null);
   const [productModels, setProductModels] = useState<
     { id: number; name: string }[]
@@ -267,6 +267,23 @@ const PostFormScreen = ({
   const [selectedGenderId, setSelectedGenderId] = useState<number | null>(null);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+
+  // State cho Dung tích xe (Xe máy)
+  const [engineCapacityId, setEngineCapacityId] = useState<number | null>(null);
+  const [engineCapacities, setEngineCapacities] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [selectedEngineCapacityId, setSelectedEngineCapacityId] = useState<
+    number | null
+  >(null);
+  const [showEngineCapacityModal, setShowEngineCapacityModal] = useState(false);
+  const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] =
+    useState(false);
+
+  // State cho Số km đã đi (Xe cộ)
+  const [mileage, setMileage] = useState("");
+  const [showMileageInput, setShowMileageInput] = useState(false);
+
   // Loaders
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);
@@ -287,6 +304,9 @@ const PostFormScreen = ({
   const [isLoadingBreeds, setIsLoadingBreeds] = useState(false);
   const [isLoadingAgeRanges, setIsLoadingAgeRanges] = useState(false);
   const [isLoadingGenders, setIsLoadingGenders] = useState(false);
+
+  const [isLoadingEngineCapacities, setIsLoadingEngineCapacities] =
+    useState(false);
 
   const [exchangeCategory, setExchangeCategory] = useState<{
     id: string;
@@ -398,6 +418,11 @@ const PostFormScreen = ({
     setShowGenderModal(false);
   };
 
+  const handleSelectEngineCapacity = (id: number) => {
+    setSelectedEngineCapacityId(id);
+    setEngineCapacityId(id);
+    setShowEngineCapacityModal(false);
+  };
   const handleUploadImage = async (useCamera: boolean) => {
     let result;
     if (useCamera) {
@@ -491,8 +516,7 @@ const PostFormScreen = ({
     if (showMaterialDropdown && !materialId) missingFields.push("Chất liệu");
     if (showSizeDropdown && !sizeId) missingFields.push("Kích cỡ");
     if (showBrandDropdown && !brandId) missingFields.push("Hãng");
-    if (showProductModelDropdown && !productModelId)
-      missingFields.push("Dòng máy");
+    if (showProductModelDropdown && !productModelId) missingFields.push("Dòng");
     if (showColorDropdown && !colorId) missingFields.push("Màu sắc");
     if (showCapacityDropdown && !capacityId) missingFields.push("Dung lượng");
     if (showWarrantyDropdown && !warrantyId) missingFields.push("Bảo hành");
@@ -510,10 +534,12 @@ const PostFormScreen = ({
     if (showAgeRangeDropdown && !ageRangeId) missingFields.push("Độ tuổi");
     if (showGenderDropdown && !genderId) missingFields.push("Giới tính");
 
-    if (showAcademicFields && category?.name === "Tài liệu khoa" && !author)
-      missingFields.push("Tác giả");
-    if (showAcademicFields && category?.name === "Tài liệu khoa" && !year)
-      missingFields.push("Năm xuất bản");
+    if (showEngineCapacityDropdown && !engineCapacityId)
+      missingFields.push("Dung tích xe");
+    if (showMileageInput && !mileage) missingFields.push("Số km đã đi");
+
+    if (showAuthorField && !author) missingFields.push("Tác giả");
+    if (showYearField && !year) missingFields.push("Năm sản xuất");
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
     if (!postTypeId) missingFields.push("Loại bài đăng");
     if (images.length === 0)
@@ -582,6 +608,11 @@ const PostFormScreen = ({
       if (breedId) formData.append("breed_id", String(breedId));
       if (ageRangeId) formData.append("age_range_id", String(ageRangeId));
       if (genderId) formData.append("gender_id", String(genderId));
+
+      if (engineCapacityId)
+        formData.append("engine_capacity_id", String(engineCapacityId));
+      // Gửi đi số km (bỏ dấu chấm)
+      if (mileage) formData.append("mileage", mileage.replace(/\D/g, ""));
 
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
         formData.append("category_change_id", String(exchangeCategory.id));
@@ -669,11 +700,11 @@ const PostFormScreen = ({
   const subCategoryId = subCategory?.id;
 
   const [showProductTypeDropdown, setShowProductTypeDropdown] = useState(false);
-  const [showAcademicFields, setShowAcademicFields] = useState(false);
+  const [showAuthorField, setShowAuthorField] = useState(false);
+  const [showYearField, setShowYearField] = useState(false);
 
   const [author, setAuthor] = useState("");
   const [year, setYear] = useState<number | null>(null);
-
   useEffect(() => {
     // --- HÀM FETCH LOẠI SẢN PHẨM ---
     const fetchProductTypes = async () => {
@@ -954,7 +985,6 @@ const PostFormScreen = ({
             setWarranties(data);
             setShowWarrantyModal(false);
             setShowWarrantyDropdown(true);
-            setIsLoadingWarranties(false);
           } else {
             setShowWarrantyDropdown(false);
           }
@@ -967,7 +997,6 @@ const PostFormScreen = ({
       }
     };
 
-    // ===== BẮT ĐẦU THÊM 4 HÀM FETCH MỚI (LAPTOP) =====
     // --- HÀM FETCH BỘ VI XỬ LÝ ---
     const fetchProcessors = async () => {
       setShowProcessorDropdown(false);
@@ -1171,123 +1200,180 @@ const PostFormScreen = ({
       }
     };
 
-    // 1. Nếu là "Tài liệu khoa"
-    if (category?.name === "Tài liệu khoa") {
-      setShowAcademicFields(true);
-      setShowProductTypeDropdown(false);
-      setShowOriginDropdown(false);
-      setShowMaterialDropdown(false);
-      setShowSizeDropdown(false);
-      setShowBrandDropdown(false);
-      setShowColorDropdown(false);
-      setShowCapacityDropdown(false);
-      setShowWarrantyDropdown(false);
-      // Tắt hết loading nếu đang chạy
-      setIsLoadingProductTypes(false);
-      setIsLoadingOrigins(false);
-      setIsLoadingMaterials(false);
-      setIsLoadingSizes(false);
-      setIsLoadingBrands(false);
-      setIsLoadingColors(false);
-      setIsLoadingCapacities(false);
-      setIsLoadingWarranties(false);
-      // Tắt loading laptop
-      setIsLoadingProcessors(false);
-      setIsLoadingRamOptions(false);
-      setIsLoadingStorageTypes(false);
-      setIsLoadingGraphicsCards(false);
+    // --- HÀM FETCH DUNG TÍCH XE ---
+    const fetchEngineCapacities = async () => {
+      setShowEngineCapacityDropdown(false);
+      setSelectedEngineCapacityId(null);
+      setEngineCapacityId(null);
+      if (!subCategoryId) return;
+      setIsLoadingEngineCapacities(true);
+      try {
+        const res = await fetch(
+          `${path}/engine-capacities/by-sub-category/${subCategoryId}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setEngineCapacities(data);
+            setShowEngineCapacityModal(false);
+            setShowEngineCapacityDropdown(true);
+          } else {
+            setShowEngineCapacityDropdown(false);
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi fetch dung tích xe:", (err as Error).message);
+        setShowEngineCapacityDropdown(false);
+      } finally {
+        setIsLoadingEngineCapacities(false);
+      }
+    };
 
-      setShowBreedDropdown(false);
-      setShowAgeRangeDropdown(false);
-      setShowGenderDropdown(false);
-      setIsLoadingBreeds(false);
-      setIsLoadingAgeRanges(false);
-      setIsLoadingGenders(false);
+    //  LOGIC CHẠY CHÍNH
+
+    // 1. Reset tất cả các trường
+    setShowAuthorField(false);
+    setShowYearField(false);
+    setShowProductTypeDropdown(false);
+    setShowOriginDropdown(false);
+    setShowMaterialDropdown(false);
+    setShowSizeDropdown(false);
+    setShowBrandDropdown(false);
+    setShowColorDropdown(false);
+    setShowCapacityDropdown(false);
+    setShowWarrantyDropdown(false);
+    setShowProcessorDropdown(false);
+    setShowRamOptionDropdown(false);
+    setShowStorageTypeDropdown(false);
+    setShowGraphicsCardDropdown(false);
+    setShowBreedDropdown(false);
+    setShowAgeRangeDropdown(false);
+    setShowGenderDropdown(false);
+    setShowEngineCapacityDropdown(false);
+    setShowMileageInput(false);
+
+    // Tắt loading (nếu có)
+    setIsLoadingProductTypes(false);
+    setIsLoadingOrigins(false);
+    setIsLoadingMaterials(false);
+    setIsLoadingSizes(false);
+    setIsLoadingBrands(false);
+    setIsLoadingColors(false);
+    setIsLoadingCapacities(false);
+    setIsLoadingWarranties(false);
+    setIsLoadingProcessors(false);
+    setIsLoadingRamOptions(false);
+    setIsLoadingStorageTypes(false);
+    setIsLoadingGraphicsCards(false);
+    setIsLoadingBreeds(false);
+    setIsLoadingAgeRanges(false);
+    setIsLoadingGenders(false);
+    setIsLoadingEngineCapacities(false);
+
+    // Reset giá trị
+    setProductTypeId(null);
+    setOriginId(null);
+    setMaterialId(null);
+    setSizeId(null);
+    setBrandId(null);
+    setColorId(null);
+    setCapacityId(null);
+    setWarrantyId(null);
+    setProcessorId(null);
+    setRamOptionId(null);
+    setStorageTypeId(null);
+    setGraphicsCardId(null);
+    setBreedId(null);
+    setAgeRangeId(null);
+    setGenderId(null);
+    setEngineCapacityId(null);
+    setMileage("");
+    setAuthor("");
+    setYear(null);
+
+    // Nếu là "Thú cưng" (ID 5) hoặc "Tài liệu khoa" (ID 1)
+    if (category?.name === "Tài liệu khoa") {
+      setShowAuthorField(true);
+      setShowYearField(true);
+    } else if (category?.name === "Thú cưng") {
+      // (ID 53, 54, 55, 56, 57)
+      const petSubIds = [53, 54, 55, 56, 57];
+      if (petSubIds.includes(Number(subCategoryId))) {
+        fetchBreeds();
+        fetchAgeRanges();
+        fetchGenders();
+      }
     }
     // 2. Nếu là danh mục khác
     else {
-      setShowAcademicFields(false);
+      const subIdNum = Number(subCategoryId);
+
+      // Chạy chung
       fetchProductTypes();
       fetchOrigins();
 
-      // Logic Chất liệu
-      if ([23, 24].includes(Number(subCategoryId))) {
+      // Đồ gia dụng (23, 24)
+      if ([23, 24].includes(subIdNum)) {
         fetchMaterials();
-      } else {
-        setShowMaterialDropdown(false);
-        setMaterialId(null);
       }
 
-      // Logic Kích cỡ
-      if ([25, 39, 40, 41, 44, 53, 54, 55, 56, 57].includes(Number(subCategoryId))) {
+      // Kích cỡ (Giường 25, Đồ điện tử 39, 40, 41, Xe cộ 49, 51, 52)
+      if ([25, 39, 40, 41, 62].includes(subIdNum)) {
         fetchSizes();
-      } else {
-        setShowSizeDropdown(false);
-        setSizeId(null);
       }
 
-      // LOGIC MỚI CHO ĐỒ ĐIỆN TỬ
-      const subIdNum = Number(subCategoryId);
-
-      // Hãng: Hiển thị cho 38, 39, 40
-      if ([38, 39, 40, 46].includes(subIdNum)) {
+      // Hãng (Đồ điện tử 38, 39, 40, 46, Xe cộ 49, 51, 52)
+      if ([38, 39, 40, 46, 60, 61, 62].includes(subIdNum)) {
         fetchBrands();
-      } else {
-        setShowBrandDropdown(false);
-        setBrandId(null);
       }
 
-      // Màu, Dung lượng, Bảo hành:
-      if ([38, 39, 40, 41].includes(subIdNum)) {
+      // Màu sắc, Bảo hành: (Áp dụng cho Đồ điện tử VÀ Xe cộ)
+      if ([38, 39, 40, 41, 60, 61, 62].includes(subIdNum)) {
         fetchColors();
-        fetchCapacities();
         fetchWarranties();
       } else {
         setShowColorDropdown(false);
         setColorId(null);
+        setShowWarrantyDropdown(false);
+        setWarrantyId(null);
+      }
+
+      // Dung lượng (Storage): (Chỉ cho Đồ điện tử)
+      if ([38, 39, 40, 41].includes(subIdNum)) {
+        fetchCapacities();
+      } else {
         setShowCapacityDropdown(false);
         setCapacityId(null);
-        setShowWarrantyDropdown(false);
-        setWarrantyId(null);
       }
 
-      //  Bảo hành:
+      // Bảo hành (Cho các mục con khác 42-48)
       if ([42, 43, 44, 45, 46, 47, 48].includes(subIdNum)) {
         fetchWarranties();
-      } else {
-        setShowWarrantyDropdown(false);
-        setWarrantyId(null);
       }
 
-      // Bộ vi xử lý, ram, loại ổ cứng, card màn hình
+      // Laptop & PC (40, 41)
       if ([40, 41].includes(subIdNum)) {
         fetchProcessors();
         fetchRamOptions();
         fetchStorageTypes();
         fetchGraphicsCards();
-      } else {
-        setShowProcessorDropdown(false);
-        setProcessorId(null);
-        setShowRamOptionDropdown(false);
-        setRamOptionId(null);
-        setShowStorageTypeDropdown(false);
-        setStorageTypeId(null);
-        setShowGraphicsCardDropdown(false);
-        setGraphicsCardId(null);
       }
 
-      const petSubIds = [53, 54, 55, 56, 57];
-      if (petSubIds.includes(subIdNum)) {
-        fetchBreeds();
-        fetchAgeRanges();
-        fetchGenders();
-      } else {
-        setShowBreedDropdown(false);
-        setBreedId(null);
-        setShowAgeRangeDropdown(false);
-        setAgeRangeId(null);
-        setShowGenderDropdown(false);
-        setGenderId(null);
+      // Xe cộ (60, 61, 62)
+      if ([60, 61, 62].includes(subIdNum)) {
+        setShowYearField(true); // Bật Năm sản xuất (cho cả 3)
+
+        if (subIdNum === 60) {
+          // Chỉ Xe máy (60)
+          setShowMileageInput(true); // Bật Số km
+          fetchEngineCapacities(); // Bật Dung tích xe
+        } else {
+          // Ẩn (Xe điện 61, Xe đạp 62)
+          setShowMileageInput(false);
+          setMileage("");
+          setShowEngineCapacityDropdown(false);
+          setEngineCapacityId(null);
+        }
       }
     }
   }, [category, categoryId, subCategoryId]);
@@ -1305,9 +1391,7 @@ const PostFormScreen = ({
       // 3. Bật loading
       setIsLoadingModels(true);
 
-      console.log(
-        `[Dòng máy] Đang tìm dòng máy cho BrandID ${currentBrandId}...`
-      );
+      console.log(`[Dòng] Đang tìm dòng cho BrandID ${currentBrandId}...`);
       try {
         const res = await fetch(
           `${path}/product-models/by-brand/${currentBrandId}` // <-- API DÒNG MÁY
@@ -1315,24 +1399,22 @@ const PostFormScreen = ({
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            console.log(`[Dòng máy] Tìm thấy ${data.length} dòng máy.`);
+            console.log(`[Dòng] Tìm thấy ${data.length} dòng.`);
             setProductModels(data);
             setShowProductModelModal(false);
             setShowProductModelDropdown(true); // ✅ HIỂN THỊ
           } else {
-            console.log(
-              `[Dòng máy] Không tìm thấy cho BrandID ${currentBrandId}`
-            );
+            console.log(`[Dòng] Không tìm thấy cho BrandID ${currentBrandId}`);
             setShowProductModelDropdown(false); // ẨN
           }
         } else {
           console.log(
-            `[Dòng máy] Không tìm thấy (non-ok) cho BrandID ${currentBrandId}`
+            `[Dòng] Không tìm thấy (non-ok) cho BrandID ${currentBrandId}`
           );
           setShowProductModelDropdown(false); // ẨN
         }
       } catch (err) {
-        console.error("Lỗi fetch dòng máy:", (err as Error).message);
+        console.error("Lỗi fetch dòng:", (err as Error).message);
         setShowProductModelDropdown(false);
       } finally {
         setIsLoadingModels(false);
@@ -1649,21 +1731,21 @@ const PostFormScreen = ({
           </View>
         )}
 
-        {/* Loading Dòng máy */}
+        {/* Loading Dòng */}
         {isLoadingModels && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#8c7ae6" />
-            <Text style={styles.loadingText}>Đang tải dòng máy...</Text>
+            <Text style={styles.loadingText}>Đang tải dòng...</Text>
           </View>
         )}
-        {/* Dòng máy */}
+        {/* Dòng */}
         {showProductModelDropdown && (
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.dropdown}
               onPress={() => setShowProductModelModal(true)}
             >
-              <Text style={styles.dropdownLabel}>Dòng máy</Text>
+              <Text style={styles.dropdownLabel}>Dòng</Text>
               <View style={styles.dropdownContent}>
                 <Text
                   style={styles.dropdownText}
@@ -1674,15 +1756,65 @@ const PostFormScreen = ({
                     ? (productModels.find(
                         (t) => t.id === selectedProductModelId
                       )?.name ?? "Không xác định")
-                    : "Chọn dòng máy"}
+                    : "Chọn dòng"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.helperText}>Chọn dòng máy (model)</Text>
+            <Text style={styles.helperText}>Chọn dòng (model)</Text>
+          </View>
+        )}
+        {/* Loading Dung tích xe */}
+        {isLoadingEngineCapacities && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#8c7ae6" />
+            <Text style={styles.loadingText}>Đang tải dung tích xe...</Text>
+          </View>
+        )}
+        {/* Dung tích xe */}
+        {showEngineCapacityDropdown && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.dropdown}
+              onPress={() => setShowEngineCapacityModal(true)}
+            >
+              <Text style={styles.dropdownLabel}>Dung tích xe</Text>
+              <View style={styles.dropdownContent}>
+                <Text
+                  style={styles.dropdownText}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedEngineCapacityId
+                    ? (engineCapacities.find(
+                        (t) => t.id === selectedEngineCapacityId
+                      )?.name ?? "Không xác định")
+                    : "Chọn dung tích xe (cc)"}
+                </Text>
+                <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              </View>
+            </TouchableOpacity>
+            <Text style={styles.helperText}>Chọn dung tích (cc) của xe</Text>
           </View>
         )}
 
+        {/* Số km đã đi (TextInput) */}
+        {showMileageInput && (
+          <View style={styles.section}>
+            <Text style={styles.dropdownLabel}>Số km đã đi (Odometer)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập số km đã đi (ví dụ: 15000)"
+              value={mileage}
+              onChangeText={(text) => {
+                const numeric = text.replace(/\D/g, "").slice(0, 9); // Bỏ dấu chấm
+                setMileage(numeric);
+              }}
+              keyboardType="numeric"
+            />
+            <Text style={styles.helperText}>Nhập số km xe đã di chuyển</Text>
+          </View>
+        )}
         {/* ===== BẮT ĐẦU THÊM 4 JSX MỚI (LAPTOP) ===== */}
 
         {/* Loading Bộ vi xử lý */}
@@ -2017,34 +2149,36 @@ const PostFormScreen = ({
             <Text style={styles.helperText}>Chọn xuất xứ của sản phẩm</Text>
           </View>
         )}
-        {/* Input đặc thù Tài liệu khoa */}
-        {showAcademicFields && (
-          <>
-            <View style={styles.section}>
-              <Text style={styles.dropdownLabel}>Tác giả/ Người biên soạn</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Tác giả / Người biên soạn *"
-                value={author}
-                onChangeText={setAuthor}
-              />
+        {/* Input Tài liệu khoa (Tác giả) */}
+        {showAuthorField && (
+          <View style={styles.section}>
+            <Text style={styles.dropdownLabel}>Tác giả/ Người biên soạn</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Tác giả / Người biên soạn *"
+              value={author}
+              onChangeText={setAuthor}
+            />
+          </View>
+        )}
+
+        {/* Input đặc thù (Năm sản xuất) */}
+        {showYearField && (
+          <View style={styles.section}>
+            <Text style={styles.dropdownLabel}>Năm sản xuất</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={year}
+                onValueChange={(itemValue) => setYear(itemValue)}
+                style={styles.picker}
+              >
+                <Picker.Item label="Chọn năm *" value={null} />
+                {years.map((y) => (
+                  <Picker.Item key={y} label={y.toString()} value={y} />
+                ))}
+              </Picker>
             </View>
-            <View style={styles.section}>
-              <Text style={styles.dropdownLabel}>Năm xuất bản / Năm học</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={year}
-                  onValueChange={(itemValue) => setYear(itemValue)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Chọn năm *" value={null} />
-                  {years.map((y) => (
-                    <Picker.Item key={y} label={y.toString()} value={y} />
-                  ))}
-                </Picker>
-              </View>
-            </View>
-          </>
+          </View>
         )}
 
         {/* Hình thức giao dịch */}
@@ -2287,11 +2421,11 @@ const PostFormScreen = ({
         </View>
       )}
 
-      {/* Menu chọn Dòng máy */}
+      {/* Menu chọn Dòng */}
       {showProductModelModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.dropdownLabel}>Chọn dòng máy</Text>
+            <Text style={styles.dropdownLabel}>Chọn dòng</Text>
             <ScrollView style={{ flexShrink: 1 }}>
               {productModels.map((type) => (
                 <TouchableOpacity
@@ -2524,7 +2658,35 @@ const PostFormScreen = ({
           </View>
         </View>
       )}
-
+      {/* Menu chọn Dung tích xe */}
+      {showEngineCapacityModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn dung tích xe</Text>
+            <ScrollView style={{ flexShrink: 1 }}>
+              {engineCapacities.map((type) => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[
+                    styles.modalOption,
+                    selectedEngineCapacityId === type.id &&
+                      styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectEngineCapacity(type.id)}
+                >
+                  <Text style={styles.modalOptionText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowEngineCapacityModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       {/* Menu chọn Màu sắc */}
       {showColorModal && (
         <View style={styles.modalOverlay}>

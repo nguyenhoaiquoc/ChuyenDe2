@@ -34,6 +34,7 @@ import { GraphicsCard } from 'src/entities/graphics-card.entity';
 import { Breed } from 'src/entities/breed.entity';
 import { AgeRange } from 'src/entities/age-range.entity';
 import { Gender } from 'src/entities/gender.entity';
+import { EngineCapacity } from 'src/entities/engine-capacity.entity';
 
 @Injectable()
 export class ProductService {
@@ -101,6 +102,9 @@ export class ProductService {
 
     @InjectRepository(Gender) 
     private readonly genderRepo: Repository<Gender>,
+
+        @InjectRepository(EngineCapacity) 
+    private readonly egineCapacityRepo: Repository<EngineCapacity>,
 
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
@@ -257,6 +261,8 @@ export class ProductService {
       breed_id: data.breed_id,
       age_range_id: data.age_range_id,
       gender_id: data.gender_id,
+      engine_capacity_id: data.engine_capacity_id,
+      mileage: data.mileage,
       author: data.author,
       year: data.year,
     });
@@ -329,6 +335,7 @@ export class ProductService {
         'breed',
         'ageRange',
         'gender',
+        'engineCapacity',
       ],
     });
 
@@ -366,6 +373,7 @@ export class ProductService {
         'breed',
         'ageRange',
         'gender',
+        'engineCapacity',
       ],
 
       order: { created_at: 'DESC' },
@@ -402,6 +410,7 @@ export class ProductService {
         'breed',
         'ageRange',
         'gender',
+        'engineCapacity',
       ],
       order: { created_at: 'DESC' },
     });
@@ -439,6 +448,7 @@ export class ProductService {
         'breed',
         'ageRange',
         'gender',
+        'engineCapacity',
       ],
       order: { created_at: 'DESC' },
     });
@@ -516,6 +526,8 @@ export class ProductService {
         breed: p.breed ? { id: p.breed, name: p.breed.name } : null,
         ageRange: p.ageRange ? { id: p.ageRange, name: p.ageRange.name } : null,
         gender: p.gender ? { id: p.gender, name: p.gender.name } : null,
+        engineCapacity: p.engineCapacity ? { id: p.engineCapacity, name: p.engineCapacity.name } : null,
+        mileage: p.mileage ?? null,
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,
@@ -676,6 +688,7 @@ export class ProductService {
         'ramOption',
         'storageType',
         'graphicsCard',
+        'engineCapacity',
       ],
     });
 
