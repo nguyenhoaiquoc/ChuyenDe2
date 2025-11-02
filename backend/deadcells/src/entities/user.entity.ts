@@ -50,16 +50,16 @@ export class User {
   phone: string;
 
   @Column({ type: 'varchar', length: 191, nullable: true })
-  image: string; // avatar
+  image: string|null; // avatar
 
   @Column({ type: 'varchar', length: 191, nullable: true })
-  coverImage: string; // ảnh bìa
+  coverImage: string|null; // ảnh bìa
 
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  @Column({ type: 'smallint', default: 0 })
-  gender: number; // 0 = không xác định
+  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
+gender: string; 
 
   /** --------- Trạng thái xác minh --------- */
   @Column({ type: 'boolean', default: false })
@@ -71,7 +71,12 @@ export class User {
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
-  @Column({ type: 'varchar', length: 255, nullable: true, name: 'reset_token_hash' })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    name: 'reset_token_hash',
+  })
   resetTokenHash?: string | null;
 
   @Column({ type: 'timestamp', nullable: true, name: 'reset_token_expires_at' })
@@ -89,6 +94,9 @@ export class User {
 
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
+
+  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
+  lastOnlineAt?: Date | null;
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;

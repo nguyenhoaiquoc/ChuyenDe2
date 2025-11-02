@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import { Product, RootStackParamList } from "../../types";
 import { Feather } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
@@ -16,42 +16,6 @@ import axios from "axios";
 import { path } from "../../config";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CategoryIndex">;
-
-interface Product {
-  id: string;
-  image: any;
-  name: string;
-  price: string;
-  phone?: string;
-  location: string;
-  time: string;
-  tag: string;
-  authorName: string;
-  category: string | undefined;
-  subCategory?: {
-    id?: number;
-    name?: string;
-    source_table?: string;
-    source_detail?: any;
-  };
-  imageCount: number;
-  isFavorite: boolean;
-  images?: {
-    id: string;
-    product_id: string;
-    name: string;
-    image_url: string;
-    created_at: string;
-  }[];
-  description?: string;
-  postType?: { id: string; name: string };
-  productType?: { id: string; name: string };
-  condition?: { id: string; name: string };
-  address_json?: { full: string };
-  dealType?: { id: string; name: string };
-  categoryObj?: { id: string; name: string };
-  created_at?: string;
-}
 
 const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
   const { categoryId, categoryName } = route.params ?? {};
@@ -95,10 +59,18 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
 
         const mapped: Product[] = rawData.map((item: any) => {
           console.log("CategoryIndex productType:", item.productType);
+          console.log(
+            "API Response Item:",
+            item.id,
+            "Author:",
+            item.author,
+            "Year:",
+            item.year
+          );
           // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
-            : item.thumbnail_url 
+            : item.thumbnail_url
               ? `${path}${item.thumbnail_url}`
               : item.images?.[0]?.image_url
                 ? `${path}${item.images[0].image_url}`
@@ -146,6 +118,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
+          // THAY THẾ TOÀN BỘ KHỐI 'return' TRONG HÀM .map() CỦA BẠN BẰNG CODE NÀY:
 
           return {
             id: item.id.toString(),
@@ -155,67 +128,101 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
               return item.price
-                ? `${item.price.toLocaleString("vi-VN")} đ`
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
                 : "Liên hệ";
             })(),
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: item.user?.name || "Ẩn danh",
-            category: categoryName,
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
+
+            // === SỬA LỖI LOGIC ===
+
+            category: item.category || null, // Dùng null
+
+            // Sửa logic 'subCategory' cho đúng với 'types.ts'
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
+                  id: item.subCategory.id,
                   name: item.subCategory.name,
+                  parent_category_id: item.subCategory.parent_category_id,
                   source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
+                  source_id: item.subCategory.source_id,
                 }
-              : undefined,
-            category_change: item.category_change
-              ? {
-                  id: item.category_change.id,
-                  name: item.category_change.name,
-                  image: item.category_change.image,
-                }
-              : undefined,
-            sub_category_change: item.sub_category_change
-              ? {
-                  id: item.sub_category_change.id,
-                  name: item.sub_category_change.name,
-                  parent_category_id:
-                    item.sub_category_change.parent_category_id || null,
-                  source_table: item.sub_category_change.source_table || null,
-                }
-              : undefined,
-            imageCount: item.images?.length || 1,
+              : null, // <-- SỬA TỪ 'undefined' THÀNH 'null'
+
+            category_change: item.category_change || null, // <-- SỬA THÀNH 'null'
+            sub_category_change: item.sub_category_change || null, // <-- SỬA THÀNH 'null'
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0),
             isFavorite: false,
             images: item.images || [],
             description: item.description || "",
-            postType:
-              item.postType && item.postType.id
-                ? item.postType
-                : { id: "2", name: "Đăng mua" },
 
-            productType: item.productType || { id: "1", name: "Chưa rõ" },
+            // Chuẩn hóa và fallback về 'null'
+            postType: item.postType || null,
+            condition: item.condition || null,
+            dealType: item.dealType || null,
 
-            condition:
-              item.condition && item.condition.id
-                ? item.condition
-                : { id: "1", name: "Chưa rõ" },
-
-            dealType:
-              item.dealType && item.dealType.name
-                ? item.dealType
-                : { id: "1", name: "Bán" },
+            // Sửa logic fallback (kiểm tra .name)
+            productType:
+              item.productType && item.productType.name
+                ? item.productType
+                : null,
+            origin: item.origin && item.origin.name ? item.origin : null,
+            material:
+              item.material && item.material.name ? item.material : null,
+            size: item.size && item.size.name ? item.size : null,
+            brand: item.brand && item.brand.name ? item.brand : null,
+            color: item.color && item.color.name ? item.color : null,
+            capacity:
+              item.capacity && item.capacity.name ? item.capacity : null,
+            warranty:
+              item.warranty && item.warranty.name ? item.warranty : null,
+            productModel:
+              item.productModel && item.productModel.name
+                ? item.productModel
+                : null,
+            processor:
+              item.processor && item.processor.name ? item.processor : null,
+            ramOption:
+              item.ramOption && item.ramOption.name ? item.ramOption : null,
+            storageType:
+              item.storageType && item.storageType.name
+                ? item.storageType
+                : null,
+            graphicsCard:
+              item.graphicsCard && item.graphicsCard.name
+                ? item.graphicsCard
+                : null,
+            breed: item.breed && item.breed.name ? item.breed : null,
+            ageRange:
+              item.ageRange && item.ageRange.name ? item.ageRange : null,
+            gender: item.gender && item.gender.name ? item.gender : null,
+            engineCapacity:
+              item.engineCapacity && item.engineCapacity.name
+                ? item.engineCapacity
+                : null,
+            mileage: item.mileage || null,
 
             address_json: item.address_json || { full: locationText },
-            categoryObj: item.category || {
-              id: "1",
-              name: categoryName || "Chưa rõ",
-            },
+            phone: item.user?.phone || null,
+            author: item.author || null,
+            year: item.year || null,
+
             created_at: item.created_at || new Date().toISOString(),
+            updated_at: item.updated_at || undefined, // (optional '?' có thể là undefined)
+
+            // Sửa fallback sang 'null'
+            sub_category_id: item.sub_category_id || null,
+            status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
+            visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
+            group_id: item.group_id || null,
+            is_approved:
+              typeof item.is_approved === "boolean"
+                ? item.is_approved
+                : undefined, // (optional '?' có thể là undefined)
           };
         });
 
@@ -307,21 +314,16 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
           }
           renderItem={({ item }) => (
             <ProductCard
-              image={item.image}
-              name={item.name}
-              price={item.price}
-              location={item.location}
-              time={item.time}
-              tag={item.tag}
-              authorName={item.authorName}
-              category={item.category}
-              subCategory={item.subCategory}
-              imageCount={item.imageCount}
-              isFavorite={item.isFavorite}
+              product={item}
               onPress={() =>
                 navigation.navigate("ProductDetail", { product: item })
               }
               onToggleFavorite={() => console.log("Yêu thích:", item.name)}
+              onPressPostType={(pt) => {
+                if (pt.id == "1") navigation.navigate("SellProductScreen");
+                else if (pt.id == "2")
+                  navigation.navigate("PurchaseRequestScreen");
+              }}
             />
           )}
         />

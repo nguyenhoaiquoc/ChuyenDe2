@@ -12,221 +12,25 @@ import {
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute, RouteProp, useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useRoute, RouteProp } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import "../../global.css";
 import { path } from "../../config";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  Comment,
+  Product,
+  ProductDetailScreenNavigationProp,
+  ProductDetailScreenRouteProp,
+  ProductImage,
+  User,
+} from "../../types";
 
 const { width } = Dimensions.get("window");
 
-// ************************ INTERFACES (Giữ nguyên) ************************
-interface Comment {
-  id: number;
-  content: string;
-  created_at: string;
-  user: {
-    id: number;
-    fullName: string;
-    image?: string;
-  };
-}
-
-interface ProductImage {
-  id: string;
-  product_id: string;
-  name: string;
-  image_url: string;
-  created_at: string;
-}
-
-interface Condition {
-  id: string;
-  name: string;
-}
-
-interface ProductType {
-  id: string;
-  name: string;
-}
-
-interface PostType {
-  id: string;
-  name: string;
-}
-interface AddressJson {
-  full: string;
-  province?: string;
-  district?: string;
-  ward?: string;
-  village?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  image: string;
-  hot?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface DealType {
-  id: string;
-  name: string;
-}
-
-interface Product {
-  id: string;
-  authorName: string;
-  name: string;
-  description: string;
-  phone?: string;
-  price: string;
-  thumbnail_url?: string;
-  images: ProductImage[];
-  user_id: string;
-  post_type_id: string;
-  dealType: DealType;
-  category_id: string;
-  category: Category;
-  sub_category_id: string | null;
-  category_change_id?: string | null;
-  sub_category_change_id?: string | null;
-
-  category_change?: {
-    id: string;
-    name: string;
-    image?: string;
-  };
-  sub_category_change?: {
-    id: string;
-    name: string;
-    parent_category_id?: string;
-    source_table?: string;
-    source_id?: string;
-  };
-  postType: PostType;
-  productType: ProductType;
-  condition: Condition;
-  address_json: AddressJson;
-  status_id: string;
-  visibility_type: string;
-  group_id?: string | null;
-  is_approved: boolean;
-  created_at: string;
-  updated_at: string;
-  image?: any;
-  location?: string;
-  time?: string;
-  tag?: string;
-  imageCount?: number;
-  isFavorite?: boolean; // Giữ lại thuộc tính này (tùy chọn)
-}
-
-type RootStackParamList = {
-  ProductDetail: { product: Product };
-  ChatRoomScreen: {
-    product: Product;
-    otherUserId: number;
-    otherUserName?: string;
-    currentUserId: number;
-    currentUserName: string;
-  };
-};
-
-type ProductDetailScreenRouteProp = RouteProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-type ProductDetailScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  "ProductDetail"
->;
-
 export default function ProductDetailScreen() {
-  const [currentUser, setCurrentUser] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-
-  const route = useRoute<ProductDetailScreenRouteProp>();
-  const navigation = useNavigation<ProductDetailScreenNavigationProp>();
-
-  const product = route.params?.product || {};
-
-  // ****************** LOGIC LƯU SẢN PHẨM MỚI ******************
-  const [isFavorite, setIsFavorite] = useState<boolean>(
-    product.isFavorite || false
-  );
-  const [loadingFavorite, setLoadingFavorite] = useState<boolean>(false);
-
-  // 1. Hàm kiểm tra trạng thái lưu khi tải trang
-  const checkFavoriteStatus = async () => {
-    if (!product.id || !currentUser?.id) return;
-    try {
-      // ✅ Gọi endpoint mới /favorites/by-user/:userId để lấy danh sách ID
-      // Sau đó kiểm tra xem product.id có trong danh sách đó không.
-      const response = await axios.get(
-        `${path}/favorites/by-user/${currentUser.id}`
-      );
-      const favoriteIds: string[] = response.data.map((id: number | string) => id.toString());
-      
-      setIsFavorite(favoriteIds.includes(product.id));
-    } catch (error) {
-      console.log("Không thể kiểm tra trạng thái lưu ban đầu.", error);
-    }
-  };
-
-  // 2. Hàm xử lý Lưu/Bỏ lưu (TOGGLE)
-  const handleToggleFavorite = async () => {
-    if (!product.id || !currentUser?.id) {
-        Alert.alert("Lỗi", "Vui lòng đăng nhập để lưu sản phẩm.");
-        return;
-    }
-    if (loadingFavorite) return;
-    
-    setLoadingFavorite(true);
-
-    try {
-      // ✅ Gửi yêu cầu đúng route và body theo NestJS Controller: POST /favorites/toggle
-      const response = await axios.post(`${path}/favorites/toggle`, {
-        // Tên trường phải khớp: userId và productId
-        userId: currentUser.id, 
-        productId: Number(product.id), // Đảm bảo gửi kiểu Number theo yêu cầu của ParseIntPipe
-      });
-
-      // Backend trả về { favorited: true/false, message: ... }
-      const { favorited, message } = response.data;
-      
-      // Cập nhật state và hiển thị thông báo
-      setIsFavorite(favorited);
-      Alert.alert("Thông báo", message);
-      
-    } catch (error) {
-      const err = error as any;
-      console.error("Lỗi API Lưu/Bỏ lưu:", err.response?.data || err.message);
-      
-      // Thêm kiểm tra lỗi 404/Network để giúp debug
-      const status = err.response?.status;
-      if (status === 404 || status === 0) {
-        Alert.alert("Lỗi kết nối", "Kiểm tra IP/Port hoặc route Backend /favorites/toggle");
-      } else {
-        Alert.alert("Lỗi", "Không thể thay đổi trạng thái lưu sản phẩm.");
-      }
-      
-    } finally {
-      setLoadingFavorite(false);
-    }
-  };
-
-  // ****************** LOGIC BÌNH LUẬN VÀ KHÁC (Giữ nguyên) ******************
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [comment, setComment] = useState("");
-  const [isSending, setIsSending] = useState(false);
-  const [isPhoneVisible, setIsPhoneVisible] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -238,18 +42,67 @@ export default function ProductDetailScreen() {
     })();
   }, []);
 
+  const route = useRoute<ProductDetailScreenRouteProp>();
+  const navigation = useNavigation<ProductDetailScreenNavigationProp>();
+
+  const product: Product = route.params?.product || ({} as Product);
+
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [comment, setComment] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteCount, setFavoriteCount] = useState(0);
+
   useEffect(() => {
-    // 3. Gọi hàm kiểm tra trạng thái lưu khi currentUser/product.id thay đổi
-    if (currentUser?.id && product.id) {
-        checkFavoriteStatus();
+    const fetchFavoriteData = async () => {
+      try {
+        const [countRes, statusRes] = await Promise.all([
+          axios.get(`${path}/favorites/${product.id}/count`),
+          axios.get(
+            `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+          ),
+        ]);
+
+        setFavoriteCount(countRes.data.count || 0);
+        setIsFavorite(statusRes.data.isFavorite || false);
+      } catch (err) {
+        console.log("Lỗi lấy dữ liệu yêu thích:", err);
+      }
+    };
+
+    if (product.id && currentUser?.id) {
+      fetchFavoriteData();
     }
-  }, [product.id, currentUser?.id]);
+  }, [product.id, currentUser]);
+
+  const handleToggleFavorite = async () => {
+    try {
+      await axios.post(`${path}/favorites/toggle/${product.id}`, {
+        userId: currentUser?.id,
+      });
+
+      const [countRes, statusRes] = await Promise.all([
+        axios.get(`${path}/favorites/${product.id}/count`),
+        axios.get(
+          `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+        ),
+      ]);
+
+      setFavoriteCount(countRes.data.count || 0);
+      setIsFavorite(statusRes.data.isFavorite || false);
+    } catch (err) {
+      console.log("Lỗi toggle yêu thích detail:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchComments = async () => {
       try {
         setLoadingComments(true);
         const res = await axios.get(`${path}/comments/${product.id}`);
+        // API trả về mảng comments
         setComments(res.data);
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
@@ -261,8 +114,13 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
+  useEffect(() => { }, [product]);
+
+  const [isPhoneVisible, setIsPhoneVisible] = useState(false);
+
   const handleCall = async () => {
     if (product.phone) {
+      // Kiểm tra SĐT có tồn tại không
       try {
         await Linking.openURL(`tel:${product.phone}`);
       } catch (error) {
@@ -271,29 +129,31 @@ export default function ProductDetailScreen() {
     }
   };
 
+  // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-          ...img,
-          id: img.id.toString(),
-          product_id: img.product_id.toString(),
-          image_url:
-            img.image_url.startsWith("file://") ||
+        ...img,
+        id: img.id.toString(),
+        product_id: img.product_id.toString(),
+        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
+        image_url:
+          img.image_url.startsWith("file://") ||
             img.image_url.startsWith("http")
-              ? img.image_url
-              : `${path}${img.image_url}`,
-        }))
+            ? img.image_url
+            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+      })) // Cast string nếu cần
       : [
-          {
-            id: "1",
-            product_id: product.id || "1",
-            name: "Default",
-            image_url:
-              product.image ||
-              "https://via.placeholder.com/400x300?text=No+Image",
-            created_at: new Date().toISOString(),
-          },
-        ];
+        {
+          id: "1",
+          product_id: product.id || "1",
+          name: "Default",
+          image_url:
+            product.image ||
+            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+          created_at: new Date().toISOString(),
+        },
+      ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -305,10 +165,20 @@ export default function ProductDetailScreen() {
     }
 
     try {
-      setIsSending(true);
+      setIsSending(true); // 🟡 Bắt đầu gửi
+
+      // Lấy user_id từ AsyncStorage
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) {
+        Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
+        setIsSending(false);
+        return;
+      }
+      const userId = Number(userIdStr);
+
       const res = await axios.post(`${path}/comments`, {
         product_id: Number(product.id),
-        user_id: currentUser?.id || 1, // Dùng currentUser.id
+        user_id: userId, // dùng user thật
         content: comment.trim(),
       });
 
@@ -318,40 +188,89 @@ export default function ProductDetailScreen() {
       Alert.alert("Lỗi", "Không gửi được bình luận. Vui lòng thử lại!");
       console.error("Gửi bình luận lỗi:", error);
     } finally {
-      setIsSending(false);
+      setIsSending(false); // 🟢 Cho phép gửi lại
     }
   };
+
+  // ✅ Render dots indicator (cho tất cả ảnh)
+  const renderDots = () => (
+    <View className="flex-row items-center justify-center mt-2">
+      {productImages.map((_, index) => (
+        <View
+          key={index}
+          className={`w-2 h-2 rounded-full mx-1 ${index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"}`}
+        />
+      ))}
+    </View>
+  );
+  useEffect(() => {
+    console.log("Product detail:", product);
+  }, []);
 
   const handleChatPress = async () => {
-    if (!currentUser) {
-        Alert.alert("Lỗi", "Vui lòng đăng nhập để chat.");
-        return;
-    }
-
     try {
-      const res = await fetch(`${path}/products/${product.id}`);
-      const data = await res.json();
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
 
+      const tokenValue = await AsyncStorage.getItem("token");
+      if (!tokenValue) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      const sellerId = String(product.user_id);
+      const buyerId = String(currentUser.id);
+
+      // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
+      const response = await openOrCreateRoom(tokenValue, {
+        seller_id: sellerId,
+        buyer_id: buyerId,
+        room_type: "PAIR",
+        product_id: String(product.id), // ✅ backend giờ nhận product_id
+      });
+
+      const room = response.room ?? response;
+      console.log("🟢 Room nhận được:", room);
+
+      // ✅ Xác định người còn lại trong phòng (người bán)
+      const otherUserId =
+        sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserName = product.authorName || "Người bán";
+      const otherUserAvatar =
+        product.user?.avatar ||
+        product.seller?.avatar ||
+        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+
+      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
+
+      // ✅ Truyền avatar và product sang ChatRoom
       navigation.navigate("ChatRoomScreen", {
-        product: product,
-        otherUserId: Number(data.user_id),
-        otherUserName: data.author_name || "Người bán",
-        currentUserId: Number(currentUser.id),
+        roomId: room.id,
+        product,
+        otherUserId,
+        otherUserName,
+        otherUserAvatar, // ✅ thêm dòng này
+        currentUserId: currentUser.id,
         currentUserName: currentUser.name,
+        token: tokenValue,
       });
     } catch (error) {
-      Alert.alert("Lỗi", "Không thể lấy thông tin người bán");
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
     }
   };
 
+  // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
-    const imageSource = { uri: item.image_url };
+    const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
     return (
       <View style={{ width, height: 280 }}>
         <Image
           source={imageSource}
           style={{ width: "100%", height: "100%" }}
-          resizeMode="contain"
+          resizeMode="contain" // ✅ Sửa: "contain" để giữ nét, full ảnh không crop, cùng kích thước frame nhưng scale fit
         />
       </View>
     );
@@ -362,10 +281,54 @@ export default function ProductDetailScreen() {
     index,
   });
 
+  // 🧩 Gọi API tạo hoặc lấy phòng chat
+  async function openOrCreateRoom(
+    token: string,
+    payload: {
+      seller_id: string;
+      buyer_id: string;
+      room_type: "PAIR";
+      product_id?: string;
+    }
+  ) {
+    console.log("🪙 Token gửi đi:", token);
+    console.log("📤 Payload gửi:", payload);
+
+    try {
+      const authHeader = token?.startsWith("Bearer ")
+        ? token
+        : `Bearer ${token}`;
+
+      const res = await axios.post(`${path}/chat/room`, payload, {
+        headers: { Authorization: authHeader },
+      });
+      console.log("🧾 Header gửi đi:", authHeader);
+
+      console.log("💬 Phản hồi từ server:", res.data);
+      return res.data; // Có thể là { room: {...} } hoặc {...}
+    } catch (err: any) {
+      console.log("❌ Lỗi chat:", err.response?.status, err.response?.data);
+      throw err;
+    }
+  }
+
+  const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
+  const priceNumber = Number(rawPrice);
+
+  const formatAgeRangeName = (text: string) => {
+    if (!text) return "";
+    const words = text.split(" ");
+    const lines = [];
+    for (let i = 0; i < words.length; i += 6) {
+      lines.push(words.slice(i, i + 6).join(" "));
+    }
+    return lines.join("\n");
+  };
+
   return (
     <View className="flex-1 bg-white mt-5">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Ảnh sản phẩm - Swipe horizontal để xem hết ảnh */}
+        {/* Ảnh sản phẩm */}
         <View className="relative">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -392,51 +355,48 @@ export default function ProductDetailScreen() {
               }
             }}
           />
-          {/* ✅ Dots indicator */}
           <View className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex-row items-center">
             {productImages.map((_, index) => (
               <View
                 key={index}
-                className={`w-2 h-2 rounded-full mx-1 ${
-                  index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"
-                }`}
+                className={`w-2 h-2 rounded-full mx-1 ${index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"}`}
               />
             ))}
           </View>
-          {/* Counter 1/N */}
+          {/* Counter 1/N (1/4 nếu 4 ảnh) */}
           <View className="absolute bottom-2 left-2 bg-black/50 rounded px-2 py-1">
             <Text className="text-white text-sm font-medium">
               {currentImageIndex + 1}/{productImages.length}
             </Text>
           </View>
-          {/* Nút Lưu Sản Phẩm MỚI */}
+          {/* Nút Lưu */}
           <TouchableOpacity
-            onPress={handleToggleFavorite}
-            disabled={loadingFavorite}
-            className="absolute top-4 right-4 bg-white px-3 py-2 rounded-full flex-row items-center shadow"
+            onPress={handleToggleFavorite} 
+            className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
           >
             <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={18}
-              color={isFavorite ? "red" : "black"}
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={16}
+              color={isFavorite ? "red" : "black"} 
             />
             <Text className="ml-1 text-xs text-black">
-              {loadingFavorite
-                ? "..."
-                : isFavorite
-                ? "Đã lưu"
-                : "Lưu"}
+              {isFavorite ? "Đã lưu" : "Lưu"} 
             </Text>
           </TouchableOpacity>
         </View>
-        <View className="bg-green-500 self-end rounded-md ">
-          <TouchableOpacity
-            onPress={handleChatPress}
-            className="bg-green-500 self-end rounded-md"
-          >
-            <Text className="text-white px-4 py-1 font-bold">Chat</Text>
-          </TouchableOpacity>
-        </View>
+        {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
+        {currentUser &&
+          Number(product.user_id) === Number(currentUser.id) ? null : (
+          <View className="bg-green-500 self-end rounded-md my-2 mr-4">
+            <TouchableOpacity
+              onPress={handleChatPress}
+              className="bg-green-500 self-end rounded-md"
+            >
+              <Text className="text-white px-4 py-1 font-bold">Chat</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View className="px-4 py-3 pb-12">
           {/* Tiêu đề */}
           <Text className=" text-xl font-bold mb-2">
@@ -448,16 +408,32 @@ export default function ProductDetailScreen() {
           >
             {product.tag || "Chưa rõ"}
           </Text>
-          {/* Giá */}
-          <Text className="text-red-600 text-xl font-bold mb-2">
-            {product.dealType?.name === "Miễn phí"
-              ? "Miễn phí"
-              : product.dealType?.name === "Trao đổi"
-              ? "Trao đổi"
-              : parseFloat(product.price || "0") > 0
-              ? `${parseFloat(product.price).toLocaleString()} đ`
-              : null}
-          </Text>
+
+          <View className="flex-row justify-between items-center mb-2">
+            {/* Giá  */}
+            <Text className="text-red-600 text-xl font-bold">
+              {product.dealType?.name === "Miễn phí"
+                ? "Miễn phí"
+                : product.dealType?.name === "Trao đổi"
+                  ? "Trao đổi"
+                  : priceNumber > 0
+                    ? `${priceNumber.toLocaleString("vi-VN")} đ`
+                    : "Liên hệ"}
+            </Text>
+
+            {/* Tim */}
+            <TouchableOpacity
+              className="flex-row items-center"
+              onPress={handleToggleFavorite}
+            >
+              <Text className="mr-1 text-gray-700">{favoriteCount}</Text>
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={20}
+                color={isFavorite ? "red" : "#666"}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Địa chỉ */}
           <Text className="text-gray-500 text-sm mb-1">
@@ -469,18 +445,29 @@ export default function ProductDetailScreen() {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                  "vi-VN",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}`
+                "vi-VN",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }
+              )}`
               : product.time || "1 tuần trước"}
           </Text>
 
           {/* Thông tin shop */}
-          <TouchableOpacity /* onPress={() => navigation.navigate("UserDetail")} */
+          <TouchableOpacity
+            onPress={() => {
+              if (product.user_id) {
+                navigation.navigate("UserDetail", {
+                  userId: product.user_id,
+                  productId: product.id,
+                  product: product,
+                });
+              } else {
+                Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
+              }
+            }}
           >
             <View className="flex-row items-center mt-4">
               <Image
@@ -490,22 +477,21 @@ export default function ProductDetailScreen() {
                 className="w-12 h-12 rounded-full"
               />
               <View className="ml-3 flex-1">
-                <Text className="font-semibold">Người dùng</Text>
+                <Text className="font-semibold">
+                  {product.authorName || "Người dùng"}
+                </Text>
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
                 <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="ml-1 text-gray-500 text-xs">
-                  (14 đánh giá)
-                </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
               </View>
             </View>
           </TouchableOpacity>
-
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
-            <Text className="text-gray-700 leading-6 text-sm">
+            <Text className="text-gray-700 leading-6 text-lg">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
           </View>
@@ -549,6 +535,45 @@ export default function ProductDetailScreen() {
                   {product.name || "Chưa rõ"}
                 </Text>
               </View>
+
+              {/* Giống thú cưng */}
+              {product.breed?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Giống</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.breed.name}
+                  </Text>
+                </View>
+              )}
+
+              {/* Độ tuổi */}
+              {product.ageRange?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Độ tuổi</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {formatAgeRangeName(product.ageRange.name)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Giới tính */}
+              {product.gender?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Giới tính</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.gender.name}
+                  </Text>
+                </View>
+              )}
               {/* Loại bài đăng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Loại bài đăng</Text>
@@ -582,33 +607,306 @@ export default function ProductDetailScreen() {
                       className="text-gray-800 text-sm font-medium"
                       style={{ flexShrink: 1, flexWrap: "wrap" }}
                     >
-                      {product.category_change?.name} -{" "}
-                      {product.sub_category_change?.name}
+                      {formatAgeRangeName(
+                        `${product.category_change?.name || ""} - ${product.sub_category_change?.name || ""}`
+                      )}
                     </Text>
                   </View>
                 )}
 
               {/* Loại sản phẩm */}
-              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.productType?.name || "Chưa rõ"}
-                </Text>
-              </View>
+              {product.productType?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.productType.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Hãng */}
+              {product.brand?.name &&
+                (product.subCategory?.id == 38 ||
+                  product.subCategory?.id == 39 ||
+                  product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 46 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Hãng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.brand.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Dòng */}
+              {product.productModel?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Dòng</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.productModel.name}
+                  </Text>
+                </View>
+              )}
+
+              {/* Màu sắc */}
+              {product.color?.name &&
+                (product.subCategory?.id == 38 || // Điện thoại
+                  product.subCategory?.id == 39 || // Máy tính bảng
+                  product.subCategory?.id == 40 || // Laptop
+                  product.subCategory?.id == 41 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && ( // Máy tính để bàn
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Màu sắc</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.color.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Dung lượng */}
+              {product.capacity?.name &&
+                (product.subCategory?.id == 38 || // Điện thoại
+                  product.subCategory?.id == 39 || // Máy tính bảng
+                  product.subCategory?.id == 40 || // Laptop
+                  product.subCategory?.id == 41) && ( // Máy tính để bàn
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Dung lượng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.capacity.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Bảo hành */}
+              {product.warranty?.name &&
+                (product.subCategory?.id == 38 ||
+                  product.subCategory?.id == 39 ||
+                  product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41 ||
+                  product.subCategory?.id == 42 ||
+                  product.subCategory?.id == 43 ||
+                  product.subCategory?.id == 44 ||
+                  product.subCategory?.id == 45 ||
+                  product.subCategory?.id == 46 ||
+                  product.subCategory?.id == 47 ||
+                  product.subCategory?.id == 48 ||
+                  product.subCategory?.id == 60 ||
+                  product.subCategory?.id == 61 ||
+                  product.subCategory?.id == 62) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Bảo hành</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.warranty.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Bộ vi xử lý */}
+              {product.processor?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Bộ vi xử lý</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.processor.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* RAM */}
+              {product.ramOption?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">RAM</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.ramOption.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Loại ổ cứng */}
+              {product.storageType?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Loại ổ cứng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.storageType.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Card màn hình */}
+              {product.graphicsCard?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Card màn hình</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.graphicsCard.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Chất liệu */}
+              {product.material?.name &&
+                (product.subCategory?.id == 23 ||
+                  product.subCategory?.id == 24) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Chất liệu</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.material.name}
+                    </Text>
+                  </View>
+                )}
+              {/* Kích cỡ */}
+              {product.size?.name &&
+                (product.subCategory?.id === 25 ||
+                  product.subCategory?.id === 39 ||
+                  product.subCategory?.id === 40 ||
+                  product.subCategory?.id === 41 ||
+                  product.subCategory?.id === 44 ||
+                  product.subCategory?.id === 53 ||
+                  product.subCategory?.id === 54 ||
+                  product.subCategory?.id === 55 ||
+                  product.subCategory?.id === 56 ||
+                  product.subCategory?.id === 57) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Kích cỡ</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.size.name}
+                    </Text>
+                  </View>
+                )}
+              {/* Xuất xứ */}
+              {product.origin?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Xuất xứ</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.origin.name}
+                    </Text>
+                  </View>
+                )}
+              {/* Tác giả */}
+              {product.category?.name === "Tài liệu khoa" && product.author && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">
+                    Tác giả/ Người biên soạn
+                  </Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.author}
+                  </Text>
+                </View>
+              )}
+              {/* Dung tích xe (Xe máy) */}
+              {product.engineCapacity?.name &&
+                product.subCategory?.id == 60 && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Dung tích xe</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.engineCapacity.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Số km đã đi (Xe cộ) */}
+              {product.mileage != null && // Dùng '!= null' để cho phép 0km
+                [60, 61, 62].includes(Number(product.subCategory?.id)) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Số km đã đi</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {Number(product.mileage).toLocaleString("vi-VN")} km
+                    </Text>
+                  </View>
+                )}
+              {/* Năm xuất bản */}
+              {product.year &&
+                (product.category?.name === "Tài liệu khoa" || // Tài liệu
+                  [60, 61, 62].includes(Number(product.subCategory?.id))) && ( // Xe cộ
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">
+                      {product.category?.name === "Tài liệu khoa"
+                        ? "Năm xuất bản/ Năm học"
+                        : "Năm sản xuất"}
+                    </Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.year}
+                    </Text>
+                  </View>
+                )}
 
               {/* Tình trạng */}
-              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Tình trạng</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.condition?.name || "Chưa rõ"}
-                </Text>
-              </View>
+              {product.condition?.name &&
+                product.category?.name !== "Thú cưng" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Tình trạng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.condition.name}
+                    </Text>
+                  </View>
+                )}
 
               {/* Số lượng ảnh */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
@@ -620,19 +918,6 @@ export default function ProductDetailScreen() {
                   {product.images?.length || product.imageCount || 0} ảnh
                 </Text>
               </View>
-
-              {/* Địa chỉ */}
-              {product.address_json?.full && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">Địa chỉ</Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.address_json.full}
-                  </Text>
-                </View>
-              )}
 
               {/* Người đăng */}
               {product.authorName && (
@@ -674,7 +959,16 @@ export default function ProductDetailScreen() {
                       {c.content}
                     </Text>
                     <Text className="text-gray-400 text-xs mt-1">
-                      {new Date(c.created_at).toLocaleDateString("vi-VN")}
+                      {new Date(
+                        new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
+                      ).toLocaleString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </Text>
                   </View>
                 </View>
@@ -698,9 +992,8 @@ export default function ProductDetailScreen() {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${
-                  isSending ? "bg-gray-400" : "bg-blue-500"
-                }`}
+                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
+                  }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">

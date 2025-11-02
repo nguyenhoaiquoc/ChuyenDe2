@@ -7,11 +7,13 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { path } from "../../config";
 import { categoryEndpoints } from "../../src/constants/category-endpoints";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseSubCategoryScreen({ navigation, route }: any) {
   const { category } = route.params;
@@ -24,6 +26,8 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
 
   const [loading, setLoading] = useState(true);
 
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
   useEffect(() => {
     const endpointKey = categoryEndpoints[Number(category.id)];
     if (!endpointKey) {
@@ -35,19 +39,21 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
     const fullUrl = `${path}/sub-categories/${endpointKey}`;
     console.log("🔍 Đang gọi API:", fullUrl);
 
-    axios.get(fullUrl)
+    axios
+      .get(fullUrl)
       .then((res) => {
-        const subData = res.data.map((item: any) => ({ name: item.name, id: item.id }));
+        const subData = res.data.map((item: any) => ({
+          name: item.name,
+          id: item.id,
+        }));
         setSubCategories(subData);
-         console.log(subData);
       })
-      
+
       .catch((err) => {
         console.log("❌ Lỗi khi lấy danh mục con:", err.message);
       })
       .finally(() => setLoading(false));
   }, [category]);
-
 
   const handleSelectSubCategory = (sub: SubCategory) => {
     navigation.navigate("PostFormScreen", {
@@ -74,7 +80,9 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
         {loading ? (
           <ActivityIndicator size="small" color="#9D7BFF" />
         ) : subCategories.length === 0 ? (
-          <Text style={{ textAlign: "center", marginTop: 20 }}>Không có danh mục con.</Text>
+          <Text style={{ textAlign: "center", marginTop: 20 }}>
+            Không có danh mục con.
+          </Text>
         ) : (
           subCategories.map((sub, idx) => (
             <TouchableOpacity

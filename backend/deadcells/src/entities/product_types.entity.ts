@@ -1,14 +1,18 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn,JoinColumn,ManyToOne } from "typeorm";
-import { Product } from "./product.entity";
-import { Category } from "./category.entity";
-import { SubCategory } from "./sub-category.entity";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Product } from './product.entity';
+import { Category } from './category.entity';
+import { SubCategory } from './sub-category.entity';
 
 @Entity('product_types')
 export class ProductType {
-    @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-    id: number;
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
+  id: number;
 
-    @Column({ type: 'bigint', nullable: true })
+  @Column({ type: 'varchar', length: 100 })
+  name: string;
+
+  // ✅ Nếu áp dụng cho toàn bộ Category
+  @Column({ type: 'bigint', nullable: true })
   category_id: number | null;
 
   @ManyToOne(() => Category, (category) => category.productTypes, {
@@ -31,5 +35,4 @@ export class ProductType {
 
   @OneToMany(() => Product, (product) => product.productType)
   products: Product[];
-  name: any;
 }

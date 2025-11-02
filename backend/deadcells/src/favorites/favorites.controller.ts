@@ -1,31 +1,54 @@
-import { Controller, Post, Get, Param, Body, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Param,
+  ParseIntPipe,
+  Body,
+  Query,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
+
 
 @Controller('favorites')
 export class FavoritesController {
     constructor(private readonly favoritesService: FavoritesService) {}
 
-    /**
-     * 🚀 TOGGLE YÊU THÍCH: POST /favorites/toggle
-     * Sửa: Thêm ParseIntPipe cho các tham số từ Body
-     */
-    @Post('toggle')
-    async toggleFavorite(
-        // ✅ SỬA: Thêm ParseIntPipe cho userId và productId
-        @Body('userId', ParseIntPipe) userId: number,
-        @Body('productId', ParseIntPipe) productId: number,
-    ) {
-        return this.favoritesService.toggleFavorite(userId, productId);
-    }
+  @Post('toggle/:productId')
+  toggleFavorite(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Body('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.favoritesService.toggleFavorite(userId, productId);
+  }
 
-    // Các route khác đã có ParseIntPipe cho tham số @Param, nên giữ nguyên
-    @Get('count/:productId')
-    async countFavorites(@Param('productId', ParseIntPipe) productId: number) {
-        return this.favoritesService.countFavorites(productId);
-    }
+  @Get(':productId/count')
+  countFavorites(@Param('productId', ParseIntPipe) productId: number) {
+    return this.favoritesService.countFavorites(productId);
+  }
 
-    @Get('by-user/:userId')
-    async getByUser(@Param('userId', ParseIntPipe) userId: number) {
-        return this.favoritesService.getFavoriteProductIdsByUser(userId);
-    }
+  @Get('user/:userId')
+  async getFavoritesByUser(@Param('userId', ParseIntPipe) userId: number) {
+    const productIds =
+      await this.favoritesService.getFavoriteProductIdsByUser(userId);
+    return { productIds };
+  }
+
+  @Get('check/:productId')
+  async checkFavorite(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Query('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.favoritesService.isFavorite(userId, productId);
+  }
+
+  @Get('my-list')
+  async getFavoriteProductsByUser(
+    @Query('userId', ParseIntPipe) userId: number, 
+  ) {
+    return this.favoritesService.getFavoriteProductsByUser(userId);
+  }
+  
 }
