@@ -59,7 +59,14 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
 
         const mapped: Product[] = rawData.map((item: any) => {
           console.log("CategoryIndex productType:", item.productType);
-          console.log('API Response Item:', item.id, 'Author:', item.author, 'Year:', item.year);
+          console.log(
+            "API Response Item:",
+            item.id,
+            "Author:",
+            item.author,
+            "Year:",
+            item.year
+          );
           // URL ảnh
           const imageUrl = item.thumbnail_url?.startsWith("http")
             ? item.thumbnail_url
@@ -111,134 +118,108 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
-          // return {
-          //   id: item.id.toString(),
-          //   image: imageUrl,
-          //   name: item.name || "Không có tiêu đề",
-          //   price: (() => {
-          //     if (item.dealType?.name === "Miễn phí") return "Miễn phí";
-          //     if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-          //     return item.price
-          //       ? `${item.price.toLocaleString("vi-VN")} đ`
-          //       : "Liên hệ";
-          //   })(),
-          //   location: locationText,
-          //   time: timeDisplay,
-          //   tag: tagText,
-          //   authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
-          //   user_id: item.user?.id ?? item.user_id ?? 0,
-          //   category: item.category,
-          //   subCategory: item.subCategory
-          //     ? {
-          //         id: item.subCategory.id
-          //           ? parseInt(item.subCategory.id)
-          //           : undefined,
-          //         name: item.subCategory.name,
-          //         source_table: item.subCategory.source_table,
-          //         source_detail: item.subCategory.source_detail,
-          //       }
-          //     : undefined,
-          //   category_change: item.category_change
-          //     ? {
-          //         id: item.category_change.id,
-          //         name: item.category_change.name,
-          //         image: item.category_change.image,
-          //       }
-          //     : undefined,
-          //   sub_category_change: item.sub_category_change
-          //     ? {
-          //         id: item.sub_category_change.id,
-          //         name: item.sub_category_change.name,
-          //         parent_category_id:
-          //           item.sub_category_change.parent_category_id || null,
-          //         source_table: item.sub_category_change.source_table || null,
-          //       }
-          //     : undefined,
-          //   imageCount: item.images?.length || (imageUrl ? 1 : 0),
-          //   isFavorite: false,
-          //   images: item.images || [],
-          //   description: item.description || "",
-          //   postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
-          //   productType: item.productType || { id: "1", name: "Chưa rõ" },
-          //   condition: item.condition || { id: "1", name: "Chưa rõ" },
-          //   dealType: item.dealType || { id: "1", name: "Bán" },
-          //   address_json: item.address_json || { full: locationText },
-          //   author: item.author || null,
-          //   year: item.year || null,
-          //   created_at: item.created_at || new Date().toISOString(),
-          //   updated_at: item.updated_at || undefined,
-          // };
-          // THAY THẾ TOÀN BỘ KHỐI 'return {...};' BÊN TRONG HÀM .map() BẰNG CODE NÀY
 
           return {
             id: item.id.toString(),
-            image: imageUrl, // Sử dụng imageUrl đã xử lý
+            image: imageUrl,
             name: item.name || "Không có tiêu đề",
             price: (() => {
-              // Logic giá của bạn đã đúng
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
               return item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ` // Ép kiểu Number để toLocaleString
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
                 : "Liên hệ";
             })(),
-            location: locationText, // Sử dụng locationText đã xử lý
-            time: timeDisplay, // Sử dụng timeDisplay đã xử lý
-            tag: tagText, // Sử dụng tagText đã xử lý
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh", // Ưu tiên fullName
-            user_id: item.user?.id ?? item.user_id ?? 0, // ===== SỬA LỖI 1: category =====
-            // Gán trực tiếp object 'category' từ API
+            location: locationText,
+            time: timeDisplay,
+            tag: tagText,
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
 
-            category: item.category, // <-- Gán object category
-            // Giữ nguyên logic subCategory của bạn (đã ổn)
+
+            category: item.category || null, 
 
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
+                  id: item.subCategory.id,
                   name: item.subCategory.name,
+                  parent_category_id: item.subCategory.parent_category_id,
                   source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
+                  source_id: item.subCategory.source_id,
                 }
-              : undefined,
-            // Giữ nguyên category_change và sub_category_change
-            category_change: item.category_change || undefined,
-            sub_category_change: item.sub_category_change || undefined,
+              : null, 
 
-            imageCount: item.images?.length || (imageUrl ? 1 : 0), // Đếm ảnh hoặc dựa vào imageUrl
-            isFavorite: false, // Mặc định là false
-            images: item.images || [], // Gán mảng images
+            category_change: item.category_change || null, 
+            sub_category_change: item.sub_category_change || null, 
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0),
+            isFavorite: false,
+            images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa các object liên quan (PostType, ProductType, Condition, DealType)
-            postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
-            productType: item.productType || { id: "1", name: "Chưa rõ" },
-            condition: item.condition || { id: "1", name: "Chưa rõ" },
-            dealType: item.dealType || { id: "1", name: "Bán" },
+            postType: item.postType || null,
+            condition: item.condition || null,
+            dealType: item.dealType || null,
 
-            address_json: item.address_json || { full: locationText }, // Gán object address_json
-            phone: item.user?.phone || null, // Lấy phone từ user nếu có
-            // ===== SỬA LỖI 2: year =====
+            productStatus: item.productStatus || null,
 
-            // (XÓA DÒNG 'categoryObj' bị thừa)
+            productType:
+              item.productType && item.productType.name
+                ? item.productType
+                : null,
+            origin: item.origin && item.origin.name ? item.origin : null,
+            material:
+              item.material && item.material.name ? item.material : null,
+            size: item.size && item.size.name ? item.size : null,
+            brand: item.brand && item.brand.name ? item.brand : null,
+            color: item.color && item.color.name ? item.color : null,
+            capacity:
+              item.capacity && item.capacity.name ? item.capacity : null,
+            warranty:
+              item.warranty && item.warranty.name ? item.warranty : null,
+            productModel:
+              item.productModel && item.productModel.name
+                ? item.productModel
+                : null,
+            processor:
+              item.processor && item.processor.name ? item.processor : null,
+            ramOption:
+              item.ramOption && item.ramOption.name ? item.ramOption : null,
+            storageType:
+              item.storageType && item.storageType.name
+                ? item.storageType
+                : null,
+            graphicsCard:
+              item.graphicsCard && item.graphicsCard.name
+                ? item.graphicsCard
+                : null,
+            breed: item.breed && item.breed.name ? item.breed : null,
+            ageRange:
+              item.ageRange && item.ageRange.name ? item.ageRange : null,
+            gender: item.gender && item.gender.name ? item.gender : null,
+            engineCapacity:
+              item.engineCapacity && item.engineCapacity.name
+                ? item.engineCapacity
+                : null,
+            mileage: item.mileage || null,
 
-            author: item.author || null, // Gán author
-            year: item.year || null, // Gán year (sửa lỗi copy-paste)
+            address_json: item.address_json || { full: locationText },
+            phone: item.user?.phone || null,
+            author: item.author || null,
+            year: item.year || null,
 
             created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined, // Thêm updated_at
+            updated_at: item.updated_at || undefined, // (optional '?' có thể là undefined)
 
-            // Đảm bảo các trường còn lại của Product type cũng có mặt (nếu API trả về)
+            // Sửa fallback sang 'null'
             sub_category_id: item.sub_category_id || null,
-            status_id: item.status_id?.toString() || undefined,
-            visibility_type: item.visibility_type?.toString() || undefined,
+            status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
+            visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
             group_id: item.group_id || null,
             is_approved:
               typeof item.is_approved === "boolean"
                 ? item.is_approved
-                : undefined,
-            // 'file' không cần map ở đây vì nó không đến từ API get products
+                : undefined, // (optional '?' có thể là undefined)
           };
         });
 

@@ -57,9 +57,9 @@ export default function AddressPicker({
     try {
       // Lấy huyện theo code tỉnh
       const res = await axios.get(
-        `${API_BASE}/districts/getByProvince?provinceCode=${province.code}&limit=-1`
-      );
-      setDistricts(res.data.data?.data || []); // <-- Thêm .data.data
+  `${API_BASE}/districts/getByProvince?provinceCode=${province.code}&limit=-1`
+);
+setDistricts(res.data.data?.data || []); // <-- Thêm .data.data
 
       // Lấy tất cả xã từ tất cả huyện (tương tự code cũ, nếu cần)
       // Nhưng để chính xác, ta sẽ lấy khi chọn huyện
@@ -76,9 +76,9 @@ export default function AddressPicker({
     try {
       // Lấy xã theo code huyện
       const res = await axios.get(
-        `${API_BASE}/wards/getByDistrict?districtCode=${district.code}&limit=-1`
-      );
-      setWards(res.data.data?.data || []); // <-- Thêm .data.data
+  `${API_BASE}/wards/getByDistrict?districtCode=${district.code}&limit=-1`
+);
+setWards(res.data.data?.data || []); // <-- Thêm .data.data
     } catch (err) {
       console.log("Lỗi lấy xã:", err);
       setWards([]);

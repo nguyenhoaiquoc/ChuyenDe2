@@ -1,11 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Product } from './product.entity';
 import { Category } from './category.entity';
 import { SubCategory } from './sub-category.entity';
@@ -15,12 +8,10 @@ export class ProductType {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  name: string | null;
+  @Column({ type: 'varchar', length: 100})
+  name: string;
 
-  @OneToMany(() => Product, (product) => product.productType)
-  products: Product[];
-
+  // ✅ Nếu áp dụng cho toàn bộ Category
   @Column({ type: 'bigint', nullable: true })
   category_id: number | null;
 
@@ -41,4 +32,7 @@ export class ProductType {
   })
   @JoinColumn({ name: 'sub_category_id' })
   subCategory: SubCategory | null;
+
+  @OneToMany(() => Product, (product) => product.productType)
+  products: Product[];
 }

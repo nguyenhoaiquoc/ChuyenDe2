@@ -36,8 +36,6 @@ export class Report {
   @JoinColumn({ name: "status_id" })
   status: Status;
 
-
-
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

@@ -47,7 +47,6 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
           id: item.id,
         }));
         setSubCategories(subData);
-        console.log(subData);
       })
 
       .catch((err) => {

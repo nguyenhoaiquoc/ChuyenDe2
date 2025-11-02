@@ -323,6 +323,17 @@ export default function ProductDetailScreen() {
 
   const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
   const priceNumber = Number(rawPrice);
+
+  const formatAgeRangeName = (text: string) => {
+    if (!text) return "";
+    const words = text.split(" ");
+    const lines = [];
+    for (let i = 0; i < words.length; i += 6) {
+      lines.push(words.slice(i, i + 6).join(" "));
+    }
+    return lines.join("\n");
+  };
+
   return (
     <View className="flex-1 bg-white mt-5">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -368,8 +379,18 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          <TouchableOpacity className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300">
-            <Text className="ml-1 text-xs text-black">Lưu</Text>
+          <TouchableOpacity
+            onPress={handleToggleFavorite}
+            className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={16}
+              color={isFavorite ? "red" : "black"}
+            />
+            <Text className="ml-1 text-xs text-black">
+              {isFavorite ? "Đã lưu" : "Lưu"}
+            </Text>
           </TouchableOpacity>
         </View>
         {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
@@ -523,6 +544,45 @@ export default function ProductDetailScreen() {
                   {product.name || "Chưa rõ"}
                 </Text>
               </View>
+
+              {/* Giống thú cưng */}
+              {product.breed?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Giống</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.breed.name}
+                  </Text>
+                </View>
+              )}
+
+              {/* Độ tuổi */}
+              {product.ageRange?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Độ tuổi</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {formatAgeRangeName(product.ageRange.name)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Giới tính */}
+              {product.gender?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Giới tính</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.gender.name}
+                  </Text>
+                </View>
+              )}
               {/* Loại bài đăng */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                 <Text className="text-gray-600 text-sm">Loại bài đăng</Text>
@@ -556,15 +616,16 @@ export default function ProductDetailScreen() {
                       className="text-gray-800 text-sm font-medium"
                       style={{ flexShrink: 1, flexWrap: "wrap" }}
                     >
-                      {product.category_change?.name} -{" "}
-                      {product.sub_category_change?.name}
+                      {formatAgeRangeName(
+                        `${product.category_change?.name || ""} - ${product.sub_category_change?.name || ""}`
+                      )}
                     </Text>
                   </View>
                 )}
 
               {/* Loại sản phẩm */}
-              {product.category?.name === "Thời trang, đồ dùng cá nhân" &&
-                product.productType?.name && (
+              {product.productType?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Loại sản phẩm</Text>
                     <Text
@@ -576,6 +637,184 @@ export default function ProductDetailScreen() {
                   </View>
                 )}
 
+              {/* Hãng */}
+              {product.brand?.name &&
+                [38, 39, 40, 46, 60, 61, 62].includes(
+                  Number(product.subCategory?.id)
+                ) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Hãng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.brand.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Dòng */}
+              {product.productModel?.name && (
+                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                  <Text className="text-gray-600 text-sm">Dòng</Text>
+                  <Text
+                    className="text-gray-800 text-sm font-medium"
+                    style={{ flexShrink: 1, flexWrap: "wrap" }}
+                  >
+                    {product.productModel.name}
+                  </Text>
+                </View>
+              )}
+
+              {/* Màu sắc */}
+              {product.color?.name &&
+                [38, 39, 40, 41, 60, 61, 62].includes(
+                  Number(product.subCategory?.id)
+                ) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Màu sắc</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.color.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Dung lượng */}
+              {product.capacity?.name &&
+                [38, 39, 40, 41].includes(Number(product.subCategory?.id)) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Dung lượng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.capacity.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Bảo hành */}
+              {product.warranty?.name &&
+                [
+                  38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 60, 61, 62,
+                ].includes(Number(product.subCategory?.id)) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Bảo hành</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.warranty.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Bộ vi xử lý */}
+              {product.processor?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Bộ vi xử lý</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.processor.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* RAM */}
+              {product.ramOption?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">RAM</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.ramOption.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Loại ổ cứng */}
+              {product.storageType?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Loại ổ cứng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.storageType.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Card màn hình */}
+              {product.graphicsCard?.name &&
+                (product.subCategory?.id == 40 ||
+                  product.subCategory?.id == 41) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Card màn hình</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.graphicsCard.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Chất liệu */}
+              {product.material?.name &&
+                (product.subCategory?.id == 23 ||
+                  product.subCategory?.id == 24) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Chất liệu</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.material.name}
+                    </Text>
+                  </View>
+                )}
+              {/* Kích cỡ */}
+              {product.size?.name &&
+                [25, 39, 40, 41, 44, 53, 54, 55, 56, 57].includes(
+                  Number(product.subCategory?.id)
+                ) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Kích cỡ</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.size.name}
+                    </Text>
+                  </View>
+                )}
+
+              {/* Xuất xứ */}
+              {product.origin?.name &&
+                product.category?.name !== "Tài liệu khoa" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Xuất xứ</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.origin.name}
+                    </Text>
+                  </View>
+                )}
               {/* Tác giả */}
               {product.category?.name === "Tài liệu khoa" && product.author && (
                 <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
@@ -590,32 +829,65 @@ export default function ProductDetailScreen() {
                   </Text>
                 </View>
               )}
+              {/* Dung tích xe (Xe máy) */}
+              {product.engineCapacity?.name &&
+                product.subCategory?.id == 60 && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Dung tích xe</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.engineCapacity.name}
+                    </Text>
+                  </View>
+                )}
 
+              {/* Số km đã đi (Xe cộ) */}
+              {product.mileage != null && 
+                [60, 61, 62].includes(Number(product.subCategory?.id)) && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Số km đã đi</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {Number(product.mileage).toLocaleString("vi-VN")} km
+                    </Text>
+                  </View>
+                )}
               {/* Năm xuất bản */}
-              {product.category?.name === "Tài liệu khoa" && product.year && (
-                <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                  <Text className="text-gray-600 text-sm">
-                    Năm xuất bản/ Năm học
-                  </Text>
-                  <Text
-                    className="text-gray-800 text-sm font-medium"
-                    style={{ flexShrink: 1, flexWrap: "wrap" }}
-                  >
-                    {product.year}
-                  </Text>
-                </View>
-              )}
+              {product.year &&
+                (product.category?.name === "Tài liệu khoa" || // Tài liệu
+                  [60, 61, 62].includes(Number(product.subCategory?.id))) && ( // Xe cộ
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">
+                      {product.category?.name === "Tài liệu khoa"
+                        ? "Năm xuất bản/ Năm học"
+                        : "Năm sản xuất"}
+                    </Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.year}
+                    </Text>
+                  </View>
+                )}
 
               {/* Tình trạng */}
-              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
-                <Text className="text-gray-600 text-sm">Tình trạng</Text>
-                <Text
-                  className="text-gray-800 text-sm font-medium"
-                  style={{ flexShrink: 1, flexWrap: "wrap" }}
-                >
-                  {product.condition?.name || "Chưa rõ"}
-                </Text>
-              </View>
+              {product.condition?.name &&
+                product.category?.name !== "Thú cưng" && (
+                  <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                    <Text className="text-gray-600 text-sm">Tình trạng</Text>
+                    <Text
+                      className="text-gray-800 text-sm font-medium"
+                      style={{ flexShrink: 1, flexWrap: "wrap" }}
+                    >
+                      {product.condition.name}
+                    </Text>
+                  </View>
+                )}
 
               {/* Số lượng ảnh */}
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">

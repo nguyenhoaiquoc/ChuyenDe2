@@ -41,7 +41,6 @@ export type RootStackParamList = {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };
   ChooseExchangeSubCategoryScreen: undefined;
-  HomeAdminScreen: undefined;
   ManagerGroupsScreen: undefined;
   UserInforScreen: undefined;
   EditProfileScreen: undefined;
@@ -49,6 +48,10 @@ export type RootStackParamList = {
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
+  SavedPostsScreen: undefined;
+  HomeAdminScreen: undefined;
+  ManageProductsScreen: undefined;
+
   GroupDetailScreen: { group: GroupType };
   PostGroupFormScreen: {
     group: GroupType;
@@ -106,6 +109,17 @@ export type ChatRoomNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ChatRoomScreen"
 >;
+
+export type HomeAdminScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "HomeAdminScreen"
+>;
+
+export type ManageProductsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageProductsScreen"
+>;
+
 export type ProductImage = {
   id: string;
   product_id: string;
@@ -119,7 +133,82 @@ export type PostType = { id: string; name: string };
 export type DealType = { id: string; name: string };
 export type Category = { id: string; name: string; image?: string };
 export type SubCategory = {
-  id: string;
+  id: string | number;
+  name: string;
+  parent_category_id?: number | null; // (Trường này API có gửi)
+  source_table?: string | null; // (Trường này API có gửi)
+  source_id?: number | null; // (Trường này API có gửi)
+};
+export type ProductType = {
+  id: string | number;
+  name: string;
+};
+export type Origin = {
+  id: string | number;
+  name: string;
+};
+export type Material = {
+  id: string | number;
+  name: string;
+};
+export type Size = {
+  id: string | number;
+  name: string;
+};
+export type Brand = {
+  id: string | number;
+  name: string;
+};
+export type Color = {
+  id: string | number;
+  name: string;
+};
+export type Capacity = {
+  id: string | number;
+  name: string;
+};
+export type Warranty = {
+  id: string | number;
+  name: string;
+};
+export type ProductModel = {
+  id: string | number;
+  name: string;
+};
+export type Processor = {
+  id: string | number;
+  name: string;
+};
+export type RamOption = {
+  id: string | number;
+  name: string;
+};
+export type StorageType = {
+  id: string | number;
+  name: string;
+};
+export type GraphicsCard = {
+  id: string | number;
+  name: string;
+};
+export type Breed = {
+  id: string | number;
+  name: string;
+};
+export type AgeRange = {
+  id: string | number;
+  name: string;
+};
+export type Gender = {
+  id: string | number;
+  name: string;
+};
+export type EngineCapacity = {
+  id: string | number;
+  name: string;
+};
+export type ProductStatus = {
+  id: string | number;
   name: string;
 };
 export type AddressJson = {
@@ -139,16 +228,37 @@ export type Product = {
   price: string;
   thumbnail_url?: string;
   images: ProductImage[];
-  dealType: DealType;
+  dealType: DealType | null;
   category: Category | undefined;
+  subCategory: SubCategory | null;
   sub_category_id?: string | null;
-  category_change?: Category;
-  sub_category_change?: { id: string; name: string };
-  postType: PostType;
-  productType: PostType;
-  condition: Condition;
+  category_change?: Category | null;
+  sub_category_change?: { id: string; name: string } | null;
+  postType: PostType | null;
+
+  productStatus: ProductStatus | null;
+  productType: ProductType | null;
+  origin: Origin | null;
+  material: Material | null;
+  size: Size | null;
+  brand: Brand | null;
+  color: Color | null;
+  capacity: Capacity | null;
+  warranty: Warranty | null;
+  productModel: ProductModel | null;
+  processor: Processor | null;
+  ramOption: RamOption | null;
+  storageType: StorageType | null;
+  graphicsCard: GraphicsCard | null;
+  breed: Breed | null;
+  ageRange: AgeRange | null;
+  gender: Gender | null;
+  engineCapacity: EngineCapacity | null;
+  mileage: string | number | null;
+
+  condition: Condition | null;
   address_json?: AddressJson;
-  status_id?: string;
+  status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
   is_approved?: boolean;
@@ -159,13 +269,12 @@ export type Product = {
   imageCount?: number;
   isFavorite?: boolean;
   file?: FileResult;
-  author: string;
-  year: number;
+  author: string | null;
+  year: number | null;
   created_at: string;
   updated_at?: string;
   user_id: string | number;
 
-  // ✅ Thêm hai field này
   user?: {
     id?: string | number;
     name?: string;

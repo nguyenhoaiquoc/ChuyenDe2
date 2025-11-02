@@ -7,6 +7,8 @@ import {
   Text,
   StatusBar,
   FlatList,
+  GestureResponderEvent,
+  useColorScheme,
   Alert,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
@@ -20,18 +22,18 @@ import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNotification } from "../Notification/NotificationContext";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
 };
 
 const filters = [
-  { id: "1", label: "Dành cho bạn" },
+  { id: "1", label: "Mới nhất" },
   { id: "2", label: "Đang tìm mua" },
-  { id: "3", label: "Mới nhất" },
-  { id: "4", label: "Đồ miễn phí" },
-  { id: "5", label: "Trao đổi" },
-  { id: "6", label: "Gợi ý cho bạn " },
+  { id: "3", label: "Đồ miễn phí" },
+  { id: "4", label: "Trao đổi" },
+  { id: "5", label: "Gợi ý cho bạn " },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -39,10 +41,12 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+
+  const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
   useEffect(() => {
     axios
@@ -126,78 +130,111 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
+          console.log(
+            "Product ID:",
+            item.id,
+            "is_approved:",
+            item.is_approved,
+            typeof item.is_approved
+          );
 
           return {
             id: item.id.toString(),
-            image: imageUrl, // Sử dụng imageUrl đã xử lý
+            image: imageUrl,
             name: item.name || "Không có tiêu đề",
             price: (() => {
-              // Logic giá của bạn đã đúng
               if (item.dealType?.name === "Miễn phí") return "Miễn phí";
               if (item.dealType?.name === "Trao đổi") return "Trao đổi";
               return item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ` // Ép kiểu Number để toLocaleString
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
                 : "Liên hệ";
             })(),
-            location: locationText, // Sử dụng locationText đã xử lý
-            time: timeDisplay, // Sử dụng timeDisplay đã xử lý
-            tag: tagText, // Sử dụng tagText đã xử lý
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh", // Ưu tiên fullName
-            user_id: item.user?.id ?? item.user_id ?? 0, // ===== SỬA LỖI 1: category =====
-            // Gán trực tiếp object 'category' từ API
-
-            category: item.category, // <-- Gán object category
-            // Giữ nguyên logic subCategory của bạn (đã ổn)
-
+            location: locationText,
+            time: timeDisplay,
+            tag: tagText,
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
+            category: item.category || null,
             subCategory: item.subCategory
               ? {
-                  id: item.subCategory.id
-                    ? parseInt(item.subCategory.id)
-                    : undefined,
+                  id: item.subCategory.id,
                   name: item.subCategory.name,
+                  parent_category_id: item.subCategory.parent_category_id,
                   source_table: item.subCategory.source_table,
-                  source_detail: item.subCategory.source_detail,
+                  source_id: item.subCategory.source_id,
                 }
-              : undefined,
-            // Giữ nguyên category_change và sub_category_change
-            category_change: item.category_change || undefined,
-            sub_category_change: item.sub_category_change || undefined,
+              : null,
 
-            imageCount: item.images?.length || (imageUrl ? 1 : 0), // Đếm ảnh hoặc dựa vào imageUrl
-            isFavorite: false, // Mặc định là false
-            images: item.images || [], // Gán mảng images
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0),
+            isFavorite: false,
+            images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa các object liên quan (PostType, ProductType, Condition, DealType)
-            postType: item.postType || { id: "1", name: "Chưa rõ" }, // Cung cấp giá trị mặc định nếu thiếu
-            productType: item.productType || { id: "1", name: "Chưa rõ" },
-            condition: item.condition || { id: "1", name: "Chưa rõ" },
-            dealType: item.dealType || { id: "1", name: "Bán" },
+            postType: item.postType || null,
+            condition: item.condition || null,
+            dealType: item.dealType || null,
 
-            address_json: item.address_json || { full: locationText }, // Gán object address_json
-            phone: item.user?.phone || null, // Lấy phone từ user nếu có
-            // ===== SỬA LỖI 2: year =====
+            productStatus: item.productStatus || null,
+            
+            productType:
+              item.productType && item.productType.name
+                ? item.productType
+                : null,
+            origin: item.origin && item.origin.name ? item.origin : null,
+            material:
+              item.material && item.material.name ? item.material : null,
+            size: item.size && item.size.name ? item.size : null,
+            brand: item.brand && item.brand.name ? item.brand : null,
+            color: item.color && item.color.name ? item.color : null,
+            capacity:
+              item.capacity && item.capacity.name ? item.capacity : null,
+            warranty:
+              item.warranty && item.warranty.name ? item.warranty : null,
+            productModel:
+              item.productModel && item.productModel.name
+                ? item.productModel
+                : null,
+            processor:
+              item.processor && item.processor.name ? item.processor : null,
+            ramOption:
+              item.ramOption && item.ramOption.name ? item.ramOption : null,
+            storageType:
+              item.storageType && item.storageType.name
+                ? item.storageType
+                : null,
+            graphicsCard:
+              item.graphicsCard && item.graphicsCard.name
+                ? item.graphicsCard
+                : null,
+            breed: item.breed && item.breed.name ? item.breed : null,
+            ageRange:
+              item.ageRange && item.ageRange.name ? item.ageRange : null,
+            gender: item.gender && item.gender.name ? item.gender : null,
+            engineCapacity:
+              item.engineCapacity && item.engineCapacity.name
+                ? item.engineCapacity
+                : null,
+            mileage: item.mileage || null,
 
-            // (XÓA DÒNG 'categoryObj' bị thừa)
-
-            author: item.author || null, // Gán author
-            year: item.year || null, // Gán year (sửa lỗi copy-paste)
+            address_json: item.address_json || { full: locationText },
+            phone: item.user?.phone || null,
+            author: item.author || null,
+            year: item.year || null,
 
             created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined, // Thêm updated_at
+            updated_at: item.updated_at || undefined,
 
-            // Đảm bảo các trường còn lại của Product type cũng có mặt (nếu API trả về)
             sub_category_id: item.sub_category_id || null,
             status_id: item.status_id?.toString() || undefined,
             visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
-            is_approved:
-              typeof item.is_approved === "boolean"
-                ? item.is_approved
-                : undefined,
-            // 'file' không cần map ở đây vì nó không đến từ API get products
+            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
+
         setProducts(mapped);
       })
       .catch((err) => {
@@ -226,6 +263,30 @@ export default function HomeScreen({ navigation }: Props) {
 
     fetchFavorites();
   }, []);
+
+  useEffect(() => {
+    // Định nghĩa hàm lọc
+    const filterProducts = () => {
+      console.log("Chạy logic filter cho:", selectedFilter);
+
+      if (selectedFilter === "Đồ miễn phí") {
+        setFilteredProducts(products.filter((p) => p.price === "Miễn phí"));
+      } else if (selectedFilter === "Trao đổi") {
+        setFilteredProducts(products.filter((p) => p.price === "Trao đổi"));
+      } else if (selectedFilter == "Đang tìm mua") {
+        setFilteredProducts(products.filter((p) => p.postType?.id == "2"));
+      } else {
+        // "Mới nhất", "Gợi ý" và các trường hợp khác sẽ hiển thị tất cả
+        setFilteredProducts(products);
+      }
+    }; // Gọi hàm lọc
+
+    filterProducts(); // useEffect này sẽ chạy lại mỗi khi selectedFilter hoặc products thay đổi
+  }, [selectedFilter, products]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
 
   const handleToggleFavorite = async (productId: string) => {
     try {
@@ -271,9 +332,24 @@ export default function HomeScreen({ navigation }: Props) {
     interval = seconds / 60;
     return Math.floor(interval) + " phút trước";
   };
+  const handleBellPress = async () => {
+    const userId = await AsyncStorage.getItem("userId");
+    if (!userId) {
+      return navigation.navigate("NotificationScreen");
+    }
+    try {
+      await axios.patch(`${path}/notifications/user/${userId}/mark-all-read`);
+      setUnreadCount(0);
+    } catch (error) {
+      console.error("Lỗi khi mark all as read:", error);
+    } finally {
+      navigation.navigate("NotificationScreen");
+    }
+  };
+
   return (
-    <View className="flex-1 bg-[#f5f6fa] mt-6">
-      <StatusBar className="auto" />
+    <View className="flex-1 bg-[#f5f6fa]">
+      <StatusBar hidden={true} />
 
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
@@ -296,11 +372,17 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity
-          className="p-2"
-          onPress={() => navigation.navigate("NotificationScreen")}
-        >
+        <TouchableOpacity className="p-2 relative" onPress={handleBellPress}>
           <Feather name="bell" size={22} color="#333" />
+
+          {/* 3. Thêm cái badge (chấm đỏ) */}
+          {unreadCount > 0 && (
+            <View className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
+              <Text className="text-white text-[10px] font-bold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -311,7 +393,7 @@ export default function HomeScreen({ navigation }: Props) {
             {/* Text bên trái */}
             <View className="flex-1 pr-3">
               <Text className="text-xl font-bold text-gray-800">
-                Mua bán & Trao đổi đồ cũ TDC
+                Hỗ trợ Mua bán & Trao đổi đồ cũ TDC
               </Text>
             </View>
 
@@ -367,7 +449,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters}
+            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
@@ -379,28 +461,15 @@ export default function HomeScreen({ navigation }: Props) {
                     : "bg-white border-gray-300"
                 }`}
                 onPress={() => {
-                  console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);
-
-                  if (item.label === "Đồ miễn phí") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Miễn phí")
-                    );
-                  } else if (item.label === "Trao đổi") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Trao đổi")
-                    );
-                  } else if (item.label == "Đang tìm mua") {
-                    setFilteredProducts(
-                      products.filter((p) => p.postType?.id == "2")
-                    );
-                  } else {
-                    setFilteredProducts(products); // các filter khác hiển thị tất cả
-                  }
                 }}
               >
                 <Text
-                  className={`${selectedFilter === item.label ? "text-white" : "text-gray-700"} text-sm`}
+                  className={`${
+                    selectedFilter === item.label
+                      ? "text-white"
+                      : "text-gray-700"
+                  } text-sm`}
                 >
                   {item.label}
                 </Text>
@@ -411,7 +480,9 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Danh sách sản phẩm */}
         <View className="px-4 mt-4">
           <FlatList
-            data={selectedFilter ? filteredProducts : products} // 🔹
+            data={(selectedFilter ? filteredProducts : products).filter(
+              (p) => p.is_approved === true
+            )}
             numColumns={2}
             keyExtractor={(item) => item.id}
             columnWrapperStyle={{ justifyContent: "space-between" }}
