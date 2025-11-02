@@ -140,7 +140,7 @@ async getChatList(userId: number, limit = 20, offset = 0) {
 }
 
   /** 🧱 Lấy lịch sử tin nhắn theo roomId (fix đủ 2 chiều) */
-  async getHistory(roomId: number, userId: number, cursor?: string, limit = 30) {
+  async getHistory(roomId: number, userId: number, cursor?: string, limit = 50) {
     console.log(`📜 Lấy lịch sử roomId=${roomId}, userId=${userId}`);
 
     // 🔍 Lấy thông tin room để biết seller & buyer
