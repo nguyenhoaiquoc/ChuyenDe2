@@ -16,6 +16,7 @@ import { User } from 'src/entities/user.entity';
 import { baseUrl } from 'config';
 
 @WebSocketGateway({
+  namespace: '/chat',
   cors: { origin: baseUrl },
   pingInterval: 5000,  // gửi ping mỗi 5s
   pingTimeout: 10000,  // nếu không phản hồi 10s -> disconnect
@@ -35,6 +36,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   /** Khi user kết nối socket */
   async handleConnection(client: Socket) {
+    console.log('🔍 Handshake auth:', client.handshake.auth);
+
     try {
       const token = client.handshake.auth?.token;
       if (!token) {

@@ -55,7 +55,7 @@ export default function ChatListScreen({ navigation }: Props) {
       if (!token || !uid) return;
       currentUserIdRef.current = String(uid);
 
-      const socket = io(path, {
+      const socket = io(`${path}/notification`, {
         auth: { token, userId: String(uid) },
         transports: ["websocket"],
       });

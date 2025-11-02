@@ -47,9 +47,9 @@ export default function Menu() {
       const userId = await AsyncStorage.getItem("userId");
       if (!token || !userId) return;
 
-      const socket = io(path, {
+      const socket = io(`${path}/notification`, {
         auth: { userId, token },
-        transports: ["websocket"], // ✅ ổn định hơn
+        transports: ["websocket"],
       });
 
       // socket.on("connect", () => console.log("✅ Socket connected for unread"));
