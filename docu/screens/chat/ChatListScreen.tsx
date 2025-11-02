@@ -26,7 +26,7 @@ export default function ChatListScreen({ navigation }: Props) {
   const [chatList, setChatList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /** 🧩 Hàm mở phòng chat (có token + user) */
+  /** 🧩 Mở phòng chat */
   const handleOpenRoom = async (room: any) => {
     try {
       const tokenValue = await AsyncStorage.getItem("token");
@@ -38,14 +38,16 @@ export default function ChatListScreen({ navigation }: Props) {
         return;
       }
 
-      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
-      console.log("🧠 UserId hiện tại:", currentUserId);
-
       navigation.navigate("ChatRoomScreen", {
         roomId: room.room_id,
-        product: room.product,
-        otherUserId: room.partner?.id,
-        otherUserName: room.partner?.name,
+        product: room.product ?? null,
+        otherUserId: room.partner?.id ?? null,
+        otherUserName: room.partner?.name ?? "Người dùng",
+        otherUserAvatar:
+          room.partner?.avatar ||
+          "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+
+        // ⬇️ những params dưới KHÔNG còn bắt buộc, giữ lại để tương thích
         currentUserId: Number(currentUserId),
         currentUserName: currentUserName || "Tôi",
         token: tokenValue,
@@ -70,7 +72,6 @@ export default function ChatListScreen({ navigation }: Props) {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        console.log("💬 Chat list nhận được:", res.data.data?.length || 0);
         setChatList(res.data.data || []);
       } catch (err: any) {
         console.log(
@@ -84,6 +85,18 @@ export default function ChatListScreen({ navigation }: Props) {
 
     fetchChats();
   }, []);
+
+  const renderTime = (dt?: string) => {
+    if (!dt) return "";
+    try {
+      return new Date(dt).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <View className="flex-1 bg-[#f5f6fa]">
@@ -132,7 +145,7 @@ export default function ChatListScreen({ navigation }: Props) {
                 <TouchableOpacity
                   key={i}
                   className="flex flex-row mb-6 px-4"
-                  onPress={() => handleOpenRoom(room)} // ✅ gọi hàm xử lý
+                  onPress={() => handleOpenRoom(room)}
                 >
                   <Image
                     className="w-[46px] h-[46px] rounded-full"
@@ -148,25 +161,24 @@ export default function ChatListScreen({ navigation }: Props) {
                         {room.partner?.name || "Người dùng ẩn danh"}
                       </Text>
                       <Text className="text-gray-400 text-sm">
-                        {new Date(room.last_message_at).toLocaleTimeString(
-                          "vi-VN",
-                          { hour: "2-digit", minute: "2-digit" }
-                        )}
+                        {renderTime(room.last_message_at)}
                       </Text>
                     </View>
-                    <Text
-  className={`${
-    room.unread_count > 0 ? "font-bold text-black" : "text-gray-500"
-  }`}
-  numberOfLines={1}
->
-  {room.unread_count > 9
-    ? "Hơn 9 tin nhắn mới"
-    : room.unread_count > 0
-    ? `${room.unread_count} tin nhắn mới`
-    : room.last_message || "(chưa có tin nhắn)"}
-</Text>
 
+                    <Text
+                      className={`${
+                        room.unread_count > 0
+                          ? "font-bold text-black"
+                          : "text-gray-500"
+                      }`}
+                      numberOfLines={1}
+                    >
+                      {room.unread_count > 9
+                        ? "Hơn 9 tin nhắn mới"
+                        : room.unread_count > 0
+                        ? `${room.unread_count} tin nhắn mới`
+                        : room.last_message || "(chưa có tin nhắn)"}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               ))

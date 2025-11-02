@@ -228,6 +228,25 @@ async handleEditMessage(
 joinRoom(@MessageBody() data: { room_id: string }, @ConnectedSocket() client: Socket) {
   client.join(`room_${data.room_id}`);
 }
+/** 🔎 WS search: payload { q, roomId?, limit?, cursor? } */
+@SubscribeMessage('searchMessages')
+async handleSearchMessages(
+  @MessageBody() payload: any,
+  @ConnectedSocket() client: Socket,
+) {
+  const userId = Number(client.data?.userId);
+  if (!userId) return { event: 'searchMessagesResult', data: { items: [], nextCursor: null } };
+
+  const { q, roomId, limit, cursor } = payload || {};
+  const data = await this.chatService.searchMessages(userId, String(q ?? ''), {
+    roomId: roomId ? Number(roomId) : undefined,
+    limit: limit ? Number(limit) : undefined,
+    cursor: cursor || undefined,
+  });
+
+  // Trả về qua ACK (nếu client có callback) hoặc emit dạng result event
+  return { event: 'searchMessagesResult', data };
+}
 
 }
   

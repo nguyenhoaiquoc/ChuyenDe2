@@ -184,5 +184,48 @@ async editMessage(
 
   return { message: msg };
 }
+/** 🔎 HTTP search tin nhắn: /chat/search?q=...&roomId=&limit=&cursor= */
+@Get('search')
+async searchMessagesHttp(
+  @Req() req: Request,
+  @Query('q') q: string,
+  @Query('roomId') roomId?: string,
+  @Query('limit') limit?: string,
+  @Query('cursor') cursor?: string,
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.searchMessages(userId, q, {
+    roomId: roomId ? Number(roomId) : undefined,
+    limit: limit ? Number(limit) : undefined,
+    cursor: cursor || undefined,
+  });
+  return { data };
+}
+/** 📍 GET /chat/history/:roomId/around?messageId=...&window=40 */
+@Get('history/:roomId/around')
+async getHistoryAround(
+  @Req() req: Request,
+  @Param('roomId', ParseIntPipe) roomId: number,
+  @Query('messageId', ParseIntPipe) messageId: number,
+  @Query('window') window = '40',
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.getHistoryAround(roomId, userId, messageId, Number(window));
+  return { data };
+}
+/** 🔎 Meta của 1 room (để mở từ Search mà có đủ partner/product) */
+@Get('room/:roomId/meta')
+async getRoomMeta(
+  @Req() req: Request,
+  @Param('roomId', ParseIntPipe) roomId: number,
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.getRoomMetaData(userId, roomId);
+  if (!data) {
+    // Không tồn tại hoặc không có quyền
+    throw new NotFoundException('Room không tồn tại hoặc bạn không thuộc phòng này');
+  }
+  return { data };
+}
 
 }
