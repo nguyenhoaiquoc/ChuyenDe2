@@ -140,7 +140,7 @@ export class Product {
 
   @Column({ type: 'int', nullable: true })
   year: number | null;
-  
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

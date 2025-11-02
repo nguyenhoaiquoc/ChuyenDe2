@@ -74,21 +74,6 @@ async sendMessage(
   return saved;
 }
 
-
-  /** ✏️ Sửa tin nhắn */
-  async editMessage(userId: number, messageId: number, newContent: string) {
-    const msg = await this.messageRepo.findOne({ where: { id: messageId } });
-    if (!msg) throw new Error('Không tìm thấy tin nhắn');
-    if (msg.sender_id !== userId) throw new Error('Bạn không thể sửa tin này');
-
-    msg.content = newContent;
-    msg.is_edited = true;
-    msg.edit_count = (msg.edit_count ?? 0) + 1;
-    msg.edited_at = new Date();
-
-    return this.messageRepo.save(msg);
-  }
-
   /** ✅ Đánh dấu tin nhắn đã đọc */
 async markRead(conversationId: number, userId: number) {
   // 1) Ghi nhận thời điểm đọc
@@ -196,5 +181,75 @@ async countUnreadMessages(userId: number): Promise<number> {
 
   return Number(result?.count || 0);
 }
+
+/** 🗑️ Thu hồi tin nhắn (recall) */
+async recallMessage(messageId: number, userId: number) {
+  const msg = await this.messageRepo.findOne({
+    where: { id: Number(messageId) },
+  });
+  if (!msg) throw new Error('Không tìm thấy tin nhắn');
+
+  // ✅ ép kiểu để so sánh đúng
+  if (Number(msg.sender_id) !== Number(userId)) {
+    throw new Error('Bạn không thể thu hồi tin nhắn này');
+  }
+
+  if (msg.is_recalled) return msg;
+
+  msg.is_recalled = true;
+  msg.recalled_by = userId;
+  msg.recalled_at = new Date();
+  msg.content = null;
+  msg.media_url = null;
+
+  const saved = await this.messageRepo.save(msg);
+  return saved;
+}
+
+
+/** 💬 Trả lời tin nhắn */
+async replyMessage(
+  roomId: number,
+  senderId: number,
+  receiverId: number,
+  content: string,
+  replyToId: number,
+) {
+  const replyMsg = this.messageRepo.create({
+    conversation_id: roomId,
+    sender_id: senderId,
+    receiver_id: receiverId,
+    content,
+    reply_to_id: replyToId,
+    message_type: 'TEXT',
+  });
+
+  const saved = await this.messageRepo.save(replyMsg);
+
+  await this.roomRepo.update(roomId, {
+    last_message_id: saved.id,
+    last_message_at: saved.created_at,
+  });
+
+  return saved;
+}
+
+/** ✏️ Sửa tin nhắn (đã có – nâng cấp emit dùng socket ở gateway) */
+async editMessage(userId: number, messageId: number, newContent: string) {
+  const msg = await this.messageRepo.findOne({ where: { id: messageId } });
+  if (!msg) throw new Error('Không tìm thấy tin nhắn');
+if (Number(msg.sender_id) !== Number(userId)) throw new Error('Bạn không thể sửa tin này');
+
+  if (msg.is_recalled) throw new Error('Tin nhắn đã thu hồi không thể chỉnh sửa');
+
+  msg.content = newContent;
+  msg.is_edited = true;
+  msg.edit_count = (msg.edit_count ?? 0) + 1;
+  msg.edited_at = new Date();
+
+  const saved = await this.messageRepo.save(msg);
+  return saved;
+}
+
 
 }

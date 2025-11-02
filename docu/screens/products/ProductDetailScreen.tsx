@@ -243,7 +243,7 @@ export default function ProductDetailScreen() {
         "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
 
       console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
-
+      
       // ✅ Truyền avatar và product sang ChatRoom
       navigation.navigate("ChatRoomScreen", {
         roomId: room.id,
@@ -262,36 +262,7 @@ export default function ProductDetailScreen() {
   };
 
 
-      const room = response.room ?? response;
-      console.log("🟢 Room nhận được:", room);
-
-      // ✅ Xác định người còn lại trong phòng (người bán)
-      const otherUserId =
-        sellerId === String(currentUser.id) ? buyerId : sellerId;
-      const otherUserName = product.authorName || "Người bán";
-      const otherUserAvatar =
-        product.user?.avatar ||
-        product.seller?.avatar ||
-        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
-
-      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
-
-      // ✅ Truyền avatar và product sang ChatRoom
-      navigation.navigate("ChatRoomScreen", {
-        roomId: room.id,
-        product,
-        otherUserId,
-        otherUserName,
-        otherUserAvatar, // ✅ thêm dòng này
-        currentUserId: currentUser.id,
-        currentUserName: currentUser.name,
-        token: tokenValue,
-      });
-    } catch (error) {
-      console.error("❌ Lỗi mở phòng chat:", error);
-      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-    }
-  };
+    
 
   // ✅ Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
