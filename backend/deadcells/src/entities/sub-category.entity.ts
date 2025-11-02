@@ -113,5 +113,4 @@ export class SubCategory {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
-    productTypes: any;
 }

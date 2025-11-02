@@ -142,7 +142,7 @@ export default function UserScreen() {
             <UtilityItem
               icon="person-outline"
               title="Tài khoản của tôi  "
-              onPress={() => navigation.navigate("ViewHistory")}
+              onPress={() => navigation.navigate("UserInforScreen")}
             />
             <UtilityItem
               icon="heart-outline"

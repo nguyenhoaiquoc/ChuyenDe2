@@ -8,6 +8,7 @@ import {
   StatusBar,
   FlatList,
   GestureResponderEvent,
+  useColorScheme,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -21,7 +22,6 @@ import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNotification } from "../Notification/NotificationContext";
-
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -149,12 +149,7 @@ export default function HomeScreen({ navigation }: Props) {
             tag: tagText,
             authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
-
-            // === SỬA LỖI LOGIC ===
-
-            category: item.category || null, // Dùng null
-
-            // Sửa logic 'subCategory' cho đúng với 'types.ts'
+            category: item.category || null,
             subCategory: item.subCategory
               ? {
                   id: item.subCategory.id,
@@ -163,22 +158,20 @@ export default function HomeScreen({ navigation }: Props) {
                   source_table: item.subCategory.source_table,
                   source_id: item.subCategory.source_id,
                 }
-              : null, // <-- SỬA TỪ 'undefined' THÀNH 'null'
+              : null,
 
-            category_change: item.category_change || null, // <-- SỬA THÀNH 'null'
-            sub_category_change: item.sub_category_change || null, // <-- SỬA THÀNH 'null'
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
 
             imageCount: item.images?.length || (imageUrl ? 1 : 0),
             isFavorite: false,
             images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa và fallback về 'null'
             postType: item.postType || null,
             condition: item.condition || null,
             dealType: item.dealType || null,
 
-            // Sửa logic fallback (kiểm tra .name)
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -225,17 +218,16 @@ export default function HomeScreen({ navigation }: Props) {
             year: item.year || null,
 
             created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined, // (optional '?' có thể là undefined)
+            updated_at: item.updated_at || undefined,
 
-            // Sửa fallback sang 'null'
             sub_category_id: item.sub_category_id || null,
-            status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
-            visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
+            status_id: item.status_id?.toString() || undefined,
+            visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
             is_approved:
               typeof item.is_approved === "boolean"
                 ? item.is_approved
-                : undefined, // (optional '?' có thể là undefined)
+                : undefined,
           };
         });
         setProducts(mapped);
@@ -264,7 +256,7 @@ export default function HomeScreen({ navigation }: Props) {
       }
     };
 
-    fetchFavorites(); // gọi hàm async
+    fetchFavorites();
   }, []);
 
   useEffect(() => {
@@ -326,9 +318,10 @@ export default function HomeScreen({ navigation }: Props) {
       navigation.navigate("NotificationScreen");
     }
   };
+
   return (
-    <View className="flex-1 bg-[#f5f6fa] mt-6">
-      <StatusBar className="auto" />
+    <View className="flex-1 bg-[#f5f6fa]">
+      <StatusBar hidden={true} />
 
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
@@ -351,17 +344,14 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity
-          className="p-2 relative"
-          onPress={handleBellPress}
-        >
+        <TouchableOpacity className="p-2 relative" onPress={handleBellPress}>
           <Feather name="bell" size={22} color="#333" />
 
           {/* 3. Thêm cái badge (chấm đỏ) */}
           {unreadCount > 0 && (
             <View className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
               <Text className="text-white text-[10px] font-bold">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </Text>
             </View>
           )}
@@ -437,10 +427,11 @@ export default function HomeScreen({ navigation }: Props) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
-                  ? "bg-blue-500 border-blue-500"
-                  : "bg-white border-gray-300"
-                  }`}
+                className={`px-4 py-2 mr-3 rounded-full border ${
+                  selectedFilter === item.label
+                    ? "bg-blue-500 border-blue-500"
+                    : "bg-white border-gray-300"
+                }`}
                 onPress={() => {
                   console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);

@@ -39,6 +39,7 @@ import GroupDetailScreen from './screens/groups/GroupDetailScreen';
 import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
+import { StatusBar } from 'expo-status-bar';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,6 +47,7 @@ export default function App() {
   return (
     <NotificationProvider>
       <NavigationContainer>
+        <StatusBar hidden />
         <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
           {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
           <Stack.Screen name="Home" component={HomeScreen} />

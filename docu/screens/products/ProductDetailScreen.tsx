@@ -114,7 +114,7 @@ export default function ProductDetailScreen() {
     if (product.id) fetchComments();
   }, [product.id]);
 
-  useEffect(() => { }, [product]);
+  useEffect(() => {}, [product]);
 
   const [isPhoneVisible, setIsPhoneVisible] = useState(false);
 
@@ -133,27 +133,27 @@ export default function ProductDetailScreen() {
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
       ? product.images.map((img) => ({
-        ...img,
-        id: img.id.toString(),
-        product_id: img.product_id.toString(),
-        // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-        image_url:
-          img.image_url.startsWith("file://") ||
-            img.image_url.startsWith("http")
-            ? img.image_url
-            : `${path}${img.image_url}`, // Prepend nếu /uploads/...
-      })) // Cast string nếu cần
-      : [
-        {
-          id: "1",
-          product_id: product.id || "1",
-          name: "Default",
+          ...img,
+          id: img.id.toString(),
+          product_id: img.product_id.toString(),
+          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
           image_url:
-            product.image ||
-            "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
-          created_at: new Date().toISOString(),
-        },
-      ];
+            img.image_url.startsWith("file://") ||
+            img.image_url.startsWith("http")
+              ? img.image_url
+              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+        })) // Cast string nếu cần
+      : [
+          {
+            id: "1",
+            product_id: product.id || "1",
+            name: "Default",
+            image_url:
+              product.image ||
+              "https://via.placeholder.com/400x300?text=No+Image", // Thumbnail fallback
+            created_at: new Date().toISOString(),
+          },
+        ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleSend = async () => {
@@ -371,22 +371,22 @@ export default function ProductDetailScreen() {
           </View>
           {/* Nút Lưu */}
           <TouchableOpacity
-            onPress={handleToggleFavorite} 
+            onPress={handleToggleFavorite}
             className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
           >
             <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"} 
+              name={isFavorite ? "heart" : "heart-outline"}
               size={16}
-              color={isFavorite ? "red" : "black"} 
+              color={isFavorite ? "red" : "black"}
             />
             <Text className="ml-1 text-xs text-black">
-              {isFavorite ? "Đã lưu" : "Lưu"} 
+              {isFavorite ? "Đã lưu" : "Lưu"}
             </Text>
           </TouchableOpacity>
         </View>
         {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
         {currentUser &&
-          Number(product.user_id) === Number(currentUser.id) ? null : (
+        Number(product.user_id) === Number(currentUser.id) ? null : (
           <View className="bg-green-500 self-end rounded-md my-2 mr-4">
             <TouchableOpacity
               onPress={handleChatPress}
@@ -445,13 +445,13 @@ export default function ProductDetailScreen() {
           <Text className="text-gray-400 text-xs mb-4">
             {product.created_at
               ? `Đăng ${new Date(product.created_at).toLocaleDateString(
-                "vi-VN",
-                {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                }
-              )}`
+                  "vi-VN",
+                  {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  }
+                )}`
               : product.time || "1 tuần trước"}
           </Text>
 
@@ -630,13 +630,9 @@ export default function ProductDetailScreen() {
 
               {/* Hãng */}
               {product.brand?.name &&
-                (product.subCategory?.id == 38 ||
-                  product.subCategory?.id == 39 ||
-                  product.subCategory?.id == 40 ||
-                  product.subCategory?.id == 46 ||
-                  product.subCategory?.id == 60 ||
-                  product.subCategory?.id == 61 ||
-                  product.subCategory?.id == 62) && (
+                [38, 39, 40, 46, 60, 61, 62].includes(
+                  Number(product.subCategory?.id)
+                ) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Hãng</Text>
                     <Text
@@ -663,13 +659,9 @@ export default function ProductDetailScreen() {
 
               {/* Màu sắc */}
               {product.color?.name &&
-                (product.subCategory?.id == 38 || // Điện thoại
-                  product.subCategory?.id == 39 || // Máy tính bảng
-                  product.subCategory?.id == 40 || // Laptop
-                  product.subCategory?.id == 41 ||
-                  product.subCategory?.id == 60 ||
-                  product.subCategory?.id == 61 ||
-                  product.subCategory?.id == 62) && ( // Máy tính để bàn
+                [38, 39, 40, 41, 60, 61, 62].includes(
+                  Number(product.subCategory?.id)
+                ) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Màu sắc</Text>
                     <Text
@@ -683,10 +675,7 @@ export default function ProductDetailScreen() {
 
               {/* Dung lượng */}
               {product.capacity?.name &&
-                (product.subCategory?.id == 38 || // Điện thoại
-                  product.subCategory?.id == 39 || // Máy tính bảng
-                  product.subCategory?.id == 40 || // Laptop
-                  product.subCategory?.id == 41) && ( // Máy tính để bàn
+                [38, 39, 40, 41].includes(Number(product.subCategory?.id)) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Dung lượng</Text>
                     <Text
@@ -700,20 +689,9 @@ export default function ProductDetailScreen() {
 
               {/* Bảo hành */}
               {product.warranty?.name &&
-                (product.subCategory?.id == 38 ||
-                  product.subCategory?.id == 39 ||
-                  product.subCategory?.id == 40 ||
-                  product.subCategory?.id == 41 ||
-                  product.subCategory?.id == 42 ||
-                  product.subCategory?.id == 43 ||
-                  product.subCategory?.id == 44 ||
-                  product.subCategory?.id == 45 ||
-                  product.subCategory?.id == 46 ||
-                  product.subCategory?.id == 47 ||
-                  product.subCategory?.id == 48 ||
-                  product.subCategory?.id == 60 ||
-                  product.subCategory?.id == 61 ||
-                  product.subCategory?.id == 62) && (
+                [
+                  38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 60, 61, 62,
+                ].includes(Number(product.subCategory?.id)) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Bảo hành</Text>
                     <Text
@@ -801,16 +779,9 @@ export default function ProductDetailScreen() {
                 )}
               {/* Kích cỡ */}
               {product.size?.name &&
-                (product.subCategory?.id === 25 ||
-                  product.subCategory?.id === 39 ||
-                  product.subCategory?.id === 40 ||
-                  product.subCategory?.id === 41 ||
-                  product.subCategory?.id === 44 ||
-                  product.subCategory?.id === 53 ||
-                  product.subCategory?.id === 54 ||
-                  product.subCategory?.id === 55 ||
-                  product.subCategory?.id === 56 ||
-                  product.subCategory?.id === 57) && (
+                [25, 39, 40, 41, 44, 53, 54, 55, 56, 57].includes(
+                  Number(product.subCategory?.id)
+                ) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Kích cỡ</Text>
                     <Text
@@ -821,6 +792,7 @@ export default function ProductDetailScreen() {
                     </Text>
                   </View>
                 )}
+
               {/* Xuất xứ */}
               {product.origin?.name &&
                 product.category?.name !== "Tài liệu khoa" && (
@@ -863,7 +835,7 @@ export default function ProductDetailScreen() {
                 )}
 
               {/* Số km đã đi (Xe cộ) */}
-              {product.mileage != null && // Dùng '!= null' để cho phép 0km
+              {product.mileage != null && 
                 [60, 61, 62].includes(Number(product.subCategory?.id)) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Số km đã đi</Text>
@@ -992,8 +964,9 @@ export default function ProductDetailScreen() {
               <TouchableOpacity
                 onPress={handleSend}
                 disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${isSending ? "bg-gray-400" : "bg-blue-500"
-                  }`}
+                className={`ml-2 px-4 py-2 rounded-full ${
+                  isSending ? "bg-gray-400" : "bg-blue-500"
+                }`}
               >
                 {isSending ? (
                   <Text className="text-white font-semibold text-sm">
