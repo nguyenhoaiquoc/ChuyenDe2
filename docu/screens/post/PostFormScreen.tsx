@@ -651,7 +651,7 @@ const PostFormScreen = ({
       });
 
       if (response.status === 201 || response.status === 200) {
-        Alert.alert("Thành công", "Đăng tin thành công!");
+        Alert.alert("Thành công", "Đăng tin thành công. Đang chờ duyệt");
         navigation.navigate("Home");
       } else {
         Alert.alert("Lỗi", "Không thể đăng tin. Vui lòng thử lại.");

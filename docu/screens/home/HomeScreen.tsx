@@ -28,12 +28,11 @@ type Props = {
 };
 
 const filters = [
-  { id: "1", label: "Dành cho bạn" },
+  { id: "1", label: "Mới nhất" },
   { id: "2", label: "Đang tìm mua" },
-  { id: "3", label: "Mới nhất" },
-  { id: "4", label: "Đồ miễn phí" },
-  { id: "5", label: "Trao đổi" },
-  { id: "6", label: "Gợi ý cho bạn " },
+  { id: "3", label: "Đồ miễn phí" },
+  { id: "4", label: "Trao đổi" },
+  { id: "5", label: "Gợi ý cho bạn " },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -41,7 +40,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -130,8 +129,13 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
-
-          // THAY THẾ TOÀN BỘ KHỐI 'return' TRONG HÀM .map() CỦA BẠN BẰNG CODE NÀY:
+          console.log(
+            "Product ID:",
+            item.id,
+            "is_approved:",
+            item.is_approved,
+            typeof item.is_approved
+          );
 
           return {
             id: item.id.toString(),
@@ -172,6 +176,8 @@ export default function HomeScreen({ navigation }: Props) {
             condition: item.condition || null,
             dealType: item.dealType || null,
 
+            productStatus: item.productStatus || null,
+            
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -224,12 +230,10 @@ export default function HomeScreen({ navigation }: Props) {
             status_id: item.status_id?.toString() || undefined,
             visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
-            is_approved:
-              typeof item.is_approved === "boolean"
-                ? item.is_approved
-                : undefined,
+            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
+
         setProducts(mapped);
       })
       .catch((err) => {
@@ -258,6 +262,26 @@ export default function HomeScreen({ navigation }: Props) {
 
     fetchFavorites();
   }, []);
+
+  useEffect(() => {
+    // Định nghĩa hàm lọc
+    const filterProducts = () => {
+      console.log("Chạy logic filter cho:", selectedFilter);
+
+      if (selectedFilter === "Đồ miễn phí") {
+        setFilteredProducts(products.filter((p) => p.price === "Miễn phí"));
+      } else if (selectedFilter === "Trao đổi") {
+        setFilteredProducts(products.filter((p) => p.price === "Trao đổi"));
+      } else if (selectedFilter == "Đang tìm mua") {
+        setFilteredProducts(products.filter((p) => p.postType?.id == "2"));
+      } else {
+        // "Mới nhất", "Gợi ý" và các trường hợp khác sẽ hiển thị tất cả
+        setFilteredProducts(products);
+      }
+    }; // Gọi hàm lọc
+
+    filterProducts(); // useEffect này sẽ chạy lại mỗi khi selectedFilter hoặc products thay đổi
+  }, [selectedFilter, products]);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -421,7 +445,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters}
+            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
@@ -433,28 +457,15 @@ export default function HomeScreen({ navigation }: Props) {
                     : "bg-white border-gray-300"
                 }`}
                 onPress={() => {
-                  console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);
-
-                  if (item.label === "Đồ miễn phí") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Miễn phí")
-                    );
-                  } else if (item.label === "Trao đổi") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Trao đổi")
-                    );
-                  } else if (item.label == "Đang tìm mua") {
-                    setFilteredProducts(
-                      products.filter((p) => p.postType?.id == "2")
-                    );
-                  } else {
-                    setFilteredProducts(products); // các filter khác hiển thị tất cả
-                  }
                 }}
               >
                 <Text
-                  className={`${selectedFilter === item.label ? "text-white" : "text-gray-700"} text-sm`}
+                  className={`${
+                    selectedFilter === item.label
+                      ? "text-white"
+                      : "text-gray-700"
+                  } text-sm`}
                 >
                   {item.label}
                 </Text>
@@ -465,7 +476,9 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Danh sách sản phẩm */}
         <View className="px-4 mt-4">
           <FlatList
-            data={selectedFilter ? filteredProducts : products} // 🔹
+            data={(selectedFilter ? filteredProducts : products).filter(
+              (p) => p.is_approved === true
+            )}
             numColumns={2}
             keyExtractor={(item) => item.id}
             columnWrapperStyle={{ justifyContent: "space-between" }}

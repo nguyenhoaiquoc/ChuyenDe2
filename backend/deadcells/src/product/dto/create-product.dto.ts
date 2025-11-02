@@ -162,6 +162,10 @@ export class CreateProductDto {
 
   @IsOptional()
   @Transform(transformToNumberOrNull)
+  product_status_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
   mileage: number | null;
   
   @IsOptional()

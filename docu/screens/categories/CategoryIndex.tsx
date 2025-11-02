@@ -118,7 +118,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             tagText = `${categoryNameItem} - ${subCategoryObj.name}`;
           else if (categoryNameItem) tagText = categoryNameItem;
           else if (subCategoryObj?.name) tagText = subCategoryObj.name;
-          // THAY THẾ TOÀN BỘ KHỐI 'return' TRONG HÀM .map() CỦA BẠN BẰNG CODE NÀY:
 
           return {
             id: item.id.toString(),
@@ -137,11 +136,9 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
 
-            // === SỬA LỖI LOGIC ===
 
-            category: item.category || null, // Dùng null
+            category: item.category || null, 
 
-            // Sửa logic 'subCategory' cho đúng với 'types.ts'
             subCategory: item.subCategory
               ? {
                   id: item.subCategory.id,
@@ -150,22 +147,22 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                   source_table: item.subCategory.source_table,
                   source_id: item.subCategory.source_id,
                 }
-              : null, // <-- SỬA TỪ 'undefined' THÀNH 'null'
+              : null, 
 
-            category_change: item.category_change || null, // <-- SỬA THÀNH 'null'
-            sub_category_change: item.sub_category_change || null, // <-- SỬA THÀNH 'null'
+            category_change: item.category_change || null, 
+            sub_category_change: item.sub_category_change || null, 
 
             imageCount: item.images?.length || (imageUrl ? 1 : 0),
             isFavorite: false,
             images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa và fallback về 'null'
             postType: item.postType || null,
             condition: item.condition || null,
             dealType: item.dealType || null,
 
-            // Sửa logic fallback (kiểm tra .name)
+            productStatus: item.productStatus || null,
+
             productType:
               item.productType && item.productType.name
                 ? item.productType

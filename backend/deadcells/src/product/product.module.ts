@@ -53,6 +53,7 @@ import { AgeRangeModule } from 'src/age-ranges/age-range.module';
 import { GenderModule } from 'src/genders/gender.module';
 import { EngineCapacityModule } from 'src/engine-capacities/engine-capacity.module';
 import { ProductTypeModule } from 'src/product-types/product-type.module';
+import { ProductStatusModule } from 'src/product-statuses/product-status.module';
 
 @Module({
   imports: [
@@ -76,7 +77,6 @@ import { ProductTypeModule } from 'src/product-types/product-type.module';
 
     NotificationModule,
     forwardRef(() => GroupModule),
-    // Các module con bạn đã thêm là CHÍNH XÁC
     SizeModule,
     BrandModule,
     OriginModule,
@@ -94,6 +94,7 @@ import { ProductTypeModule } from 'src/product-types/product-type.module';
     GenderModule,
     EngineCapacityModule,
     ProductTypeModule,
+    ProductStatusModule,
   ],
   providers: [ProductService],
   controllers: [ProductController],

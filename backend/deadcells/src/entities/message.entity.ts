@@ -87,6 +87,22 @@ export class Message {
   @Column({ name: 'is_read', type: 'boolean', default: false })
   is_read: boolean;
 
+  @Column({ name: 'is_recalled', type: 'boolean', default: false })
+  is_recalled: boolean;
+
+  @Column({ name: 'recalled_by', type: 'bigint', nullable: true })
+  recalled_by: number | null;
+
+  @Column({ name: 'recalled_at', type: 'timestamptz', nullable: true })
+  recalled_at: Date | null;
+
+  @ManyToOne(() => Message, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'reply_to_id' })
+  reply_to?: Message | null;
+
+  @Column({ name: 'reply_to_id', type: 'bigint', nullable: true })
+  reply_to_id: number | null;
+
   /** --------- Thời gian tạo / cập nhật --------- */
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   created_at: Date;

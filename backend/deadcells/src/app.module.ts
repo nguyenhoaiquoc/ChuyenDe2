@@ -41,6 +41,7 @@ import { BreedModule } from './breeds/breed.module';
 import { AgeRangeModule } from './age-ranges/age-range.module';
 import { GenderModule } from './genders/gender.module';
 import { EngineCapacityModule } from './engine-capacities/engine-capacity.module';
+import { ProductStatus } from './entities/product-status.entity';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { EngineCapacityModule } from './engine-capacities/engine-capacity.module
     AgeRangeModule,
     GenderModule,
     EngineCapacityModule,
+    ProductStatus,
   ],
   controllers: [AppController],
   providers: [AppService],

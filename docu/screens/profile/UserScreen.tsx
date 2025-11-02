@@ -85,10 +85,10 @@ export default function UserScreen() {
                 source={
                   avatar
                     ? {
-                      uri: avatar.startsWith("http")
-                        ? avatar
-                        : `${path}${avatar}`,
-                    }
+                        uri: avatar.startsWith("http")
+                          ? avatar
+                          : `${path}${avatar}`,
+                      }
                     : require("../../assets/meo.jpg")
                 }
                 style={{ width: "100%", height: "100%", borderRadius: 48 }}
@@ -145,6 +145,11 @@ export default function UserScreen() {
               onPress={() => navigation.navigate("UserInforScreen")}
             />
             <UtilityItem
+              icon="newspaper-outline"
+              title="Quản lý tin "
+              onPress={() => navigation.navigate("ManagePostsScreen")}
+            />
+            <UtilityItem
               icon="heart-outline"
               title="Tin đăng đã thích "
               onPress={() => navigation.navigate("SavedPostsScreen")}
@@ -174,8 +179,8 @@ export default function UserScreen() {
                   const socket = getSocket();
                   if (socket) {
                     console.log("⚠️ Gửi sự kiện logout");
-                    socket.emit("logout");  // Gửi sự kiện logout đến backend
-                    disconnectSocket();     // Ngắt kết nối socket hiện tại
+                    socket.emit("logout"); // Gửi sự kiện logout đến backend
+                    disconnectSocket(); // Ngắt kết nối socket hiện tại
                     console.log("✅ Socket đã ngắt kết nối!");
                   }
                 } catch (err) {
@@ -183,14 +188,18 @@ export default function UserScreen() {
                 }
 
                 // Xoá thông tin người dùng và chuyển hướng
-                await AsyncStorage.multiRemove(["token", "userId", "userName", "userAvatar"]);
+                await AsyncStorage.multiRemove([
+                  "token",
+                  "userId",
+                  "userName",
+                  "userAvatar",
+                ]);
                 navigation.reset({
                   index: 0,
                   routes: [{ name: "LoginScreen" }],
                 });
               }}
             />
-
           </View>
         </View>
       </ScrollView>

@@ -37,6 +37,8 @@ import { StorageTypeService } from 'src/storage-types/storage-type.service';
 import { ProductTypeService } from 'src/product-types/product-type.service';
 import { Category } from 'src/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductStatusDto } from './dto/update-status.dto';
+import { ProductStatusService } from 'src/product-statuses/product-status.service';
 
 @Injectable()
 export class ProductService {
@@ -93,13 +95,14 @@ export class ProductService {
     private readonly genderService: GenderService,
     private readonly engineCapacityService: EngineCapacityService,
     private readonly productTypeService: ProductTypeService,
+    private readonly productStatusService: ProductStatusService,
 
     private readonly groupService: GroupService,
     private readonly dataSource: DataSource,
     private readonly notificationService: NotificationService,
   ) {}
 
-  // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
+  // Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
   async create(data: CreateProductDto, files?: Express.Multer.File[]) {
     // 1. Lấy các đối tượng (Entity) từ ID song song
     const [
@@ -125,6 +128,7 @@ export class ProductService {
       breed,
       ageRange,
       gender,
+      productStatus,
       engineCapacity,
       category_change,
       sub_category_change,
@@ -200,6 +204,9 @@ export class ProductService {
       data.engine_capacity_id
         ? this.engineCapacityService.findOne(data.engine_capacity_id)
         : Promise.resolve(null),
+      data.product_status_id
+        ? this.productStatusService.findOne(data.product_status_id)
+        : Promise.resolve(null),
 
       data.category_change_id
         ? this.categoryRepo.findOneBy({ id: data.category_change_id })
@@ -238,14 +245,12 @@ export class ProductService {
 
     // 3. Tạo sản phẩm
     const product = this.productRepo.create({
-      // ===== BẮT ĐẦU CÁC TRƯỜNG TƯỜNG MINH (TỪ ...data) =====
       name: data.name,
       description: data.description,
-      price: Number(data.price), // Sửa lỗi 'string' vs 'number'
+      price: Number(data.price),
       author: data.author || undefined,
       year: data.year || undefined,
-      mileage: data.mileage || undefined, // ===== KẾT THÚC CÁC TRƯỜNG TƯỜNG MINH =====
-      // Gán các Entity đã lấy (Dùng '|| undefined')
+      mileage: data.mileage || undefined,
       user: user || undefined,
       dealType: dealType || undefined,
       condition: condition || undefined,
@@ -270,8 +275,9 @@ export class ProductService {
       gender: gender || undefined,
       engineCapacity: engineCapacity || undefined,
       category_change: category_change || undefined,
-      sub_category_change: sub_category_change || undefined, // Các trường gán thủ công
-
+      sub_category_change: sub_category_change || undefined,
+      
+      productStatus: { id: 1 },
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
@@ -344,6 +350,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
     });
 
@@ -354,7 +361,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, status_id: 1 }],
+      where: [{ category_id: categoryId, product_status_id: 1 }],
       relations: [
         'images',
         'user',
@@ -382,6 +389,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
 
       order: { created_at: 'DESC' },
@@ -419,6 +427,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
       order: { created_at: 'DESC' },
     });
@@ -429,7 +438,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { status_id: 1 },
+      where: { is_approved: true, product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -457,6 +466,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
       order: { created_at: 'DESC' },
     });
@@ -520,41 +530,43 @@ export class ProductService {
           : null,
         origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
         material: p.material
-          ? { id: p.material.id, name: p.material.name } // Sửa: .id
+          ? { id: p.material.id, name: p.material.name }
           : null,
-        size: p.size ? { id: p.size.id, name: p.size.name } : null, // Sửa: .id
-        brand: p.brand ? { id: p.brand.id, name: p.brand.name } : null, // Sửa: .id
-        color: p.color ? { id: p.color.id, name: p.color.name } : null, // Sửa: .id
+        size: p.size ? { id: p.size.id, name: p.size.name } : null,
+        brand: p.brand ? { id: p.brand.id, name: p.brand.name } : null,
+        color: p.color ? { id: p.color.id, name: p.color.name } : null,
         capacity: p.capacity
           ? { id: p.capacity.id, name: p.capacity.name }
-          : null, // Sửa: .id
+          : null,
         warranty: p.warranty
           ? { id: p.warranty.id, name: p.warranty.name }
-          : null, // Sửa: .id
+          : null,
         productModel: p.productModel
           ? { id: p.productModel.id, name: p.productModel.name }
-          : null, // Sửa: .id
+          : null,
         processor: p.processor
           ? { id: p.processor.id, name: p.processor.name }
-          : null, // Sửa: .id
+          : null,
         ramOption: p.ramOption
           ? { id: p.ramOption.id, name: p.ramOption.name }
-          : null, // Sửa: .id
+          : null,
         storageType: p.storageType
           ? { id: p.storageType.id, name: p.storageType.name }
-          : null, // Sửa: .id
+          : null,
         graphicsCard: p.graphicsCard
           ? { id: p.graphicsCard.id, name: p.graphicsCard.name }
-          : null, // Sửa: .id
-        breed: p.breed ? { id: p.breed.id, name: p.breed.name } : null, // Sửa: .id
+          : null,
+        breed: p.breed ? { id: p.breed.id, name: p.breed.name } : null,
         ageRange: p.ageRange
           ? { id: p.ageRange.id, name: p.ageRange.name }
-          : null, // Sửa: .id
-        gender: p.gender ? { id: p.gender.id, name: p.gender.name } : null, // Sửa: .id
+          : null,
+        gender: p.gender ? { id: p.gender.id, name: p.gender.name } : null,
         engineCapacity: p.engineCapacity
           ? { id: p.engineCapacity.id, name: p.engineCapacity.name }
-          : null, // Sửa: .id
-        // ===== KẾT THÚC SỬA LỖI FORMAT =====
+          : null,
+        productStatus: p.productStatus
+          ? { id: p.productStatus.id, name: p.productStatus.name }
+          : null,
 
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
@@ -723,5 +735,101 @@ export class ProductService {
     if (!product) return null;
 
     return await this.formatProduct(product);
+  }
+
+  // 🟢 Người dùng xem tất cả sản phẩm của chính họ
+  async findByUserId(userId: number): Promise<any[]> {
+    const products = await this.productRepo.find({
+      where: { user: { id: userId } }, // không lọc is_approved
+      order: { created_at: 'DESC' },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+      ],
+    });
+
+    return this.formatProducts(products);
+  }
+
+  async findAllForAdmin(): Promise<any[]> {
+    const products = await this.productRepo.find({
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+      ],
+      order: { created_at: 'DESC' },
+    });
+    return this.formatProducts(products);
+  }
+
+  // Cập nhật trạng thái (Duyệt/Từ chối)
+  async updateProductStatus(
+    id: number,
+    dto: UpdateProductStatusDto,
+  ): Promise<Product> {
+    const product = await this.productRepo.findOneBy({ id });
+    if (!product) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
+    }
+
+    product.is_approved = dto.is_approved;
+    product.product_status_id = dto.product_status_id;
+
+    const updatedProduct = await this.productRepo.save(product);
+
+    // Thông báo
+    // this.notificationService.notifyUserOfApproval(updatedProduct);
+
+    return updatedProduct;
   }
 }

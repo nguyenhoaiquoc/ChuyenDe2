@@ -32,7 +32,6 @@ export type RootStackParamList = {
   UserScreen: undefined;
   ChooseExchangeCategoryScreen: undefined;
   ChooseExchangeSubCategoryScreen: undefined;
-  HomeAdminScreen: undefined;
   ManagerGroupsScreen: undefined;
   UserInforScreen: undefined;
   EditProfileScreen: undefined;
@@ -41,6 +40,9 @@ export type RootStackParamList = {
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
+  HomeAdminScreen: undefined;
+  ManageProductsScreen: undefined;
+
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
     roomId: string | number;
@@ -92,6 +94,17 @@ export type ChatRoomNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ChatRoomScreen"
 >;
+
+export type HomeAdminScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "HomeAdminScreen"
+>;
+
+export type ManageProductsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageProductsScreen"
+>;
+
 export type ProductImage = {
   id: string;
   product_id: string;
@@ -179,6 +192,10 @@ export type EngineCapacity = {
   id: string | number;
   name: string;
 };
+export type ProductStatus = {
+  id: string | number;
+  name: string;
+};
 export type AddressJson = {
   full: string;
   province?: string;
@@ -204,6 +221,7 @@ export type Product = {
   sub_category_change?: { id: string; name: string } | null;
   postType: PostType | null;
 
+  productStatus: ProductStatus | null;
   productType: ProductType | null;
   origin: Origin | null;
   material: Material | null;
@@ -225,7 +243,7 @@ export type Product = {
 
   condition: Condition | null;
   address_json?: AddressJson;
-  status_id?: string;
+  status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
   is_approved?: boolean;

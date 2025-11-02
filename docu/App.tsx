@@ -40,6 +40,7 @@ import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import { StatusBar } from 'expo-status-bar';
+import ManageProductsScreen from './screens/admin/ManageProductsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -75,6 +76,7 @@ export default function App() {
           <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
           <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
           <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+          <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} />
           <Stack.Screen name="UserDetail" component={UserDetail} />
           <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
           <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
