@@ -45,7 +45,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const decoded = this.jwtService.verify(token);
       const userId = Number(decoded.sub || decoded.id);
       client.data.userId = userId;
-          console.log(`✅ [Connect] User ${userId}, socketId=${client.id}`);
+          // console.log(`✅ [Connect] User ${userId}, socketId=${client.id}`);
 
       const userSockets = this.socketsByUser.get(userId) ?? new Set<string>();
       const wasOffline = userSockets.size === 0;

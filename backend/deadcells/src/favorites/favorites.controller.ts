@@ -6,8 +6,11 @@ import {
   ParseIntPipe,
   Body,
   Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
+
 
 @Controller('favorites')
 export class FavoritesController {
@@ -40,4 +43,12 @@ export class FavoritesController {
   ) {
     return this.favoritesService.isFavorite(userId, productId);
   }
+
+  @Get('my-list')
+  async getFavoriteProductsByUser(
+    @Query('userId', ParseIntPipe) userId: number, 
+  ) {
+    return this.favoritesService.getFavoriteProductsByUser(userId);
+  }
+  
 }

@@ -9,14 +9,40 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
-import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons, FontAwesome5, FontAwesome } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import axios from "axios";
 import { path } from "../../config";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RootStackParamList } from "../../types";
+import { TabView, SceneMap, TabBar } from "react-native-tab-view"; 
+import { StatusBar } from "expo-status-bar"; 
+import "../../global.css"; 
+
+// ---------------------------------
+// BẮT ĐẦU PHẦN TABS (TỪ USERINFO)
+// ---------------------------------
+const DisplayingRoute = () => (
+  <View className="flex-1 items-center justify-center py-10">
+    <Text className="font-semibold text-gray-800">
+      Người dùng chưa có tin đăng nào
+    </Text>
+  </View>
+);
+
+const SoldRoute = () => (
+  <View className="flex-1 items-center justify-center py-10">
+    <Text className="font-semibold text-gray-500">
+      Người dùng chưa bán sản phẩm nào
+    </Text>
+  </View>
+);
+// ---------------------------------
+// KẾT THÚC PHẦN TABS
+// ---------------------------------
 
 type UserProfileData = {
   id: number;
@@ -34,6 +60,7 @@ interface MenuItem {
 }
 
 export default function UserProfile({ navigation }: any) {
+  // --- LOGIC CỦA USERPROFILE (GIỮ NGUYÊN) ---
   const route = useRoute<
     RouteProp<{ params: { userId: number | string; productId: string } }>
   >();
@@ -71,7 +98,7 @@ export default function UserProfile({ navigation }: any) {
 
   const handleToggleSelect = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
 
@@ -131,6 +158,21 @@ export default function UserProfile({ navigation }: any) {
     if (interval >= 1) return Math.floor(interval) + " ngày";
     return "Hôm nay";
   };
+  // --- KẾT THÚC LOGIC CỦA USERPROFILE ---
+
+  // --- LOGIC UI TABS (TỪ USERINFO) ---
+  const layout = useWindowDimensions();
+  const [index, setIndex] = React.useState(0);
+  const [routes] = React.useState([
+    { key: "displaying", title: "Đang hiển thị (0)" },
+    { key: "sold", title: "Đã bán (0)" },
+  ]);
+
+  const renderScene = SceneMap({
+    displaying: DisplayingRoute,
+    sold: SoldRoute,
+  });
+  // --- KẾT THÚC LOGIC UI TABS ---
 
   if (loading) {
     return (
@@ -141,78 +183,149 @@ export default function UserProfile({ navigation }: any) {
     );
   }
 
+  // Lấy ảnh từ state (logic của UserProfile)
   const coverImageUrl = user?.coverImage
     ? { uri: user.coverImage.startsWith("http") ? user.coverImage : `${path}${user.coverImage}` }
-    : require("../../assets/hoa.png");
+    : require("../../assets/anhbia.jpg"); // 👈 Dùng ảnh bìa mặc định
 
   const avatarImageUrl = user?.image
     ? { uri: user.image.startsWith("http") ? user.image : `${path}${user.image}` }
-    : require("../../assets/hoa.png");
+    : require("../../assets/meo.jpg"); // 👈 Dùng ảnh mèo mặc định
 
+  // ---------------------------------
+  // BẮT ĐẦU GIAO DIỆN MỚI (TỪ USERINFO)
+  // ---------------------------------
   return (
-    <ScrollView className="flex-1 bg-white">
-      {/* Header */}
-      <View className="relative">
-        <Image
-          source={coverImageUrl}
-          className="w-full h-36 opacity-80"
-          resizeMode="cover"
-        />
-
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="absolute top-10 left-5 bg-black/40 p-2 rounded-full"
-        >
-          <FontAwesome5 name="arrow-left" size={16} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Avatar */}
-      <View className="items-center -mt-12">
-        <Image
-          source={avatarImageUrl}
-          className="w-28 h-28 rounded-full border-4 border-white shadow-md"
-        />
-        <Text className="text-lg font-bold mt-3">{user?.fullName}</Text>
-        <Text className="text-gray-500 text-sm">Người theo dõi: 16</Text>
-      </View>
-
-      {/* Actions */}
-      <View className="flex-row justify-center gap-3 mt-4">
-        <TouchableOpacity
-          onPress={() => setMenuVisible(true)}
-          className="bg-gray-100 w-10 h-10 rounded-xl items-center justify-center shadow"
-        >
-          <MaterialIcons name="more-horiz" size={22} color="black" />
-        </TouchableOpacity>
-
-        <TouchableOpacity className="bg-orange-500 px-5 py-2 rounded-xl shadow active:bg-orange-600">
-          <Text className="text-white font-semibold">+ Theo dõi</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Info */}
-      <View className="px-5 mt-6 space-y-3">
-        <View className="flex-row items-center">
-          <Ionicons name="chatbubbles-outline" size={18} color="#6b7280" />
-          <Text className="ml-2 text-gray-700">Phản hồi chat: </Text>
-          <Text className="text-gray-500">Thỉnh thoảng</Text>
+    <ScrollView className="flex-1">
+      <View className="mt-10">
+        <StatusBar style="auto" />
+        {/* Header (UI từ UserInfo, Data từ UserProfile) */}
+        <View className="flex flex-row gap-6 pl-6 items-center">
+          <FontAwesome
+            onPress={() => navigation.goBack()}
+            name="arrow-left"
+            size={20}
+            color="#000"
+          />
+          <Text className="text-xl">{user?.fullName || "Đang tải..."}</Text>
         </View>
 
-        <View className="flex-row items-center">
-          <Ionicons name="time-outline" size={18} color="#6b7280" />
-          <Text className="ml-2 text-gray-700">Đã tham gia: </Text>
-          <Text className="text-gray-500">{timeSince(user?.createdAt || "")}</Text>
+        {/* Ảnh bìa + avatar (UI từ UserInfo, Data từ UserProfile) */}
+        <View className="w-full h-[100px] relative mt-2">
+          <Image
+            className="w-full h-full object-contain"
+            source={coverImageUrl}
+            resizeMode="cover" // Dùng resizeMode
+          />
+          {/* Bỏ nút camera ảnh bìa */}
+
+          <View className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
+            <Image
+              className="w-full h-full object-contain rounded-full"
+              source={avatarImageUrl}
+              resizeMode="cover" // Dùng resizeMode
+            />
+            {/* Bỏ nút camera avatar */}
+          </View>
         </View>
 
-        <View className="flex-row items-center">
-          <Ionicons name="location-outline" size={18} color="#6b7280" />
-          <Text className="ml-2 text-gray-700">Địa chỉ: </Text>
-          <Text className="text-gray-500 flex-shrink">Chưa rõ địa chỉ</Text>
+        {/* ✅✅✅ THAY ĐỔI CHÍNH ✅✅✅
+          Bỏ nút "Chỉnh sửa" & "Chia sẻ"
+          Thay bằng nút "Báo cáo (...)" & "Theo dõi"
+        */}
+        <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
+          {/* Nút "..." (Báo cáo) */}
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            className="bg-gray-100 w-10 h-10 rounded-xl items-center justify-center shadow"
+          >
+            <MaterialIcons name="more-horiz" size={22} color="black" />
+          </TouchableOpacity>
+
+          {/* Nút "+ Theo dõi" */}
+          <TouchableOpacity className="bg-orange-500 px-5 py-2 rounded-xl shadow active:bg-orange-600 h-10 items-center justify-center">
+            <Text className="text-white font-semibold">+ Theo dõi</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Thông tin người dùng (UI từ UserInfo, Data từ UserProfile) */}
+        <View className="pl-3 mt-4 flex flex-col gap-3">
+          <Text className="font-bold">{user?.fullName || "Đang tải..."}</Text>
+          <Text className="text-sm text-gray-600">Chưa có đánh giá</Text>
+          <View className="flex flex-row gap-3">
+            <Text className="border-r pr-2 text-xs">Người theo dõi: 1</Text>
+            <Text className="text-xs">Đang theo dõi: 1</Text>
+          </View>
+        </View>
+
+        {/* Mô tả + trạng thái (UI từ UserInfo, Data từ UserProfile) */}
+        <View className="pl-3 flex flex-col mt-6 gap-3">
+          <View className="flex flex-row gap-1 items-center">
+            <MaterialIcons name="chat" size={16} color="gray" />
+            <Text className="text-xs text-gray-600">
+              Phản hồi chat: chưa có thông tin
+            </Text>
+          </View>
+          <View className="flex flex-row gap-1 items-center">
+            <MaterialIcons name="calendar-today" size={16} color="gray" />
+            <Text className="text-xs text-gray-600">
+              Đã tham gia: {timeSince(user?.createdAt || "")}
+            </Text>
+          </View>
+          <View className="flex flex-row gap-1 items-center">
+            <MaterialIcons name="check-circle" size={16} color="gray" />
+            <Text className="text-xs text-gray-600">Đã xác thực: </Text>
+            <MaterialIcons name="mail" size={16} color="blue" />
+          </View>
+          <View className="flex flex-row gap-1 items-center">
+            <MaterialIcons name="near-me" size={16} color="gray" />
+            <Text className="text-xs text-gray-600">
+              Địa chỉ: {user?.address_json?.full || "Chưa cung cấp"}
+            </Text>
+          </View>
+          <View className="flex flex-row gap-1 items-center">
+            <MaterialIcons name="more-horiz" size={16} color="blue" />
+            <Text className="text-xs text-blue-600">Xem thêm</Text>
+          </View>
+        </View>
+
+        {/* Tabs (UI từ UserInfo) */}
+        <View className="mt-8 h-[350px]">
+          <TabView
+            navigationState={{ index, routes }}
+            renderScene={renderScene}
+            onIndexChange={setIndex}
+            initialLayout={{ width: layout.width }}
+            renderTabBar={(props: any) => (
+              <TabBar
+                {...props}
+                indicatorStyle={{
+                  backgroundColor: "#facc15",
+                  height: 3,
+                  borderRadius: 2,
+                }}
+                style={{
+                  backgroundColor: "white",
+                  elevation: 0,
+                  shadowOpacity: 0,
+                }}
+                labelStyle={{
+                  color: "#000",
+                  fontWeight: "600",
+                  textTransform: "none",
+                  fontSize: 13,
+                }}
+                activeColor="#000"
+                inactiveColor="#9ca3af"
+              />
+            )}
+          />
         </View>
       </View>
 
-      {/* Menu modal */}
+      {/* ✅ MODALS (LOGIC TỪ USERPROFILE)
+        Giữ nguyên 2 modal "Báo cáo" và "Menu"
+      */}
       <Modal
         visible={menuVisible}
         transparent
@@ -246,7 +359,6 @@ export default function UserProfile({ navigation }: any) {
         </Pressable>
       </Modal>
 
-      {/* Report modal */}
       <Modal
         visible={reportVisible}
         transparent
@@ -318,8 +430,6 @@ export default function UserProfile({ navigation }: any) {
           </Pressable>
         </Pressable>
       </Modal>
-
-      <View className="h-10" />
     </ScrollView>
   );
 }

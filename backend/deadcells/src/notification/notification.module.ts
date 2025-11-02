@@ -7,6 +7,7 @@ import { TargetType } from 'src/entities/target-type.entity';
 import { User } from 'src/entities/user.entity'; 
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
+import { NotificationGateway } from './notification.gateway';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { NotificationController } from './notification.controller';
       User,
     ]),
   ],
-  providers: [NotificationService],
+  providers: [NotificationService , NotificationGateway],
   controllers: [NotificationController],
   exports: [NotificationService],
 })

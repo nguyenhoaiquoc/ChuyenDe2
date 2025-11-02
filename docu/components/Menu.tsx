@@ -52,7 +52,7 @@ export default function Menu() {
         transports: ["websocket"], // ✅ ổn định hơn
       });
 
-      socket.on("connect", () => console.log("✅ Socket connected for unread"));
+      // socket.on("connect", () => console.log("✅ Socket connected for unread"));
 
       // Nhận số tin chưa đọc realtime từ server
       socket.on("unreadCount", (data) => {

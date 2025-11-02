@@ -8,7 +8,7 @@ export class ProductType {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100})
   name: string;
 
   // ✅ Nếu áp dụng cho toàn bộ Category
