@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -6,11 +6,14 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
+  RefreshControl,
 } from "react-native";
 import axios from "axios";
 import { path } from "../../../config";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface PostsTabProps {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -20,24 +23,40 @@ interface PostsTabProps {
 export default function PostsTab({ limit, navigation }: PostsTabProps) {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const userId = 1;
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPosts = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert("Thông báo", "Vui lòng đăng nhập để xem nhóm đã tham gia.");
+      return;
+    }
+
+    try {
+      const res = await axios.get(
+        `${path}/groups/my/group-posts?limit=${limit}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setPosts(res.data);
+    } catch (err) {
+      console.log("Lỗi tải bài viết:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // 👈 nhớ reset refreshing
+    }
+  };
 
   useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await axios.get(
-          `${path}/groups/users/${userId}/group-posts${limit ? `?limit=${limit}` : ""}`
-        );
-        setPosts(res.data);
-      } catch (err) {
-        console.error("Lỗi tải bài viết:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPosts();
   }, [limit]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchPosts();
+  }, []);
 
   if (loading) {
     return (
@@ -53,6 +72,9 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
         <FlatList
           data={posts}
           keyExtractor={(item) => item.id.toString()}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           renderItem={({ item }) => (
             <View className="mb-6 p-3 bg-white rounded-lg shadow">
               {/* Nhóm */}
@@ -75,6 +97,7 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                 Đăng bởi {item.authorName}
               </Text>
               <Text className="font-bold text-base mt-1">{item.name}</Text>
+
               <TouchableOpacity
                 onPress={() =>
                   navigation.navigate("ProductDetail", { product: item })
@@ -87,8 +110,6 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
                   resizeMode="contain"
                 />
               </TouchableOpacity>
-
-              
             </View>
           )}
         />

@@ -39,6 +39,7 @@ import { Category } from 'src/entities/category.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { ProductStatusService } from 'src/product-statuses/product-status.service';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Injectable()
 export class ProductService {
@@ -99,6 +100,9 @@ export class ProductService {
 
     private readonly groupService: GroupService,
     private readonly dataSource: DataSource,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
+
     private readonly notificationService: NotificationService,
   ) {}
 
@@ -244,6 +248,91 @@ export class ProductService {
     }
 
     // 3. Tạo sản phẩm
+    // 1.1. Kiểm tra xem đây có phải là bài đăng nhóm không
+    if (data.visibility_type && Number(data.visibility_type) === 1) {
+      // 1.2. Nếu là bài đăng nhóm, PHẢI có group_id và user_id
+      if (!data.group_id || !data.user_id) {
+        throw new NotFoundException(
+          'Bài đăng nhóm phải có group_id và user_id hợp lệ.',
+        );
+      }
+
+      // 1.3. (Bảo mật) Kiểm tra xem user này có phải là thành viên của nhóm không
+      const isMember = await this.groupMemberRepo.findOne({
+        where: {
+          user_id: data.user_id,
+          group_id: data.group_id,
+        },
+      });
+
+      if (!isMember) {
+        throw new UnauthorizedException(
+          'Bạn không phải là thành viên của nhóm này để đăng bài.',
+        );
+      }
+    }
+
+    let subCategoryId: number | null = null;
+
+    if (data.category_id && data.sub_category && data.sub_category.name) {
+      const existingSub = await this.subCategoryRepo.findOne({
+        where: {
+          name: data.sub_category.name,
+          parent_category_id: data.category_id,
+        },
+      });
+
+      if (existingSub) {
+        subCategoryId = existingSub.id;
+      } else {
+        let sourceTable: string | null = null;
+        switch (data.category_id) {
+          case 1:
+            sourceTable = 'fashion_categories';
+            break;
+          case 2:
+            sourceTable = 'game_categories';
+            break;
+          case 3:
+            sourceTable = 'academic_categories';
+            break;
+          case 4:
+            sourceTable = 'animal_categories';
+            break;
+          case 5:
+            sourceTable = 'electronic_categories';
+            break;
+          case 6:
+            sourceTable = 'house_categories';
+            break;
+          case 7:
+            sourceTable = 'vehicle_categories';
+            break;
+        }
+
+        const newSub = this.subCategoryRepo.create({
+          name: data.sub_category.name,
+          parent_category_id: data.category_id,
+          source_table: sourceTable || undefined,
+          source_id: null,
+        });
+        const savedSub = await this.subCategoryRepo.save(newSub);
+        subCategoryId = savedSub.id;
+      }
+    } else if (data.sub_category_id) {
+      subCategoryId = data.sub_category_id;
+    }
+
+    let user: User | null = null;
+    if (data.user_id) {
+      user = await this.userRepo.findOne({
+        where: { id: data.user_id },
+      });
+      if (!user) {
+        console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
+      }
+    }
+
     const product = this.productRepo.create({
       name: data.name,
       description: data.description,
@@ -281,6 +370,9 @@ export class ProductService {
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
+      product_type_id: data.product_type_id || undefined,
+      visibility_type: data.visibility_type || 0,
+      group_id: data.group_id || null,
     });
 
     const savedProduct = await this.productRepo.save(product);
@@ -298,34 +390,37 @@ export class ProductService {
       this.logger.log(
         `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
       );
+
+      if (savedProduct) {
+        // 1. Gửi cho chính người đăng
+        this.notificationService
+          .notifyUserOfPostSuccess(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyUserOfPostSuccess:',
+              err.message,
+            ),
+          );
+
+        // 2. Gửi cho Admin ("tui")
+        this.notificationService
+          .notifyAdminsOfNewPost(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyAdminsOfNewPost:',
+              err.message,
+            ),
+          );
+      }
+      return savedProduct;
     }
 
-    // 5. Gửi thông báo
-    if (savedProduct) {
-      this.notificationService
-        .notifyUserOfPostSuccess(savedProduct)
-        .catch((err) =>
-          this.logger.error(
-            'Lỗi (từ service) notifyUserOfPostSuccess:',
-            err.message,
-          ),
-        );
-      this.notificationService
-        .notifyAdminsOfNewPost(savedProduct)
-        .catch((err) =>
-          this.logger.error(
-            'Lỗi (từ service) notifyAdminsOfNewPost:',
-            err.message,
-          ),
-        );
-    }
-
-    // 6. Trả về sản phẩm đầy đủ (Query lại để lấy đủ relations)
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
         'images',
         'user',
+        'group',
         'dealType',
         'condition',
         'category',

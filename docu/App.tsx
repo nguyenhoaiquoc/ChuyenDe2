@@ -41,6 +41,7 @@ import { NotificationProvider } from './screens/Notification/NotificationContext
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import { StatusBar } from 'expo-status-bar';
 import ManageProductsScreen from './screens/admin/ManageProductsScreen';
+import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -86,8 +87,8 @@ export default function App() {
           <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
-          <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
-          />
+           <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

@@ -13,9 +13,16 @@ export type RootStackParamList = {
   OTPVerifyScreen: { email: string };
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
-  ChooseCategoryScreen: undefined;
+  ChooseCategoryScreen:
+    | {
+        group?: GroupType;
+      }
+    | undefined;
   ChooseSubCategoryScreen:
-    | { category: { id: string; name: string } }
+    | {
+        category: Category;
+        group?: GroupType;
+      }
     | undefined;
   PostFormScreen:
     | {
@@ -30,7 +37,9 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
-  ChooseExchangeCategoryScreen: undefined;
+  ChooseExchangeCategoryScreen: {
+    onSelectCategory: (category: Category, subCategory: SubCategory) => void;
+  };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
   UserInforScreen: undefined;
@@ -43,6 +52,12 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   ManageProductsScreen: undefined;
 
+  GroupDetailScreen: { group: GroupType };
+  PostGroupFormScreen: {
+    group: GroupType;
+    category?: Category;
+    subCategory?: SubCategory;
+  };
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
     roomId: string | number;
@@ -326,4 +341,13 @@ export type Notification = {
     name: string;
     // Thêm các trường khác của Product nếu ông cần
   };
+};
+
+export type GroupType = {
+  id: number;
+  name: string;
+  image: string | number;
+  memberCount: string;
+  isPublic: boolean;
+  mustApprovePosts?: boolean;
 };

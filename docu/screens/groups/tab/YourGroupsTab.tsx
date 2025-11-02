@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,42 +8,56 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { RootStackParamList } from "../../../types";
 import axios from "axios";
 import { path } from "../../../config";
-
-// const groups = [
-//   {
-//     id: 1,
-//     name: "Hội những người yêu chó",
-//     members: "72.203 thành viên",
-//     posts: "12 bài viết mới hôm nay",
-//     image: require("../../../assets/khi.png"),
-//   },
-// ];
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type YourGroupsTabProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
+  onJoinMorePress: () => void;
 };
 
-export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
+export default function YourGroupsTab({
+  navigation,
+  onJoinMorePress,
+}: YourGroupsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchGroups = async () => {
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert("Thông báo", "Vui lòng đăng nhập để xem nhóm đã tham gia.");
+      return;
+    }
+
+    try {
+      const res = await axios.get(`${path}/groups`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setGroups(res.data);
+    } catch (err) {
+      console.log("❌ Lỗi khi lấy nhóm đã tham gia:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false); // 👈 reset refreshing
+    }
+  };
 
   useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        const res = await axios.get(`${path}/groups`);
-        setGroups(res.data); // ✅ Không cần xử lý ảnh nữa
-      } catch (err) {
-        console.error("❌ Lỗi khi lấy nhóm:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchGroups();
+  }, []);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchGroups();
   }, []);
 
@@ -56,10 +70,22 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
       group.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
     );
   }, [groups, searchQuery]);
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center">
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
   return (
     <ScrollView
       className="flex-1 px-4 pb-24"
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
     >
       <Text className="text-lg font-bold my-4">Tất cả nhóm của bạn</Text>
 
@@ -80,10 +106,10 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
           {filteredGroups.map((g) => (
             <TouchableOpacity
               key={g.id}
-              className="flex-row items-center mb-4 p-2 bg-gray-50 rounded-lg"
-              // onPress={() =>
-              //   navigation.navigate("GroupDetailScreen", { group: g })
-              // }
+              className="flex-row items-center p-4 my-4 bg-white rounded-xl border-gray-500 shadow-sm"
+              onPress={() =>
+                navigation.navigate("GroupDetailScreen", { group: g })
+              }
             >
               <Image
                 source={
@@ -91,26 +117,30 @@ export default function YourGroupsTab({ navigation }: YourGroupsTabProps) {
                     ? { uri: g.image }
                     : require("../../../assets/khi.png")
                 }
-                className="w-14 h-14 rounded-lg"
+                className="w-16 h-16 rounded-full"
               />
-              <View className="ml-3 flex-1">
-                <Text className="font-semibold text-base">{g.name}</Text>
-                <Text className="text-gray-500 text-sm">{g.members}</Text>
-                <Text className="text-green-300 text-xs font-medium">
-                  {g.posts}
+              <View className="ml-4 flex-1">
+                <Text className="font-bold text-lg text-gray-800">
+                  {g.name}
                 </Text>
+                <Text className="text-gray-600 text-sm mt-1">
+                  {g.memberCount} thành viên
+                </Text>
+                <Text className="text-gray-600 text-sm mt-1">{g.posts}</Text>
               </View>
             </TouchableOpacity>
           ))}
-          <View className="items-center py-20">
-            <Text className="text-gray-500">
-              Nhóm của bạn đã hết, hãy gia nhập thêm nhóm!
-            </Text>
+
+          <View className="items-center pb-24">
+            <TouchableOpacity onPress={onJoinMorePress} className="mt-4 mb-3">
+              <Text className="text-blue-600 text-base font-medium text-center">
+                Xem các nhóm có thể bạn thích
+              </Text>
+            </TouchableOpacity>
           </View>
         </>
       ) : (
-        // Hiển thị thông báo khi không có kết quả
-        <Text className="text-center text-gray-500 my-8">
+        <Text className="text-center text-gray-500 my-10 text-base">
           Không tìm thấy nhóm nào phù hợp.
         </Text>
       )}

@@ -58,35 +58,44 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     const fetchFavoriteData = async () => {
       try {
-        const [countRes, statusRes] = await Promise.all([
-          axios.get(`${path}/favorites/${product.id}/count`),
-          axios.get(
-            `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
-          ),
-        ]);
-
+        const countRes = await axios.get(
+          `${path}/favorites/${product.id}/count`
+        );
         setFavoriteCount(countRes.data.count || 0);
-        setIsFavorite(statusRes.data.isFavorite || false);
+
+        if (currentUser?.id) {
+          const statusRes = await axios.get(
+            `${path}/favorites/check/${product.id}?userId=${currentUser.id}`
+          );
+          setIsFavorite(statusRes.data.isFavorite || false);
+        } else {
+          setIsFavorite(false);
+        }
       } catch (err) {
         console.log("Lỗi lấy dữ liệu yêu thích:", err);
       }
     };
 
-    if (product.id && currentUser?.id) {
+    if (product.id) {
       fetchFavoriteData();
     }
   }, [product.id, currentUser]);
 
   const handleToggleFavorite = async () => {
+    if (!currentUser?.id) {
+      Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
+      return;
+    }
+
     try {
       await axios.post(`${path}/favorites/toggle/${product.id}`, {
-        userId: currentUser?.id,
+        userId: currentUser.id,
       });
 
       const [countRes, statusRes] = await Promise.all([
         axios.get(`${path}/favorites/${product.id}/count`),
         axios.get(
-          `${path}/favorites/check/${product.id}?userId=${currentUser?.id}`
+          `${path}/favorites/check/${product.id}?userId=${currentUser.id}`
         ),
       ]);
 
