@@ -55,7 +55,7 @@ export default function LoginScreen({ navigation }: Props) {
         { email: emailTrim, password: passwordTrim },
         { timeout: 15000 }
       );
-
+      console.log(res.data);
       const data = res.data || {};
       const accessToken = data.accessToken || data.token; // linh hoạt tên trường
       console.log(accessToken)
