@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Group } from '../entities/group.entity';
 import { FindManyOptions, In, Repository } from 'typeorm';
@@ -96,21 +101,27 @@ export class GroupService {
     }
 
     const products = await this.productRepo.find({
-      where: { group_id: groupId },
+      where: { group_id: groupId, status_id: 1 },
       order: { created_at: 'DESC' },
       take: 20,
+      relations: ['images', 'user', 'category', 'subCategory', 'group'], // thêm relations để có đủ dữ liệu
     });
 
-    return products.map((p) => ({
-      id: p.id,
-      title: p.name,
-      image: p.thumbnail_url,
-      price: p.price,
-      location: this.formatAddress(p.address_json),
-      time: p.created_at,
-      imageCount: p.images?.length || 0,
-      isFavorite: false,
-    }));
+    return products.map((p) => this.formatPost(p));
+  }
+
+  async getUserRole(
+    groupId: number,
+    userId: number,
+  ): Promise<'leader' | 'member' | 'none'> {
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: userId },
+    });
+
+    if (!member) return 'none';
+
+    // group_role_id: 1 = member, 2 = leader
+    return member.group_role_id == 2 ? 'leader' : 'member';
   }
 
   //KT thành vien
@@ -123,17 +134,19 @@ export class GroupService {
 
   //  User vào group
   async joinGroup(groupId: number, userId: number): Promise<GroupMember> {
+    const group = await this.groupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
     const exists = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
     });
+    if (exists)
+      throw new BadRequestException('Bạn đã là thành viên của nhóm này');
 
-    if (exists) return exists; // Đã là thành viên → không thêm lại
-
-    //  Tạo bản ghi thành viên mới
     const member = this.groupMemberRepo.create({
       group_id: groupId,
       user_id: userId,
-      group_role_id: 1, // 1 = member, 2 leader
+      group_role_id: 1, // 1 = member, 2 = leader
     });
 
     const saved = await this.groupMemberRepo.save(member);
@@ -146,7 +159,31 @@ export class GroupService {
 
   //  User rời group
   async leaveGroup(groupId: number, userId: number): Promise<void> {
-    await this.groupMemberRepo.delete({ group_id: groupId, user_id: userId });
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: userId },
+    });
+
+    if (!member) {
+      throw new BadRequestException(
+        'Bạn không phải là thành viên của nhóm này',
+      );
+    }
+
+    // Cấm leader tự rời nhóm
+    if (member.group_role_id === 2) {
+      throw new BadRequestException(
+        'Leader không thể rời nhóm. Hãy chuyển quyền leader trước.',
+      );
+    }
+
+    const result = await this.groupMemberRepo.delete({
+      group_id: groupId,
+      user_id: userId,
+    });
+
+    if (result.affected && result.affected > 0) {
+      await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
+    }
   }
 
   async findGroupsOfUser(userId: number): Promise<Group[]> {
@@ -214,10 +251,6 @@ export class GroupService {
       image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
       memberCount: `${g.count_member} `,
       isPublic: g.isPublic,
-      // commonFriends: {
-      //   count: 0,
-      //   avatars: [],
-      // },
     }));
   }
 

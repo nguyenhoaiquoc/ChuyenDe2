@@ -8,6 +8,7 @@ import {
   IsNotEmpty,
   Min,
   IsBoolean,
+  IsNumberString,
 } from 'class-validator';
 
 /**
@@ -17,13 +18,13 @@ import {
 const transformToNumberOrNull = ({ value }: { value: any }): number | null => {
   // 1. Thử phân tích cú pháp giá trị (ví dụ: "1", "abc", undefined, "null")
   const parsedValue = parseInt(value, 10);
-  
+
   // 2. Nếu kết quả là NaN (ví dụ: parseInt("abc") hoặc parseInt(undefined))
   //    thì trả về null.
   if (isNaN(parsedValue)) {
     return null;
   }
-  
+
   // 3. Nếu không, trả về giá trị số đã phân tích
   return parsedValue;
 };
@@ -54,7 +55,7 @@ export class CreateProductDto {
 
   // ===== CÁC TRƯỜNG ID SỐ BẮT BUỘC =====
   // @Type(() => Number) sẽ tự động chuyển chuỗi "1" -> 1
-  
+
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -79,7 +80,7 @@ export class CreateProductDto {
   @IsInt()
   @Min(1)
   sub_category_id: number;
-  
+
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -110,6 +111,14 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(transformToNumberOrNull) // 'year' cũng có thể bị thiếu
   year: number | null;
+
+  @IsOptional()
+  @IsNumberString()
+  visibility_type: string;
+
+  @IsOptional()
+  @IsNumberString()
+  group_id: string;
 
   /**
    * Các trường này client gửi lên là chuỗi "true"/"false"

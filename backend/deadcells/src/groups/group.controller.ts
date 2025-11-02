@@ -40,7 +40,8 @@ export class GroupController {
     return groups.map((g) => ({
       id: g.id,
       name: g.name,
-      members: `${g.count_member} thành viên`,
+      memberCount: `${g.count_member}`,
+      isPublic: g.isPublic,
       posts: 'Chưa có dữ liệu bài viết',
       image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
     }));
@@ -72,7 +73,7 @@ export class GroupController {
     const userId = req.user.id;
     return this.groupService.getGroupProducts(groupId, userId);
   }
-  
+
   @Post('upload-image')
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', CloudinaryMulter))
@@ -100,6 +101,14 @@ export class GroupController {
     };
   }
 
+  @Get(':groupId/role')
+  @UseGuards(JwtAuthGuard)
+  async getUserRole(@Req() req, @Param('groupId') groupId: number) {
+    const userId = req.user.id;
+    const role = await this.groupService.getUserRole(groupId, userId);
+    return { role }; // "leader" | "member" | "none"
+  }
+
   // Check user có trong group không
   @Get(':groupId/is-member/:userId')
   @UseGuards(JwtAuthGuard)
@@ -115,7 +124,8 @@ export class GroupController {
   @Post(':groupId/join')
   @UseGuards(JwtAuthGuard)
   async joinGroup(@Req() req, @Param('groupId') groupId: number) {
-    return this.groupService.joinGroup(groupId, req.user.id);
+    const result = await this.groupService.joinGroup(groupId, req.user.id);
+    return { success: true, message: 'Tham gia nhóm thành công', result };
   }
 
   // rời nhóm
@@ -123,7 +133,7 @@ export class GroupController {
   @UseGuards(JwtAuthGuard)
   async leaveGroup(@Req() req, @Param('groupId') groupId: number) {
     await this.groupService.leaveGroup(groupId, req.user.id);
-    return { success: true };
+    return { success: true, message: 'Rời nhóm thành công' };
   }
 
   // Lấy bài viết từ các nhóm user đã tham gia

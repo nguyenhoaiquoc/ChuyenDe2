@@ -12,7 +12,11 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { path } from "../../../config";
-import { GroupType } from "../../../types";
+import { GroupType, RootStackParamList } from "../../../types";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+
+type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const GroupSuggestionCard = ({
   group,
@@ -20,50 +24,61 @@ const GroupSuggestionCard = ({
 }: {
   group: GroupType;
   onJoin: (groupId: number) => void;
-}) => (
-  <View className="w-[48%] mb-4 bg-white rounded-lg border border-gray-200">
-    <ImageBackground
-      source={
-        typeof group.image === "string" ? { uri: group.image } : group.image
-      }
-      className="h-28 w-full"
-      imageStyle={{ borderTopLeftRadius: 8, borderTopRightRadius: 8 }}
-    >
-      <TouchableOpacity className="absolute top-2 right-2 bg-black/50 p-1 rounded-full">
-        <Feather name="x" size={16} color="white" />
-      </TouchableOpacity>
-    </ImageBackground>
-
-    <View className="p-3">
-      <Text className="font-bold text-sm leading-5" numberOfLines={2}>
-        {group.name}
-      </Text>
-      <Text className="text-xs text-gray-500 mt-1">
-        {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"} ·{" "}
-        {group.memberCount}
-      </Text>
-
-      <View className="flex-row items-center mt-2">
-        <Image
-          source={require("../../../assets/khi.png")}
-          className="w-5 h-5 rounded-full border-2 border-white"
-        />
-        <Text className="text-xs text-gray-500 ml-2 flex-1">
-          Le Duc Quy và 5 người bạn...
-        </Text>
-      </View>
-
+}) => {
+  const navigation = useNavigation<NavigationProp>();
+  return (
+    <View className="w-[48%] mb-4 bg-white rounded-lg border border-gray-200">
       <TouchableOpacity
-        className="bg-blue-100 mt-3 py-2 rounded-md"
-        onPress={() => onJoin(Number(group.id))}
+        key={group.id}
+        className="flex-row items-center p-4 my-4 bg-white rounded-xl border-gray-500 shadow-sm"
+        onPress={() =>
+          navigation.navigate("GroupDetailScreen", { group: group })
+        }
       >
-        <Text className="text-blue-600 font-semibold text-center text-sm">
-          Tham gia
-        </Text>
+        <ImageBackground
+          source={
+            typeof group.image === "string" ? { uri: group.image } : group.image
+          }
+          className="h-28 w-full"
+          imageStyle={{ borderTopLeftRadius: 8, borderTopRightRadius: 8 }}
+        >
+          <TouchableOpacity className="absolute top-2 right-2 bg-black/50 p-1 rounded-full">
+            <Feather name="x" size={16} color="white" />
+          </TouchableOpacity>
+        </ImageBackground>
       </TouchableOpacity>
+
+      <View className="p-3">
+        <Text className="font-bold text-sm leading-5" numberOfLines={2}>
+          {group.name}
+        </Text>
+        <Text className="text-xs text-gray-500 mt-1">
+          {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"} ·{" "}
+          {group.memberCount}
+        </Text>
+
+        <View className="flex-row items-center mt-2">
+          <Image
+            source={require("../../../assets/khi.png")}
+            className="w-5 h-5 rounded-full border-2 border-white"
+          />
+          <Text className="text-xs text-gray-500 ml-2 flex-1">
+            Le Duc Quy và 5 người bạn...
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          className="bg-blue-100 mt-3 py-2 rounded-md"
+          onPress={() => onJoin(Number(group.id))}
+        >
+          <Text className="text-blue-600 font-semibold text-center text-sm">
+            Tham gia
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 export default function DiscoverTab() {
   const [suggestedGroups, setSuggestedGroups] = useState<GroupType[]>([]);
@@ -85,7 +100,7 @@ export default function DiscoverTab() {
 
         setSuggestedGroups(mapped);
       } catch (err) {
-        console.error("❌ Lỗi lấy nhóm gợi ý:", err);
+        console.log("❌ Lỗi lấy nhóm gợi ý:", err);
       }
     };
 

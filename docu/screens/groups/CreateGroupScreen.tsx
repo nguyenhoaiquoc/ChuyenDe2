@@ -35,6 +35,9 @@ export default function CreateGroupScreen() {
     if (!result.canceled) {
       const selected = result.assets.map((asset) => asset.uri);
       setImages(selected);
+
+      // console.log("Kết quả chọn ảnh:", result);
+      // console.log("State images sau khi chọn:", selected);
     }
   };
 
@@ -51,14 +54,17 @@ export default function CreateGroupScreen() {
       name: filename || "photo.jpg",
       type,
     } as any);
-
+    const token = await AsyncStorage.getItem("token");
     const res = await fetch(`${path}/groups/upload-image`, {
       method: "POST",
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: {
+        Authorization: `Bearer ${token}`, // nếu cần token
+      },
       body: data,
     });
 
     const result = await res.json();
+    // console.log("Kết quả upload:", result);
     return result.url; // ✅ đường dẫn Cloudinary
   };
 
@@ -74,6 +80,7 @@ export default function CreateGroupScreen() {
       if (images[0]) {
         thumbnail_url = await uploadGroupImage(images[0]); // ✅ upload ảnh trước
       }
+      console.log("Thumbnail gửi lên:", thumbnail_url);
 
       const token = await AsyncStorage.getItem("token");
 

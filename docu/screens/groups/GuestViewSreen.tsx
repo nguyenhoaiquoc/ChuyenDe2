@@ -11,7 +11,6 @@ export default function GuestViewSreen({ onLogin }: { onLogin?: () => void }) {
     const fetchGroups = async () => {
       try {
         const res = await axios.get(`${path}/groups/featured`);
-        console.log("featured groups:", res.data);
         setHighlightedGroups(res.data);
       } catch (err) {
         console.error(" Lỗi lấy nhóm nổi bật:", err);

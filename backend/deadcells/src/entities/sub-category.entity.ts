@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm'; // ✅ nhớ import
 import { Category } from './category.entity';
 import { Product } from './product.entity';
+import { ProductType } from './product_types.entity';
 
 @Entity('sub_categories')
 export class SubCategory {
@@ -32,6 +33,9 @@ export class SubCategory {
 
   @OneToMany(() => Product, (product) => product.subCategory)
   products: Product[];
+
+  @OneToMany(() => ProductType, (productType) => productType.subCategory)
+  productTypes: ProductType[];
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;

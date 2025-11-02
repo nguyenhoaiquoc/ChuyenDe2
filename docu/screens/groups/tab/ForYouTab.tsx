@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   FlatList,
   ScrollView,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
@@ -28,29 +29,36 @@ export default function ForYouTab({
   const [groups, setGroups] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const fetchData = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      const [groupRes, postRes] = await Promise.all([
+        axios.get(`${path}/groups/latest`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${path}/groups/my/group-posts?limit=4`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      setGroups(groupRes.data);
+      setPosts(postRes.data);
+    } catch (err) {
+      console.log("❌ Lỗi khi lấy dữ liệu:", err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
+    fetchData();
+  }, []);
 
-        const [groupRes, postRes] = await Promise.all([
-          axios.get(`${path}/groups/latest`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get(`${path}/groups/my/group-posts?limit=4`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        setGroups(groupRes.data);
-        setPosts(postRes.data);
-      } catch (err) {
-        console.error("❌ Lỗi khi lấy dữ liệu:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchData();
   }, []);
 
@@ -63,14 +71,19 @@ export default function ForYouTab({
   }
 
   return (
-    <ScrollView className="flex-1 px-4">
+    <ScrollView
+      className="flex-1 px-4"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       {/* Nhóm mới nhất */}
-      <View className=" mb-2 mt-7 ">
-        <View className="flex-row justify-between items-center mb-2">
-          <Text className="text-base font-semibold">Nhóm của bạn</Text>
+      <View className="mb-4 mt-6">
+        <View className="flex-row justify-between items-center mb-4">
+          <Text className="text-xl font-bold text-gray-900">Nhóm của bạn</Text>
           {groups.length >= 5 ? (
             <TouchableOpacity onPress={onViewAllPress}>
-              <Text className="text-blue-500 text-sm font-medium">
+              <Text className="text-blue-600 text-sm font-semibold">
                 Xem tất cả
               </Text>
             </TouchableOpacity>
@@ -78,24 +91,30 @@ export default function ForYouTab({
         </View>
 
         {groups.map((g) => (
-          <View key={g.id} className="flex-row items-center mb-3">
+          <View key={g.id} className="flex-row items-center mb-4">
             <Image
               source={
                 g.image ? { uri: g.image } : require("../../../assets/khi.png")
               }
-              className="w-12 h-12 rounded-full"
+              className="w-14 h-14 rounded-full"
             />
-            <View className="ml-3">
-              <Text className="font-semibold text-sm">{g.name}</Text>
-              <Text className="text-gray-500 text-xs">{g.members}</Text>
-              <Text className="text-gray-400 text-xs">{g.posts}</Text>
+            <View className="ml-3 flex-1">
+              <Text className="font-semibold text-base text-gray-800">
+                {g.name}
+              </Text>
+              <Text className="text-gray-500 text-sm mt-0.5">{g.members}</Text>
+              <Text className="text-gray-500 text-sm mt-0.5">{g.posts}</Text>
             </View>
           </View>
         ))}
 
         {groups.length < 5 ? (
-          <TouchableOpacity onPress={onJoinMorePress} className="mt-4 mb-3">
-            <Text className="text-blue-500 text-sm font-medium text-center">
+          // Thay đổi: Tạo kiểu cho nút này thành 1 "ghost button" để dễ nhấn hơn
+          <TouchableOpacity
+            onPress={onJoinMorePress}
+            className="mt-4 mb-3 bg-blue-50 rounded-lg p-3"
+          >
+            <Text className="text-blue-600 text-sm font-semibold text-center">
               Xem các nhóm có thể bạn thích
             </Text>
           </TouchableOpacity>

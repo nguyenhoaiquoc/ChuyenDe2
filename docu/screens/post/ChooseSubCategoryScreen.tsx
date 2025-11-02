@@ -16,7 +16,7 @@ import { categoryEndpoints } from "../../src/constants/category-endpoints";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseSubCategoryScreen({ navigation, route }: any) {
-  const { category } = route.params;
+  const { category, group } = route.params;
   interface SubCategory {
     id: number;
     name: string;
@@ -27,8 +27,6 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(true);
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
-
-  
 
   useEffect(() => {
     const endpointKey = categoryEndpoints[Number(category.id)];
@@ -59,10 +57,18 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
   }, [category]);
 
   const handleSelectSubCategory = (sub: SubCategory) => {
-    navigation.navigate("PostFormScreen", {
-      category: category,
-      subCategory: sub,
-    });
+    if (group) {
+      navigation.navigate("PostGroupFormScreen", {
+        group: group,
+        category: category,
+        subCategory: sub,
+      });
+    } else {
+      navigation.navigate("PostFormScreen", {
+        category: category,
+        subCategory: sub,
+      });
+    }
   };
   return (
     <SafeAreaView style={styles.container}>

@@ -1,5 +1,9 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, NotFoundException  } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
@@ -19,6 +23,7 @@ import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Injectable()
 export class ProductService {
@@ -71,7 +76,8 @@ export class ProductService {
 
     private readonly groupService: GroupService,
 
-    private readonly dataSource: DataSource,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
 
     private readonly notificationService: NotificationService,
   ) {}
@@ -103,6 +109,30 @@ export class ProductService {
       throw new NotFoundException(
         `Không tìm thấy postType với ID ${data.post_type_id}`,
       );
+    }
+
+    // 1.1. Kiểm tra xem đây có phải là bài đăng nhóm không
+    if (data.visibility_type && Number(data.visibility_type) === 1) {
+      // 1.2. Nếu là bài đăng nhóm, PHẢI có group_id và user_id
+      if (!data.group_id || !data.user_id) {
+        throw new NotFoundException(
+          'Bài đăng nhóm phải có group_id và user_id hợp lệ.',
+        );
+      }
+
+      // 1.3. (Bảo mật) Kiểm tra xem user này có phải là thành viên của nhóm không
+      const isMember = await this.groupMemberRepo.findOne({
+        where: {
+          user_id: data.user_id,
+          group_id: data.group_id,
+        },
+      });
+
+      if (!isMember) {
+        throw new UnauthorizedException(
+          'Bạn không phải là thành viên của nhóm này để đăng bài.',
+        );
+      }
     }
 
     let subCategoryId: number | null = null;
@@ -165,6 +195,7 @@ export class ProductService {
         console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
       }
     }
+
     const product = this.productRepo.create({
       name: data.name,
       description: data.description || '',
@@ -182,6 +213,8 @@ export class ProductService {
       condition: condition,
       postType: postType,
       product_type_id: data.product_type_id,
+      visibility_type: data.visibility_type || 0,
+      group_id: data.group_id || null,
       author: data.author,
       year: data.year,
     });
@@ -203,26 +236,35 @@ export class ProductService {
       );
 
       if (savedProduct) {
-      // 1. Gửi cho chính người đăng
-      this.notificationService.notifyUserOfPostSuccess(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyUserOfPostSuccess:', err.message));
-        
-      // 2. Gửi cho Admin ("tui")
-      this.notificationService.notifyAdminsOfNewPost(savedProduct)
-        .catch(err => this.logger.error('Lỗi (từ service) notifyAdminsOfNewPost:', err.message));
+        // 1. Gửi cho chính người đăng
+        this.notificationService
+          .notifyUserOfPostSuccess(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyUserOfPostSuccess:',
+              err.message,
+            ),
+          );
+
+        // 2. Gửi cho Admin ("tui")
+        this.notificationService
+          .notifyAdminsOfNewPost(savedProduct)
+          .catch((err) =>
+            this.logger.error(
+              'Lỗi (từ service) notifyAdminsOfNewPost:',
+              err.message,
+            ),
+          );
       }
       return savedProduct;
     }
-
-
-
-    
 
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
         'images',
         'user',
+        'group',
         'dealType',
         'condition',
         'category',

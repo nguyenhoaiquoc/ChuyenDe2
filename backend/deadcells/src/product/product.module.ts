@@ -20,6 +20,7 @@ import { User } from "src/entities/user.entity";
 import { ProductType } from "src/entities/product_types.entity";
 import { GroupModule } from "src/groups/group.module";
 import { NotificationModule } from 'src/notification/notification.module';
+import { GroupMember } from "src/entities/group-member.entity";
 
 
 @Module({
@@ -41,6 +42,7 @@ import { NotificationModule } from 'src/notification/notification.module';
       VehicleCategory,
       PostType,
       ProductType,
+      GroupMember,
     ]),
 
       NotificationModule,
