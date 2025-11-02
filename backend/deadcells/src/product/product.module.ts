@@ -54,6 +54,7 @@ import { GenderModule } from 'src/genders/gender.module';
 import { EngineCapacityModule } from 'src/engine-capacities/engine-capacity.module';
 import { ProductTypeModule } from 'src/product-types/product-type.module';
 import { ProductStatusModule } from 'src/product-statuses/product-status.module';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { ProductStatusModule } from 'src/product-statuses/product-status.module'
       HouseCategory,
       VehicleCategory,
       PostType,
+      GroupMember,
     ]),
 
     NotificationModule,

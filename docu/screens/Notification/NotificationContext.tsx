@@ -1,8 +1,15 @@
-import React, { createContext, useState, useContext, ReactNode, useCallback, useEffect } from 'react';
-import axios from 'axios';
-import { path } from '../../config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { io, Socket } from 'socket.io-client';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  useCallback,
+  useEffect,
+} from "react";
+import axios from "axios";
+import { path } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { io, Socket } from "socket.io-client";
 
 // Định nghĩa những gì Context sẽ cung cấp
 type NotificationContextType = {
@@ -12,7 +19,9 @@ type NotificationContextType = {
 };
 
 // Tạo Context
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | undefined>(
+  undefined
+);
 
 // Biến lưu socket (để nó không bị tạo lại mỗi lần render)
 let socket: Socket | null = null;
@@ -30,8 +39,10 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      const response = await axios.get(`${path}/notifications/user/${userId}/unread-count`);
-      if (response.data && typeof response.data.count === 'number') {
+      const response = await axios.get(
+        `${path}/notifications/user/${userId}/unread-count`
+      );
+      if (response.data && typeof response.data.count === "number") {
         setUnreadCount(response.data.count);
       }
     } catch (error) {
@@ -51,31 +62,47 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
       // 1. Kết nối tới server
       if (!socket) {
-        socket = io(path); 
+        socket = io(`${path}/notification`, {
+          transports: ["websocket"], // 🔥 bắt buộc để tránh lỗi polling
+          autoConnect: true,
+        });
+        console.log("Socket path:", path);
         console.log(`Đang kết nối Socket.IO tới ${path}...`);
 
+        socket.on("disconnect", (reason) => {
+          console.log("⚠️ Socket đã ngắt kết nối, lý do:", reason);
+        });
+
+        socket.on("connect_error", (err) => {
+          console.log("❌ Lỗi kết nối socket:", err.message);
+        });
+
+        socket.on("error", (err) => {
+          console.log("❌ Socket error:", err);
+        });
+
         // 2. Khi kết nối thành công, gửi "định danh"
-        socket.on('connect', () => {
+        socket.on("connect", () => {
           // ✅ SỬA LỖI Ở ĐÂY: Thêm 'if (socket)'
-          if (socket) { 
+          if (socket) {
             console.log(`✅ Socket đã kết nối: ${socket.id}`);
-            socket.emit('identify', { userId });
+            socket.emit("identify", { userId });
           }
         });
 
         // 3. LẮNG NGHE SỰ KIỆN PUSH TỪ SERVER
-        socket.on('unread_count_update', (data: { count: number }) => {
+        socket.on("unread_count_update", (data: { count: number }) => {
           console.log(`🔥 Nhận được PUSH 'unread_count_update':`, data.count);
           setUnreadCount(data.count);
         });
 
         // (Các hàm log lỗi/ngắt kết nối)
-        socket.on('disconnect', () => {
+        socket.on("disconnect", () => {
           console.log("Socket đã ngắt kết nối.");
         });
-        
-        socket.on('connect_error', (err) => {
-            console.error("Lỗi kết nối Socket.IO:", err.message);
+
+        socket.on("connect_error", (err) => {
+          console.error("Lỗi kết nối Socket.IO:", err.message);
         });
       }
     };
@@ -93,7 +120,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   }, []); // Chỉ chạy 1 lần khi Provider được tạo
 
   return (
-    <NotificationContext.Provider value={{ unreadCount, setUnreadCount, fetchUnreadCount }}>
+    <NotificationContext.Provider
+      value={{ unreadCount, setUnreadCount, fetchUnreadCount }}
+    >
       {children}
     </NotificationContext.Provider>
   );
@@ -103,7 +132,9 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error('useNotification phải được dùng bên trong NotificationProvider');
+    throw new Error(
+      "useNotification phải được dùng bên trong NotificationProvider"
+    );
   }
   return context;
 };

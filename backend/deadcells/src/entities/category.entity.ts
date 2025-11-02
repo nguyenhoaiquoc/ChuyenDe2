@@ -32,7 +32,7 @@ export class Category {
 
   @Column({ type: 'varchar', length: 191 })
   name: string;
-
+  
   @OneToMany(() => SubCategory, (subCategory) => subCategory.category)
   subCategories: SubCategory[];
 

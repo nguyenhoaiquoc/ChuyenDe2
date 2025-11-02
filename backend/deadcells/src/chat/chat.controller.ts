@@ -104,19 +104,6 @@ async openOrCreateRoom(
     return { success: true };
   }
 
-  /**
-   * Chỉnh sửa tin nhắn (qua HTTP nếu client chưa bật socket)
-   */
-  @Post('edit')
-  async editMessage(
-    @Req() req: Request,
-    @Body() body: { message_id: number; content: string },
-  ) {
-    const userId = req['user'].id;
-    const msg = await this.chatService.editMessage(userId, body.message_id, body.content);
-    return { message: msg };
-  }
-
   @Get('online-status/:id')
   async getOnlineStatus(@Param('id') id: number) {
     const user = await this.userRepo.findOne({ where: { id } });
@@ -135,6 +122,110 @@ async openOrCreateRoom(
 async uploadImage(@UploadedFile() file: Express.Multer.File) {
   if (!file) throw new HttpException('File not found', HttpStatus.BAD_REQUEST);
   return { url: file.path };
+}
+
+/** 🗑️ Thu hồi tin nhắn */
+@Post('recall/:id')
+async recallMessage(
+  @Req() req: Request,
+  @Param('id', ParseIntPipe) messageId: number,
+) {
+  const userId = req['user'].id;
+  const msg = await this.chatService.recallMessage(messageId, userId);
+
+  // 🔄 Phát socket cho room để client realtime
+  this.chatGateway.server
+    .to(`room_${msg.conversation_id}`)
+    .emit('messageRecalled', { id: msg.id, recalled_at: msg.recalled_at });
+
+  return { message: msg };
+}
+
+/** 🗨️ Trả lời tin nhắn (qua HTTP) */
+@Post('reply')
+async replyMessage(
+  @Req() req: Request,
+  @Body()
+  body: {
+    room_id: number;
+    receiver_id: number;
+    content: string;
+    reply_to_id: number;
+  },
+) {
+  const senderId = req['user'].id;
+  const msg = await this.chatService.replyMessage(
+    body.room_id,
+    senderId,
+    body.receiver_id,
+    body.content,
+    body.reply_to_id,
+  );
+
+  // 🔄 Emit realtime
+  this.chatGateway.server.to(`room_${body.room_id}`).emit('newReply', msg);
+  return { message: msg };
+}
+
+/** ✏️ Sửa tin nhắn (HTTP + Socket emit) */
+@Post('edit/:id')
+async editMessage(
+  @Req() req: Request,
+  @Param('id', ParseIntPipe) messageId: number,
+  @Body() body: { content: string },
+) {
+  const userId = req['user'].id;
+  const msg = await this.chatService.editMessage(userId, messageId, body.content);
+
+  // 🔄 Thông báo cho các client khác
+  this.chatGateway.server
+    .to(`room_${msg.conversation_id}`)
+    .emit('messageEdited', msg);
+
+  return { message: msg };
+}
+/** 🔎 HTTP search tin nhắn: /chat/search?q=...&roomId=&limit=&cursor= */
+@Get('search')
+async searchMessagesHttp(
+  @Req() req: Request,
+  @Query('q') q: string,
+  @Query('roomId') roomId?: string,
+  @Query('limit') limit?: string,
+  @Query('cursor') cursor?: string,
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.searchMessages(userId, q, {
+    roomId: roomId ? Number(roomId) : undefined,
+    limit: limit ? Number(limit) : undefined,
+    cursor: cursor || undefined,
+  });
+  return { data };
+}
+/** 📍 GET /chat/history/:roomId/around?messageId=...&window=40 */
+@Get('history/:roomId/around')
+async getHistoryAround(
+  @Req() req: Request,
+  @Param('roomId', ParseIntPipe) roomId: number,
+  @Query('messageId', ParseIntPipe) messageId: number,
+  @Query('window') window = '40',
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.getHistoryAround(roomId, userId, messageId, Number(window));
+  return { data };
+}
+/** 🔎 Meta của 1 room (để mở từ Search mà có đủ partner/product) */
+@Get('room/:roomId/meta')
+async getRoomMeta(
+  @Req() req: Request,
+  @Param('roomId', ParseIntPipe) roomId: number,
+) {
+  const userId = req['user'].id;
+  const data = await this.chatService.getRoomMetaData(userId, roomId);
+  if (!data) {
+    // Không tồn tại hoặc không có quyền
+    throw new NotFoundException('Room không tồn tại hoặc bạn không thuộc phòng này');
+  }
+  return { data };
 }
 
 }

@@ -230,21 +230,21 @@ export default function ManagePostsScreen({
   // Lọc danh sách sản phẩm khi 'activeStatus' (tab) hoặc 'allPosts' thay đổi
   useEffect(() => {
     const selectedTabName = statusTabs[activeStatus].trim();
-    let posts: Product[] = [];
+    let posts: Product[] = []; // Ánh xạ tên tab với product_status_id
 
     if (selectedTabName === "Đã duyệt") {
-      posts = allPosts.filter(
-        (p) => p.is_approved === true && p.productStatus?.id !== 4
-      );
+      // SỬA: Lọc trực tiếp theo status 2
+      posts = allPosts.filter((p) => p.productStatus?.id === 2);
     } else if (selectedTabName === "Chờ duyệt") {
+      // SỬA: Lọc trực tiếp theo status 1 (hoặc null nếu là tin mới)
       posts = allPosts.filter(
-        (p) =>
-          p.is_approved === false &&
-          (p.productStatus?.id === 1 || p.productStatus == null)
+        (p) => p.productStatus?.id === 1 || p.productStatus == null
       );
     } else if (selectedTabName === "Từ chối") {
+      // Giữ nguyên: Lọc theo status 3
       posts = allPosts.filter((p) => p.productStatus?.id === 3);
     } else if (selectedTabName === "Đã ẩn") {
+      // Giữ nguyên: Lọc theo status 4
       posts = allPosts.filter((p) => p.productStatus?.id === 4);
     }
 

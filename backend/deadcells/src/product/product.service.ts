@@ -1,8 +1,12 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Product } from 'src/entities/product.entity';
 import { ProductImage } from 'src/entities/product-image.entity';
 import { DealType } from 'src/entities/deal-type.entity';
 import { Condition } from 'src/entities/condition.entity';
@@ -40,6 +44,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { ProductStatusService } from 'src/product-statuses/product-status.service';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { Product } from 'src/entities/product.entity';
 
 @Injectable()
 export class ProductService {
@@ -48,7 +53,7 @@ export class ProductService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImage)
-    private readonly imageRepo: Repository<ProductImage>, // === GIỮ LẠI CÁC REPO CHÍNH ===
+    private readonly imageRepo: Repository<ProductImage>, 
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -158,7 +163,7 @@ export class ProductService {
 
       // Dùng Service
       data.product_type_id
-        ? this.productTypeService.findOne(data.product_type_id) // Dùng service
+        ? this.productTypeService.findOne(data.product_type_id)
         : Promise.resolve(null),
       data.origin_id
         ? this.originService.findOne(data.origin_id)
@@ -261,7 +266,7 @@ export class ProductService {
       const isMember = await this.groupMemberRepo.findOne({
         where: {
           user_id: data.user_id,
-          group_id: data.group_id,
+          group_id: Number(data.group_id),
         },
       });
 
@@ -269,67 +274,6 @@ export class ProductService {
         throw new UnauthorizedException(
           'Bạn không phải là thành viên của nhóm này để đăng bài.',
         );
-      }
-    }
-
-    let subCategoryId: number | null = null;
-
-    if (data.category_id && data.sub_category && data.sub_category.name) {
-      const existingSub = await this.subCategoryRepo.findOne({
-        where: {
-          name: data.sub_category.name,
-          parent_category_id: data.category_id,
-        },
-      });
-
-      if (existingSub) {
-        subCategoryId = existingSub.id;
-      } else {
-        let sourceTable: string | null = null;
-        switch (data.category_id) {
-          case 1:
-            sourceTable = 'fashion_categories';
-            break;
-          case 2:
-            sourceTable = 'game_categories';
-            break;
-          case 3:
-            sourceTable = 'academic_categories';
-            break;
-          case 4:
-            sourceTable = 'animal_categories';
-            break;
-          case 5:
-            sourceTable = 'electronic_categories';
-            break;
-          case 6:
-            sourceTable = 'house_categories';
-            break;
-          case 7:
-            sourceTable = 'vehicle_categories';
-            break;
-        }
-
-        const newSub = this.subCategoryRepo.create({
-          name: data.sub_category.name,
-          parent_category_id: data.category_id,
-          source_table: sourceTable || undefined,
-          source_id: null,
-        });
-        const savedSub = await this.subCategoryRepo.save(newSub);
-        subCategoryId = savedSub.id;
-      }
-    } else if (data.sub_category_id) {
-      subCategoryId = data.sub_category_id;
-    }
-
-    let user: User | null = null;
-    if (data.user_id) {
-      user = await this.userRepo.findOne({
-        where: { id: data.user_id },
-      });
-      if (!user) {
-        console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
       }
     }
 
@@ -365,14 +309,14 @@ export class ProductService {
       engineCapacity: engineCapacity || undefined,
       category_change: category_change || undefined,
       sub_category_change: sub_category_change || undefined,
-      
+
       productStatus: { id: 1 },
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
-      product_type_id: data.product_type_id || undefined,
-      visibility_type: data.visibility_type || 0,
-      group_id: data.group_id || null,
+
+      visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
+      group_id: data.group_id ? Number(data.group_id) : undefined,
     });
 
     const savedProduct = await this.productRepo.save(product);
@@ -390,37 +334,34 @@ export class ProductService {
       this.logger.log(
         `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
       );
-
-      if (savedProduct) {
-        // 1. Gửi cho chính người đăng
-        this.notificationService
-          .notifyUserOfPostSuccess(savedProduct)
-          .catch((err) =>
-            this.logger.error(
-              'Lỗi (từ service) notifyUserOfPostSuccess:',
-              err.message,
-            ),
-          );
-
-        // 2. Gửi cho Admin ("tui")
-        this.notificationService
-          .notifyAdminsOfNewPost(savedProduct)
-          .catch((err) =>
-            this.logger.error(
-              'Lỗi (từ service) notifyAdminsOfNewPost:',
-              err.message,
-            ),
-          );
-      }
-      return savedProduct;
     }
 
+    // 5. Gửi thông báo
+    if (savedProduct) {
+      this.notificationService
+        .notifyUserOfPostSuccess(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi (từ service) notifyUserOfPostSuccess:',
+            err.message,
+          ),
+        );
+      this.notificationService
+        .notifyAdminsOfNewPost(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi (từ service) notifyAdminsOfNewPost:',
+            err.message,
+          ),
+        );
+    }
+
+    // 6. Trả về sản phẩm đầy đủ (Query lại để lấy đủ relations)
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
         'images',
         'user',
-        'group',
         'dealType',
         'condition',
         'category',
@@ -456,7 +397,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, product_status_id: 1 }],
+      where: [{ category_id: categoryId, product_status_id: 2 }],
       relations: [
         'images',
         'user',

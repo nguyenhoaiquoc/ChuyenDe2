@@ -35,7 +35,6 @@ import { Breed } from './breed.entity';
 import { AgeRange } from './age-range.entity';
 import { Gender } from './gender.entity';
 import { EngineCapacity } from './engine-capacity.entity';
-import { Status } from './status.entity';
 import { ProductStatus } from './product-status.entity';
 
 @Entity('products')

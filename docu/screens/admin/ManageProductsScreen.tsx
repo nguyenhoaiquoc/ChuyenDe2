@@ -119,7 +119,10 @@ export default function ManageProductsScreen() {
   }; // Component render từng hàng (Giữ nguyên)
 
   const renderProductItem = ({ item }: { item: Product }) => (
-    <View style={styles.itemContainer}>
+    <TouchableOpacity
+      style={styles.itemContainer}
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    >
       <Image source={{ uri: item.image }} style={styles.itemImage} />
       <View style={styles.itemInfo}>
         <Text style={styles.itemName} numberOfLines={2}>
@@ -145,8 +148,8 @@ export default function ManageProductsScreen() {
           </View>
         )}
       </View>
-    </View>
-  ); // Return (Giữ nguyên)
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>

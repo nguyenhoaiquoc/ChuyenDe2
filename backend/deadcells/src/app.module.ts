@@ -42,6 +42,8 @@ import { AgeRangeModule } from './age-ranges/age-range.module';
 import { GenderModule } from './genders/gender.module';
 import { EngineCapacityModule } from './engine-capacities/engine-capacity.module';
 import { ProductStatus } from './entities/product-status.entity';
+import { GroupMember } from './entities/group-member.entity';
+import { ProductStatusModule } from './product-statuses/product-status.module';
 
 @Module({
   imports: [
@@ -94,7 +96,7 @@ import { ProductStatus } from './entities/product-status.entity';
     AgeRangeModule,
     GenderModule,
     EngineCapacityModule,
-    ProductStatus,
+    ProductStatusModule,
   ],
   controllers: [AppController],
   providers: [AppService],
