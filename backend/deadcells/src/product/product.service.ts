@@ -57,10 +57,6 @@ export class ProductService {
 
     @InjectRepository(Condition)
     private readonly conditionRepo: Repository<Condition>,
-
-    @InjectRepository(Origin)
-    private readonly originRepo: Repository<Origin>,
-
     @InjectRepository(Material)
     private readonly materialRepo: Repository<Material>,
 
@@ -320,7 +316,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
+        
         'material',
         'size',
         'brand',
@@ -358,7 +354,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
+        
         'material',
         'size',
         'brand',
@@ -395,7 +391,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
+       
         'material',
         'size',
         'brand',
@@ -433,7 +429,7 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
+        
         'material',
         'size',
         'brand',
@@ -509,7 +505,7 @@ export class ProductService {
         productType: p.productType
           ? { id: p.productType.id, name: p.productType.name }
           : null,
-        origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
+       
         material: p.material
           ? { id: p.material_id, name: p.material.name }
           : null,

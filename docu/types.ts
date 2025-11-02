@@ -30,9 +30,11 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  SearchProduct: undefined;
   ChooseExchangeCategoryScreen: undefined;
   ChooseExchangeSubCategoryScreen: undefined;
   HomeAdminScreen: undefined;
+  SearchResultScreen:{ query: string };
   ManagerGroupsScreen: undefined;
   UserInforScreen: {
     onUpdate?: (updatedUser: any) => void; // cho phép truyền callback

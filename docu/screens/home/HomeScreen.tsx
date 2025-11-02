@@ -16,6 +16,7 @@ import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState } from "react";
+import SearchProduct from "../products/SearchProduct";
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
