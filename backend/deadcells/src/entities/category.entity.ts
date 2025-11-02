@@ -32,8 +32,7 @@ export class Category {
 
   @Column({ type: 'varchar', length: 191 })
   name: string;
-  @OneToMany(() => ProductType, (productType) => productType.category)
-  productTypes: ProductType[];
+  
   @OneToMany(() => SubCategory, (subCategory) => subCategory.category)
   subCategories: SubCategory[];
 

@@ -37,8 +37,6 @@ export class SubCategory {
 
   @Column()
   category_id: number;
-  @OneToMany(() => ProductType, (productType) => productType.subCategory)
-  productTypes: ProductType[];
 
   @ManyToOne(() => Category, (category) => category.subCategories, {
     onDelete: 'CASCADE',
