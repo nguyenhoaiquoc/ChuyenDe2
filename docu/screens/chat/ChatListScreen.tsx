@@ -1,0 +1,257 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  View, Text, TouchableOpacity, Image, ScrollView,
+  ActivityIndicator, Alert,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { FontAwesome5 } from "@expo/vector-icons";
+import Menu from "../../components/Menu";
+import "../../global.css";
+import axios from "axios";
+import { path } from "../../config";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
+import { useFocusEffect } from "@react-navigation/native";
+import { io, Socket } from "socket.io-client";
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, "ChatListScreen">;
+};
+
+export default function ChatListScreen({ navigation }: Props) {
+  const [chatList, setChatList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const socketRef = useRef<Socket | null>(null);
+  const currentUserIdRef = useRef<string>("");
+
+  const fetchChats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+      const res = await axios.get(`${path}/chat/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setChatList(res.data?.data || []);
+    } catch (err: any) {
+      console.log("❌ Lỗi tải danh sách chat:", err?.response?.data || err?.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Lần đầu + khi quay lại màn hình thì refresh
+  useEffect(() => { fetchChats(); }, [fetchChats]);
+  useFocusEffect(useCallback(() => { fetchChats(); }, [fetchChats]));
+
+  // 🔴 NEW: Kết nối socket ngay tại ChatList để nhận realtime
+  useEffect(() => {
+    (async () => {
+      const [token, uid] = await Promise.all([
+        AsyncStorage.getItem("token"),
+        AsyncStorage.getItem("userId"),
+      ]);
+      if (!token || !uid) return;
+      currentUserIdRef.current = String(uid);
+
+      const socket = io(`${path}/chat`, {
+        auth: { token, userId: String(uid) },
+        transports: ["websocket"],
+      });
+      socketRef.current = socket;
+
+      socket.on("connect", () => console.log("✅ ChatList socket connected:", socket.id));
+      socket.on("connect_error", (e) => console.log("⚠️ connect_error ChatList:", e?.message));
+
+      // Khi có tin nhắn mới gửi tới mình → bôi đen room đó + đẩy lên đầu
+      socket.on("receiveMessage", (msg: any) => {
+        // msg phải có: conversation_id, receiver_id, content/media_url, created_at
+        const me = currentUserIdRef.current;
+        const isForMe = String(msg.receiver_id) === String(me);
+
+        setChatList((prev) => {
+          // clone danh sách
+          const list = [...prev];
+          const idx = list.findIndex((r) => Number(r.room_id) === Number(msg.conversation_id));
+
+          const patchFields = {
+            last_message: msg.content ?? (msg.media_url ? "[Ảnh]" : ""),
+            last_message_at: msg.created_at ?? new Date().toISOString(),
+            // chỉ bôi đen nếu tin mới là gửi CHO MÌNH và chưa đọc (server mặc định is_read=false khi mới gửi)
+            is_last_unread: isForMe ? true : (list[idx]?.is_last_unread ?? false),
+            unread_count:
+              isForMe ? (Number(list[idx]?.unread_count || 0) + 1) : (list[idx]?.unread_count || 0),
+          };
+
+          if (idx >= 0) {
+            const updated = { ...list[idx], ...patchFields };
+            // đưa room lên đầu theo last_message_at mới
+            const rest = list.filter((_, i) => i !== idx);
+            const newList = [updated, ...rest];
+            // sort chắc cú theo last_message_at desc (ISO string so sánh được)
+            newList.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+            return newList;
+          } else {
+            // Chưa có room trong list (VD: lần đầu chat) → lấy meta rồi push
+            return list; // tạm thời giữ nguyên; gọi meta async để thêm
+          }
+        });
+      });
+
+      // Optional: nếu server broadcast 'messageEdited' & 'messageRecalled' thì cập nhật snippet nếu trùng last_message
+      socket.on("messageEdited", (m: any) => {
+        setChatList((prev) => {
+          const list = [...prev];
+          const idx = list.findIndex((r) => Number(r.room_id) === Number(m.conversation_id));
+          if (idx < 0) return list;
+          // chỉ update nếu message vừa sửa chính là last_message hiện đang hiển thị
+          // (Bạn có thể lưu thêm last_message_id ở payload getChatList để so sánh chắc hơn)
+          const updated = {
+            ...list[idx],
+            last_message: m.content ?? (m.media_url ? "[Ảnh]" : ""),
+            last_message_at: m.updated_at ?? list[idx].last_message_at,
+          };
+          list[idx] = updated;
+          return list.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+        });
+      });
+
+      socket.on("messageRecalled", (payload: { id: number }) => {
+        // Khi thu hồi, nếu đó là last_message, hiển thị rỗng/placeholder
+        // (cần last_message_id trong payload getChatList để làm chính xác 100%)
+        // tạm thời bỏ qua hoặc gọi fetchChats() để đồng bộ
+        fetchChats();
+      });
+
+      // Khi mình đọc trong ChatRoom, server có thể broadcast 'unreadCount' (để badge),
+      // bạn có thể tự refresh list nếu muốn:
+      // socket.on("unreadCount", () => fetchChats());
+
+      return () => {
+        socket.disconnect();
+      };
+    })();
+  }, [fetchChats]);
+
+  /** Mở phòng chat */
+  const handleOpenRoom = async (room: any) => {
+    try {
+      const tokenValue = await AsyncStorage.getItem("token");
+      const currentUserId = await AsyncStorage.getItem("userId");
+      const currentUserName = await AsyncStorage.getItem("userName");
+
+      if (!tokenValue || !currentUserId) {
+        Alert.alert("Thông báo", "Vui lòng đăng nhập lại để tiếp tục.");
+        return;
+      }
+
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.room_id,
+        product: room.product ?? null,
+        otherUserId: room.partner?.id ?? null,
+        otherUserName: room.partner?.name ?? "Người dùng",
+        otherUserAvatar:
+          room.partner?.avatar ||
+          "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+        currentUserId: Number(currentUserId),
+        currentUserName: currentUserName || "Tôi",
+        token: tokenValue,
+      });
+    } catch (error) {
+      console.error("❌ Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
+
+  const renderTime = (dt?: string) => {
+    if (!dt) return "";
+    try {
+      return new Date(dt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  };
+
+  return (
+    <View className="flex-1 bg-[#f5f6fa]">
+      <StatusBar style="auto" />
+      <View className="flex flex-row justify-between mt-14 items-center px-5">
+        <Text className="text-2xl font-bold">Chat</Text>
+        <View className="flex flex-row gap-10">
+          <FontAwesome5 name="search" size={20} color="gray"
+            onPress={() => navigation.navigate("SearchScreen")} />
+          <FontAwesome5 name="bars" size={20} color="gray" />
+        </View>
+      </View>
+
+      <View className="w-full h-[1px] bg-gray-300 mt-10" />
+      <View className="flex flex-row justify-between px-5 my-5">
+        <Text className="text-xl font-bold">Tất cả tin nhắn</Text>
+        <Text className="text-xl font-bold"
+          onPress={() => navigation.navigate("UnreadMessageScreen")}>
+          Tin chưa đọc
+        </Text>
+      </View>
+
+      {loading ? (
+        <View className="flex-1 justify-center items-center">
+          <ActivityIndicator size="large" color="#555" />
+          <Text className="mt-2 text-gray-500">Đang tải tin nhắn...</Text>
+        </View>
+      ) : (
+        <ScrollView className="flex-1">
+          <View className="mb-20">
+            {chatList.length === 0 ? (
+              <Text className="text-center text-gray-500 mt-10">Bạn chưa có cuộc trò chuyện nào</Text>
+            ) : (
+              chatList.map((room) => {
+                const unreadFlag = room?.is_last_unread === true;
+                const unreadCount: number = Number(room?.unread_count || 0);
+                return (
+                  <TouchableOpacity
+                    key={room.room_id}
+                    className={`flex flex-row mb-2 px-4 py-3 ${unreadFlag ? "bg-blue-50" : ""}`}
+                    onPress={() => handleOpenRoom(room)}
+                  >
+                    <View className="relative">
+                      <Image
+                        className="w-[46px] h-[46px] rounded-full"
+                        source={{ uri: room.partner?.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
+                      />
+                      {unreadFlag && (
+                        <View className="absolute -top-1 -right-1 bg-blue-500 w-3.5 h-3.5 rounded-full" />
+                      )}
+                    </View>
+
+                    <View className="w-[88%] pl-3 border-b border-gray-200 pb-3">
+                      <View className="flex flex-row justify-between items-center">
+                        <Text className={`text-lg ${unreadFlag ? "font-extrabold text-black" : "font-semibold"}`} numberOfLines={1}>
+                          {room.partner?.name || "Người dùng ẩn danh"}
+                        </Text>
+                        <Text className="text-gray-400 text-xs ml-2">{renderTime(room.last_message_at)}</Text>
+                      </View>
+
+                      <View className="flex flex-row items-center mt-0.5">
+                        <Text className={`${unreadFlag ? "font-bold text-black" : "text-gray-500"} flex-1`} numberOfLines={1}>
+                          {room.last_message || "(chưa có tin nhắn)"}
+                        </Text>
+                        {unreadCount > 0 && (
+                          <View className="ml-2 bg-blue-500 px-2 py-[1px] rounded-full">
+                            <Text className="text-white text-[11px] font-semibold">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
+      )}
+
+      <Menu />
+    </View>
+  );
+}
