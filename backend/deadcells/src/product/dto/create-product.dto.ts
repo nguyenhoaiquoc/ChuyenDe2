@@ -8,6 +8,7 @@ import {
   IsNotEmpty,
   Min,
   IsBoolean,
+  IsNumberString,
 } from 'class-validator';
 
 /**
@@ -162,6 +163,10 @@ export class CreateProductDto {
 
   @IsOptional()
   @Transform(transformToNumberOrNull)
+  product_status_id: number | null;
+
+  @IsOptional()
+  @Transform(transformToNumberOrNull)
   mileage: number | null;
   
   @IsOptional()
@@ -179,6 +184,14 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(transformToNumberOrNull) // 'year' cũng có thể bị thiếu
   year: number | null;
+
+  @IsOptional()
+  @IsNumberString()
+  visibility_type: string;
+
+  @IsOptional()
+  @IsNumberString()
+  group_id: string;
 
   /**
    * Các trường này client gửi lên là chuỗi "true"/"false"

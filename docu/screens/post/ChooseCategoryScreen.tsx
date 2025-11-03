@@ -18,8 +18,9 @@ interface Category {
   image: string;
 }
 
-export default function ChooseCategoryScreen({ navigation }: any) {
+export default function ChooseCategoryScreen({ navigation, route }: any) {
   const [categories, setCategories] = useState<Category[]>([]);
+  const { group } = route.params || {};
 
   useEffect(() => {
     axios.get(`${path}/categories`)
@@ -66,7 +67,7 @@ export default function ChooseCategoryScreen({ navigation }: any) {
             key={item.id}
             style={styles.categoryItem}
             onPress={() =>
-              navigation.navigate("ChooseSubCategoryScreen", { category: item })
+              navigation.navigate("ChooseSubCategoryScreen", { category: item , group: group})
             }
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -92,7 +93,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    marginTop: 24,
   },
   headerTitle: { fontSize: 18, fontWeight: "600", color: "#fff" },
   sectionHeader: {

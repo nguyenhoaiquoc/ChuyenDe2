@@ -1,19 +1,6 @@
-// src/product/product.controller.ts
-
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
-  Req,
-  UploadedFiles,
-  UseGuards,
-  UseInterceptors,
+  Controller, Get, Post, Patch, Param, Body, Query, Req,
+  UploadedFiles, UseGuards, UseInterceptors, ParseIntPipe,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -21,11 +8,13 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
+import { UpdateProductStatusDto } from './dto/update-status.dto';
 
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
+  // 🟢 Tạo bài đăng (đăng sản phẩm mới)
   @Post()
   @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter))
   async create(
@@ -35,25 +24,41 @@ export class ProductController {
     return await this.productService.create(createProductDto, files);
   }
 
+  // 🟢 Lấy danh sách bài hiển thị ngoài trang chủ
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
   async findAll(@Req() req, @Query('category_id') category_id?: string) {
     const userId = req.user?.id || null;
-    console.log('✅ userId:', userId);
-
     if (category_id) {
       return await this.productService.findByCategoryId(Number(category_id));
     }
-
-    const result = await this.productService.findAllFormatted(userId);
-    console.log('✅ products count:', result.length);
-    return result;
+    return await this.productService.findAllFormatted(userId);
   }
 
+  // 🟢 Người dùng xem tất cả bài đăng của chính mình
+  @Get('my-posts/:userId')
+  async getMyPosts(@Param('userId', ParseIntPipe) userId: number) {
+    return this.productService.findByUserId(userId);
+  }
+
+  // 🟢 Lấy chi tiết 1 bài
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
-    // Gọi hàm "findById" mà ông nói đã có trong service
-    return this.productService.findById(id); 
+    return this.productService.findById(id);
   }
-  
+
+  // 🟣 Admin xem tất cả bài (bỏ lọc duyệt)
+  @Get('admin/all')
+  async findAllForAdmin() {
+    return this.productService.findAllForAdmin();
+  }
+
+  // 🟣 Admin duyệt / từ chối bài
+  @Patch('admin/status/:id')
+  async updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateProductStatusDto,
+  ) {
+    return this.productService.updateProductStatus(id, dto);
+  }
 }

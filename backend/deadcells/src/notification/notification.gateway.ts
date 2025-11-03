@@ -9,6 +9,7 @@ import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
+  namespace: '/notification',
   cors: {
     origin: '*', // Cho phép mọi client (app) kết nối
   },

@@ -39,6 +39,9 @@ import GroupDetailScreen from './screens/groups/GroupDetailScreen';
 import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
+import { StatusBar } from 'expo-status-bar';
+import ManageProductsScreen from './screens/admin/ManageProductsScreen';
+import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -46,6 +49,7 @@ export default function App() {
   return (
     <NotificationProvider>
       <NavigationContainer>
+        <StatusBar hidden />
         <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
           {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
           <Stack.Screen name="Home" component={HomeScreen} />
@@ -73,6 +77,7 @@ export default function App() {
           <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
           <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
           <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+          <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} />
           <Stack.Screen name="UserDetail" component={UserDetail} />
           <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
           <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
@@ -81,9 +86,9 @@ export default function App() {
           <Stack.Screen name="PurchaseRequestScreen" component={PurchaseRequestScreen} />
           <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
-          {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
-          <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
-          />
+          <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
+           <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

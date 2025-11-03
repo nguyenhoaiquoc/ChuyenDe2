@@ -118,12 +118,12 @@ export default function PurchaseRequestScreen({ navigation }: Props) {
             images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa và fallback về 'null'
             postType: item.postType || null,
             condition: item.condition || null,
             dealType: item.dealType || null,
 
-            // Sửa logic fallback (kiểm tra .name)
+            productStatus: item.productStatus || null,
+
             productType:
               item.productType && item.productType.name
                 ? item.productType

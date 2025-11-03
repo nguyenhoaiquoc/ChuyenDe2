@@ -158,5 +158,95 @@ async handleLogout(@ConnectedSocket() client: Socket) {
   console.log("✅ Đã ngắt kết nối socket");
 }
 
+/** 🔄 Thu hồi tin nhắn */
+@SubscribeMessage('recallMessage')
+async handleRecallMessage(
+  @MessageBody() data: { message_id: number },
+  @ConnectedSocket() client: Socket,
+) {
+  const userId = client.data.userId;
+  
+  console.log('⚙️ [DEBUG recallMessage]');
+  console.log('  → message_id:', data.message_id);
+  console.log('  → socket.userId:', userId);
+
+  // lấy tin nhắn từ DB để xem ai là sender
+  const msg = await this.chatService['messageRepo'].findOne({
+    where: { id: data.message_id },
+  });
+  console.log('  → msg.sender_id:', msg?.sender_id, 'is_recalled:', msg?.is_recalled);
+
+  const updated = await this.chatService.recallMessage(data.message_id, userId);
+
+  this.server
+    .to(`room_${updated.conversation_id}`)
+    .emit('messageRecalled', { id: updated.id, recalled_at: updated.recalled_at });
+}
+
+
+/** 🗨️ Trả lời tin nhắn */
+@SubscribeMessage('replyMessage')
+async handleReplyMessage(
+  @MessageBody()
+  data: {
+    room_id: number;
+    receiver_id: number;
+    content: string;
+    reply_to_id: number;
+  },
+  @ConnectedSocket() client: Socket,
+) {
+  const senderId = client.data.userId;
+  const msg = await this.chatService.replyMessage(
+    data.room_id,
+    senderId,
+    data.receiver_id,
+    data.content,
+    data.reply_to_id,
+  );
+
+  this.server.to(`room_${data.room_id}`).emit('newReply', msg);
+}
+
+/** ✏️ Chỉnh sửa tin nhắn */
+@SubscribeMessage('editMessage')
+async handleEditMessage(
+  @MessageBody() data: { message_id: number; content: string },
+  @ConnectedSocket() client: Socket,
+) {
+  console.log('🧩 [DEBUG editMessage event]');
+  console.log('client.data.userId =', client.data?.userId);
+  console.log('data =', data);
+
+  const senderId = client.data.userId;
+  const msg = await this.chatService.editMessage(senderId, data.message_id, data.content);
+
+  this.server.to(`room_${msg.conversation_id}`).emit('messageEdited', msg);
+}
+
+@SubscribeMessage('joinRoom')
+joinRoom(@MessageBody() data: { room_id: string }, @ConnectedSocket() client: Socket) {
+  client.join(`room_${data.room_id}`);
+}
+/** 🔎 WS search: payload { q, roomId?, limit?, cursor? } */
+@SubscribeMessage('searchMessages')
+async handleSearchMessages(
+  @MessageBody() payload: any,
+  @ConnectedSocket() client: Socket,
+) {
+  const userId = Number(client.data?.userId);
+  if (!userId) return { event: 'searchMessagesResult', data: { items: [], nextCursor: null } };
+
+  const { q, roomId, limit, cursor } = payload || {};
+  const data = await this.chatService.searchMessages(userId, String(q ?? ''), {
+    roomId: roomId ? Number(roomId) : undefined,
+    limit: limit ? Number(limit) : undefined,
+    cursor: cursor || undefined,
+  });
+
+  // Trả về qua ACK (nếu client có callback) hoặc emit dạng result event
+  return { event: 'searchMessagesResult', data };
+}
+
 }
   

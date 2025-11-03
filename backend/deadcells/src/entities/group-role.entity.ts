@@ -12,7 +12,7 @@ export class GroupRole {
   id: number;
 
   @Column({ type: 'varchar', length: 191, unique: true })
-  name: string; // Ví dụ: 'Leader', 'Member'
+  name: string; // Ví dụ: '2. Leader', '1. Member'
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
