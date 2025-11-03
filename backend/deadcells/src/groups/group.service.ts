@@ -101,7 +101,7 @@ export class GroupService {
     }
 
     const products = await this.productRepo.find({
-      where: { group_id: groupId, status_id: 1 },
+      where: { group_id: groupId },
       order: { created_at: 'DESC' },
       take: 20,
       relations: ['images', 'user', 'category', 'subCategory', 'group'], // thêm relations để có đủ dữ liệu
@@ -206,7 +206,7 @@ export class GroupService {
     if (groupIds.length === 0) return [];
 
     const posts = await this.productRepo.find({
-      where: { group_id: In(groupIds), status_id: 1 },
+      where: { group_id: In(groupIds)},
       order: { created_at: 'DESC' },
       take: limit || undefined,
       relations: ['images', 'user', 'category', 'subCategory', 'group'],
@@ -218,7 +218,7 @@ export class GroupService {
   // ✅ Lấy bài viết từ một nhóm cụ thể
   async findPostsByGroup(groupId: number, limit?: number) {
     const posts = await this.productRepo.find({
-      where: { group_id: groupId, status_id: 1 },
+      where: { group_id: groupId },
       order: { created_at: 'DESC' },
       take: limit || undefined,
       relations: ['images', 'user', 'category', 'subCategory', 'group'],
