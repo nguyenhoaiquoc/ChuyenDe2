@@ -16,7 +16,7 @@ import { User } from 'src/entities/user.entity';
 import { baseUrl } from 'config';
 
 @WebSocketGateway({
-  namespace: '/chat',
+  namespace: '/chat_user',
   cors: { origin: baseUrl },
   pingInterval: 5000, // gửi ping mỗi 5s
   pingTimeout: 10000, // nếu không phản hồi 10s -> disconnect
