@@ -50,7 +50,7 @@ export class GroupService {
       user_id: savedGroup.owner_id,
       group_role_id: 2, // 1.member 2.leader
     });
- 
+
     await this.groupMemberRepo.save(member);
 
     return savedGroup;

@@ -92,6 +92,17 @@ export default function GroupDetailScreen({
     setRefreshing(false);
   }, [fetchData]);
 
+  // ✅ Hàm đăng bài với callback
+  const handleCreatePost = () => {
+    navigation.navigate("PostGroupFormScreen", {
+      group,
+      onPostSuccess: async () => {
+        console.log("✅ Đăng bài thành công! Đang reload...");
+        await fetchData(); // Reload lại danh sách sản phẩm
+      },
+    });
+  };
+
   // 🔹 Tham gia nhóm
   const handleJoinGroup = async () => {
     try {
@@ -105,7 +116,7 @@ export default function GroupDetailScreen({
       );
       Alert.alert("Thành công", "Bạn đã tham gia nhóm");
       setRole("member");
-      await fetchData(); // Reload data
+      await fetchData();
     } catch (error: any) {
       console.log("Lỗi tham gia nhóm:", error);
       const errorMsg =
@@ -117,7 +128,6 @@ export default function GroupDetailScreen({
 
   // 🔹 Rời nhóm
   const handleLeaveGroup = async () => {
-    // Kiểm tra nếu là leader
     if (isLeader) {
       Alert.alert(
         "Không thể rời nhóm",
@@ -145,7 +155,7 @@ export default function GroupDetailScreen({
               Alert.alert("Thành công", "Bạn đã rời nhóm");
               setRole("none");
               setMenuVisible(false);
-              await fetchData(); // Reload data
+              await fetchData();
             } catch (error: any) {
               console.log("Lỗi rời nhóm:", error);
               const errorMsg =
@@ -166,7 +176,6 @@ export default function GroupDetailScreen({
       icon: "file-text",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to user's posts in this group
         console.log("Xem bài viết của tôi");
       },
     },
@@ -185,7 +194,6 @@ export default function GroupDetailScreen({
       icon: "edit",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to edit group screen
         console.log("Sửa nhóm");
       },
     },
@@ -194,7 +202,6 @@ export default function GroupDetailScreen({
       icon: "check-square",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to pending posts screen
         console.log("Duyệt bài viết");
       },
     },
@@ -203,7 +210,6 @@ export default function GroupDetailScreen({
       icon: "user-check",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to pending members screen
         console.log("Duyệt thành viên");
       },
     },
@@ -212,7 +218,6 @@ export default function GroupDetailScreen({
       icon: "users",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to members list screen
         console.log("Xem thành viên");
       },
     },
@@ -221,7 +226,6 @@ export default function GroupDetailScreen({
       icon: "shield",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to transfer leadership screen
         console.log("Chuyển quyền trưởng nhóm");
       },
     },
@@ -239,7 +243,6 @@ export default function GroupDetailScreen({
               text: "Xóa nhóm",
               style: "destructive",
               onPress: () => {
-                // TODO: Implement delete group API
                 console.log("Xoá nhóm");
               },
             },
@@ -272,14 +275,13 @@ export default function GroupDetailScreen({
             <Feather name="arrow-left" size={20} color="#000" />
           </TouchableOpacity>
 
-          {/* Nếu là thành viên → có menu, nếu chưa → nút tham gia */}
+          {/* Nếu là thành viên → có nút đăng bài + menu, nếu chưa → nút tham gia */}
           {isMember ? (
             <View className="flex-row items-center space-x-3">
+              {/* ✅ NÚT ĐĂNG BÀI - LUÔN HIỂN THỊ */}
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("PostGroupFormScreen", { group })
-                }
-                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+                onPress={handleCreatePost}
+                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center mr-2"
               >
                 <Feather name="edit" size={20} color="black" />
               </TouchableOpacity>
@@ -402,6 +404,7 @@ export default function GroupDetailScreen({
           </View>
         )}
         ListEmptyComponent={
+          // ✅ CHỈ HIỆN KHI KHÔNG CÓ SẢN PHẨM NÀO
           <View className="items-center justify-center mt-10 px-4">
             <Feather name="package" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 mt-4 text-center">
@@ -409,9 +412,7 @@ export default function GroupDetailScreen({
             </Text>
             {isMember && (
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("PostGroupFormScreen", { group })
-                }
+                onPress={handleCreatePost}
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
               >
                 <Text className="text-white font-semibold">
@@ -479,7 +480,6 @@ export default function GroupDetailScreen({
                       thumbColor={"#f4f3f4"}
                       onValueChange={async (v) => {
                         setIsApprovalEnabled(v);
-                        // TODO: Call API to update group settings
                         console.log("Toggle approval mode:", v);
                       }}
                       value={!isGroupPublic ? true : isApprovalEnabled}

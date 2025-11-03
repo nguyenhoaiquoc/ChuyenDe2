@@ -16,12 +16,14 @@ export type RootStackParamList = {
   ChooseCategoryScreen:
     | {
         group?: GroupType;
+        onPostSuccess?: () => void;
       }
     | undefined;
   ChooseSubCategoryScreen:
     | {
         category: Category;
         group?: GroupType;
+        onPostSuccess?: () => void;
       }
     | undefined;
   PostFormScreen:
@@ -57,6 +59,7 @@ export type RootStackParamList = {
     group: GroupType;
     category?: Category;
     subCategory?: SubCategory;
+    onPostSuccess?: () => void;
   };
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {

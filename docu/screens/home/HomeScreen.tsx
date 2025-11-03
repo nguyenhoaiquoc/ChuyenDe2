@@ -37,6 +37,7 @@ const filters = [
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+   const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -47,7 +48,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
-
+  
   useEffect(() => {
     axios
       .get(`${path}/categories`)
@@ -178,7 +179,7 @@ export default function HomeScreen({ navigation }: Props) {
             dealType: item.dealType || null,
 
             productStatus: item.productStatus || null,
-            
+
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -352,7 +353,7 @@ export default function HomeScreen({ navigation }: Props) {
       <StatusBar hidden={true} />
 
       {/* Header */}
-      <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
+      <View className="flex-row items-center px-3 py-10 bg-white shadow z-1">
         {/* Icon menu */}
         <TouchableOpacity className="p-2">
           <Feather name="menu" size={24} color="#333" />
