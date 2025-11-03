@@ -40,10 +40,10 @@ export class NotificationService {
     // LƯU LẦN 1
     const savedNotification = await this.notificationRepo.save(newNotification);
 
-    // ✅ GỌI HÀM PUSH SAU KHI TẠO
+    // GỌI HÀM PUSH SAU KHI TẠO
     this.pushNewUnreadCount(dto.userId);
 
-    // ❗️ SỬA LỖI: Trả về cái đã lưu, không save 2 lần
+    //  Trả về cái đã lưu, không save 2 lần
     return savedNotification;
   }
 
@@ -255,7 +255,7 @@ export class NotificationService {
   }
 
   /**
-   * ✅ HÀM HELPER (ĐỂ PUSH REAL-TIME)
+   * HÀM HELPER (ĐỂ PUSH REAL-TIME)
    * Lấy số lượng mới nhất và PUSH cho user
    */
   private async pushNewUnreadCount(userId: number) {

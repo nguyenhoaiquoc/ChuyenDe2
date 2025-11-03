@@ -151,7 +151,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (!jwt || !roomId) return;
 
-    const socket = io(`${path}/chat`, {
+    const socket = io(path, {
       transports: ["websocket"],
       autoConnect: true,
       auth: { token: jwt },
