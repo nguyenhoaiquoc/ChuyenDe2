@@ -37,6 +37,22 @@ export class User {
   /** --------- Hồ sơ cơ bản --------- */
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
+  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
+  gender: string; 
+
+  // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
+
+  @Column({ type: 'text', nullable: true })
+  bio: string; // Giới thiệu
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nickname: string; // Tên gợi nhớ
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  citizenId: string; // CCCD / CMND
+
+  @Column({ type: 'date', nullable: true })
+  dob: Date; // Ngày sinh
 
   // Khuyến nghị: dùng CITEXT để unique không phân biệt hoa/thường (Postgres cần EXTENSION citext)
   @Column({ type: 'citext', unique: true })
@@ -58,8 +74,6 @@ export class User {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
-gender: string; 
 
   /** --------- Trạng thái xác minh --------- */
   @Column({ type: 'boolean', default: false })

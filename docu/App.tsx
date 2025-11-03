@@ -41,6 +41,7 @@ import { NotificationProvider } from './screens/Notification/NotificationContext
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import SearchProduct from './screens/products/SearchProduct';
 import SearchResultScreen from './screens/products/SearchResultScreen';
+import ImageGalleryScreen from './screens/profile/ImageGalleryScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -84,6 +85,7 @@ export default function App() {
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
           <Stack.Screen name="SearchProduct" component={SearchProduct} />
           <Stack.Screen name="SearchResultScreen" component={SearchResultScreen} />
+          <Stack.Screen name="ImageGalleryScreen" component={ImageGalleryScreen} />
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
           <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
           />

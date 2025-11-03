@@ -20,7 +20,6 @@ import { User } from 'src/entities/user.entity';
 import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
 import { Origin } from 'src/entities/origin.entity';
-import { Material } from 'src/entities/material.entity';
 import { Size } from 'src/entities/size.entity';
 import { Brand } from 'src/entities/brand.entity';
 import { Color } from 'src/entities/color.entity';
@@ -57,9 +56,6 @@ export class ProductService {
 
     @InjectRepository(Condition)
     private readonly conditionRepo: Repository<Condition>,
-    @InjectRepository(Material)
-    private readonly materialRepo: Repository<Material>,
-
     @InjectRepository(Size)
     private readonly sizeRepo: Repository<Size>,
 
@@ -243,7 +239,7 @@ export class ProductService {
       postType: postType,
       product_type_id: data.product_type_id,
      
-      material_id: data.material_id,
+      
       size_id: data.size_id,
       brand_id: data.brand_id,
       color_id: data.color_id,
@@ -317,7 +313,7 @@ export class ProductService {
         'postType',
         'productType',
         
-        'material',
+       
         'size',
         'brand',
         'color',
@@ -355,7 +351,7 @@ export class ProductService {
         'postType',
         'productType',
         
-        'material',
+       
         'size',
         'brand',
         'color',
@@ -392,7 +388,7 @@ export class ProductService {
         'postType',
         'productType',
        
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -430,7 +426,7 @@ export class ProductService {
         'postType',
         'productType',
         
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -506,9 +502,7 @@ export class ProductService {
           ? { id: p.productType.id, name: p.productType.name }
           : null,
        
-        material: p.material
-          ? { id: p.material_id, name: p.material.name }
-          : null,
+       
         size: p.size ? { id: p.size_id, name: p.size.name } : null,
         brand: p.brand ? { id: p.brand, name: p.brand.name } : null,
         color: p.color ? { id: p.color, name: p.color.name } : null,
@@ -673,7 +667,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -703,66 +697,89 @@ export class ProductService {
       .getMany();
   }
 
-  async searchAndFilter(filters: any): Promise<Product[]> {
+async searchAndFilterFormatted(filters: any, userId?: number): Promise<any[]> {
   try {
     const {
       q,
       category_id,
+      sub_category_id,
+      brand_id,
+      condition_id,
       minPrice,
       maxPrice,
-      condition,
+      product_type_id,
+      deal_type_id,
+      post_type_id,
       sortBy,
       page = 1,
       limit = 20,
     } = filters;
 
-    const query = this.productRepo.createQueryBuilder('product');
+    const query = this.productRepo.createQueryBuilder('product')
+      .leftJoinAndSelect('product.images', 'images')
+      .leftJoinAndSelect('product.user', 'user')
+      .leftJoinAndSelect('product.condition', 'condition')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.subCategory', 'subCategory')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.postType', 'postType')
+      .leftJoinAndSelect('product.dealType', 'dealType')
+      .leftJoinAndSelect('product.productType', 'productType');
 
+    // 🔍 Tìm kiếm theo tên, mô tả, brand
     if (q) {
       query.andWhere(
-        '(product.name  LIKE :q OR product.description LIKE :q)',
+        '(product.name LIKE :q OR product.description LIKE :q OR brand.name LIKE :q)',
         { q: `%${q}%` },
       );
     }
 
-    if (category_id) {
-      const catId = Number(category_id);
-      if (!isNaN(catId)) {
-        query.andWhere('product.category_id = :category_id', { category_id: catId });
-      }
-    }
+    // ⚙️ Filter
+    if (category_id) query.andWhere('product.category_id = :category_id', { category_id });
+    if (sub_category_id) query.andWhere('product.sub_category_id = :sub_category_id', { sub_category_id });
+    if (brand_id) query.andWhere('product.brand_id = :brand_id', { brand_id });
+    if (condition_id) query.andWhere('product.condition_id = :condition_id', { condition_id });
+    if (product_type_id) query.andWhere('product.product_type_id = :product_type_id', { product_type_id });
+    if (deal_type_id) query.andWhere('product.deal_type_id = :deal_type_id', { deal_type_id });
+    if (post_type_id) query.andWhere('product.post_type_id = :post_type_id', { post_type_id });
+    if (minPrice != null) query.andWhere('product.price >= :minPrice', { minPrice });
+    if (maxPrice != null) query.andWhere('product.price <= :maxPrice', { maxPrice });
 
-    if (minPrice && maxPrice) {
-      const min = Number(minPrice);
-      const max = Number(maxPrice);
-      if (!isNaN(min) && !isNaN(max)) {
-        query.andWhere('product.price BETWEEN :minPrice AND :maxPrice', {
-          minPrice: min,
-          maxPrice: max,
-        });
-      }
-    }
-
-    if (condition) {
-      query.andWhere('product.condition = :condition', { condition });
-    }
-
+    // 📊 Sắp xếp
     const sortOptions: Record<string, { field: string; order: 'ASC' | 'DESC' }> = {
       newest: { field: 'product.created_at', order: 'DESC' },
       price_asc: { field: 'product.price', order: 'ASC' },
       price_desc: { field: 'product.price', order: 'DESC' },
-      popular: { field: 'product.popularity', order: 'DESC' },
+      popular: { field: 'product.popularity', order: 'DESC' }, // nhớ thêm trường popularity nếu muốn dùng
     };
-
-    const sort = sortOptions[sortBy] || { field: 'product.id', order: 'DESC' };
+    const sort = sortOptions[sortBy] || { field: 'product.created_at', order: 'DESC' };
     query.orderBy(sort.field, sort.order);
 
+    // ⏩ Pagination
     query.skip((page - 1) * limit).take(limit);
 
-    return await query.getMany();
+    // ✅ Lấy dữ liệu
+    const products: Product[] = await query.getMany();
+
+    // 🔒 Kiểm tra quyền xem sản phẩm (visibility_type)
+    const visibleProducts: Product[] = [];
+    for (const p of products) {
+      const vis = Number(p.visibility_type);
+      if (vis === 0 || p.visibility_type == null) {
+        visibleProducts.push(p);
+      } else if (vis === 1 && userId) {
+        const isMember = await this.groupService.isMember(p.group_id, userId);
+        if (isMember) visibleProducts.push(p);
+      }
+    }
+
+    // 🔧 Format dữ liệu trước khi trả về
+    return this.formatProducts(visibleProducts);
   } catch (error) {
     console.error('Lỗi khi tìm kiếm và lọc sản phẩm:', error);
     throw new InternalServerErrorException('Không thể xử lý yêu cầu tìm kiếm.');
   }
 }
+
+
 }

@@ -1,58 +1,74 @@
-import { 
-  Controller, 
-  Get, 
-  Patch, 
-  Param, 
-  UploadedFile, 
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UploadedFiles,
   UseInterceptors,
-  Body // <<< 1. THÊM @Body VÀO IMPORT
+  Body,
+  BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
-import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
-import { User } from 'src/entities/user.entity'; // <<< 2. (Có thể) bạn cần import User
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { User } from 'src/entities/user.entity';
 
 @Controller('users')
 export class UsersController {
- constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) {}
 
- @Get(':id')
- async getUser(@Param('id') id: string) {
-return this.usersService.findOne(+id);
- }
-
-  // --- 3. THÊM HÀM MỚI NÀY ĐỂ CẬP NHẬT THÔNG TIN ---
-  @Patch(':id/info') // Dùng route mới, ví dụ /:id/info
-  async updateInfo(
-    @Param('id') id: string,
-    @Body() data: Partial<User>, // <<< Dùng @Body() để nhận JSON
-  ) {
-    // KHÔNG dùng FileInterceptor ở đây
-    // Giờ hàm này sẽ gọi service và lưu data (fullName, phone,...)
-    return this.usersService.updateUser(+id, data);
+  // Lấy thông tin user
+  @Get(':id')
+  async getUser(@Param('id') id: string) {
+    return this.usersService.findOne(+id);
   }
-  // -------------------------------------------------
 
-  // 4. SỬA LẠI HÀM CŨ (chỉ để up avatar)
-  @Patch(':id/avatar') // <<< Đổi route thành /:id/avatar
-  @UseInterceptors(FileInterceptor('image', CloudinaryMulter))
-  async updateAvatar(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) return { error: 'Chưa chọn file' };
-    // Hàm này giờ chỉ cập nhật ảnh
-    return this.usersService.updateUser(+id, { image: file.path });
-  }
+  // Cập nhật user (sửa info, upload ảnh, xoá ảnh)
+  @Patch(':id')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'image', maxCount: 1 },
+        { name: 'coverImage', maxCount: 1 },
+      ],
+      {
+        storage: diskStorage({
+          destination: './uploads',
+          filename: (req, file, cb) => {
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+            cb(null, uniqueSuffix + extname(file.originalname));
+          },
+        }),
+      },
+    ),
+  )
+  async updateUser(
+    @Param('id') id: string,
+    @Body() data: Partial<User>,
+    @UploadedFiles()
+    files: {
+      image?: Express.Multer.File[];
+      coverImage?: Express.Multer.File[];
+    },
+  ) {
+    const updateData: Partial<User> = { ...data };
 
-  // Cập nhật cover (giữ nguyên)
-  @Patch(':id/cover')
-  @UseInterceptors(FileInterceptor('coverImage', CloudinaryMulter))
-  async updateCover(
-    @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) return { error: 'Chưa chọn file' };
-    return this.usersService.updateUser(+id, { coverImage: file.path });
-  }
+    // Xử lý file upload
+    if (files) {
+      if (files.image && files.image[0]) {
+        updateData.image = files.image[0].path;
+      }
+      if (files.coverImage && files.coverImage[0]) {
+        updateData.coverImage = files.coverImage[0].path;
+      }
+    }
+
+    // Kiểm tra có dữ liệu để update không
+    if (Object.keys(updateData).length === 0 && (!files || Object.keys(files).length === 0)) {
+      throw new BadRequestException('Không có dữ liệu để cập nhật');
+    }
+
+    return this.usersService.updateUser(+id, updateData);
+  }
 }

@@ -2,38 +2,41 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
   TextInput,
+  TouchableOpacity,
   FlatList,
   SafeAreaView,
+  ScrollView,
   Keyboard,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import debounce from "lodash.debounce";
 import { RootStackParamList } from "../../types";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { path } from "../../config";
 
 type Suggestion = string;
+type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "SearchProduct">;
+
+const popularKeywords = [
+  "Áo thun nam",
+  "Giày thể thao",
+  "Tai nghe bluetooth",
+  "Điện thoại iPhone",
+  "Túi xách nữ",
+];
 
 const SearchProduct = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<SearchNavProp>();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  // 🔹 Từ khóa phổ biến (mock tĩnh, có thể thay bằng API)
-  const popularKeywords = [
-    "Áo thun nam",
-    "Giày thể thao",
-    "Tai nghe bluetooth",
-    "Điện thoại iPhone",
-    "Túi xách nữ",
-  ];
-
-  // ✅ Load lịch sử tìm kiếm
+  // --- Load history từ AsyncStorage ---
   useEffect(() => {
     (async () => {
       const saved = await AsyncStorage.getItem("search_history");
@@ -41,14 +44,14 @@ const SearchProduct = () => {
     })();
   }, []);
 
-  // ✅ Lưu lịch sử (giới hạn 10)
+  // --- Lưu history, giới hạn 10 item ---
   const saveHistory = async (keyword: string) => {
     const newHistory = [keyword, ...history.filter((h) => h !== keyword)].slice(0, 10);
     setHistory(newHistory);
     await AsyncStorage.setItem("search_history", JSON.stringify(newHistory));
   };
 
-  // ✅ Gợi ý tìm kiếm (debounce 300ms)
+  // --- Gợi ý tìm kiếm (debounce 300ms) ---
   const fetchSuggestions = useCallback(
     debounce((text: string) => {
       if (!text.trim()) {
@@ -56,7 +59,6 @@ const SearchProduct = () => {
         setShowSuggestions(false);
         return;
       }
-
       const fakeSuggestions = [
         `${text} chính hãng`,
         `${text} giá rẻ`,
@@ -73,68 +75,77 @@ const SearchProduct = () => {
     fetchSuggestions(query);
   }, [query]);
 
-  // ✅ Xử lý tìm kiếm
+  useEffect(() => {
+    return () => {
+      fetchSuggestions.cancel(); // cancel debounce khi unmount
+    };
+  }, []);
+
+  // --- Handle search ---
   const handleSearch = async (keyword?: string) => {
     const searchText = (keyword || query).trim();
     if (!searchText) return;
     Keyboard.dismiss();
     await saveHistory(searchText);
     setShowSuggestions(false);
-type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "SearchProduct">;
-const navigation = useNavigation<SearchNavProp>();
-
-    navigation.navigate("SearchResultScreen", { query: searchText } );
+    navigation.navigate("SearchResultScreen", { query: searchText });
   };
 
-  // ✅ Xóa toàn bộ lịch sử
+  // --- Clear history ---
   const clearHistory = async () => {
     setHistory([]);
     await AsyncStorage.removeItem("search_history");
   };
 
-  // ✅ Giao diện từng item gợi ý
+  // --- Render suggestion item ---
   const renderSuggestion = ({ item }: { item: string }) => (
     <TouchableOpacity
       onPress={() => handleSearch(item)}
-      className="py-3 border-b border-gray-100 flex-row items-center"
+      style={{
+        flexDirection: "row",
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: "#f0f0f0",
+        alignItems: "center",
+      }}
     >
       <Feather name="search" size={16} color="gray" />
-      <Text className="ml-3 text-gray-700">{item}</Text>
+      <Text style={{ marginLeft: 12, color: "#333" }}>{item}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      {/* --- Thanh tìm kiếm --- */}
-      <View className="flex-row items-center border-b border-gray-200 px-4 py-3">
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+      {/* Thanh tìm kiếm */}
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 12, borderBottomWidth: 1, borderColor: "#eee" }}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={22} color="gray" />
         </TouchableOpacity>
 
-        <View className="flex-1 flex-row items-center bg-gray-100 rounded-lg px-3 mx-2">
+        <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#f0f0f0", borderRadius: 8, paddingHorizontal: 10, marginHorizontal: 8 }}>
           <Feather name="search" size={18} color="gray" />
           <TextInput
             value={query}
             onChangeText={setQuery}
             placeholder="Tìm kiếm sản phẩm..."
             placeholderTextColor="#999"
-            className="flex-1 ml-2 text-base text-gray-800"
+            style={{ flex: 1, marginLeft: 8, fontSize: 16, color: "#333" }}
             returnKeyType="search"
             onSubmitEditing={() => handleSearch()}
           />
           {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")}>
+            <TouchableOpacity onPress={() => setQuery("")} style={{ padding: 6 }}>
               <Feather name="x-circle" size={18} color="#999" />
             </TouchableOpacity>
           )}
         </View>
 
         <TouchableOpacity onPress={() => handleSearch()}>
-          <Text className="text-blue-600 font-medium">Tìm</Text>
+          <Text style={{ color: "#007AFF", fontWeight: "500" }}>Tìm</Text>
         </TouchableOpacity>
       </View>
 
-      {/* --- Danh sách gợi ý --- */}
+      {/* Nội dung */}
       {showSuggestions ? (
         <FlatList
           data={suggestions}
@@ -144,53 +155,40 @@ const navigation = useNavigation<SearchNavProp>();
           keyboardShouldPersistTaps="handled"
         />
       ) : (
-        <FlatList
-          data={[{ key: "static" }]}
-          keyExtractor={(item) => item.key}
-          renderItem={() => (
-            <View className="px-4 pt-4">
-              {/* --- Lịch sử tìm kiếm --- */}
-              {history.length > 0 && (
-                <>
-                  <View className="flex-row justify-between items-center mb-2">
-                    <Text className="text-lg font-semibold text-gray-800">
-                      Tìm kiếm gần đây
-                    </Text>
-                    <TouchableOpacity onPress={clearHistory}>
-                      <Text className="text-red-500 text-sm">Xoá tất cả</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {history.map((h, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      onPress={() => handleSearch(h)}
-                      className="py-2 flex-row items-center"
-                    >
-                      <Feather name="clock" size={16} color="gray" />
-                      <Text className="ml-3 text-gray-700">{h}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </>
-              )}
-
-              {/* --- Từ khoá phổ biến --- */}
-              <Text className="text-lg font-semibold mt-6 mb-2 text-gray-800">
-                Từ khoá phổ biến
-              </Text>
-              <View className="flex-row flex-wrap">
-                {popularKeywords.map((kw, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => handleSearch(kw)}
-                    className="bg-gray-100 px-3 py-2 rounded-2xl m-1"
-                  >
-                    <Text className="text-gray-700">{kw}</Text>
-                  </TouchableOpacity>
-                ))}
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8 }} keyboardShouldPersistTaps="handled">
+          {/* Lịch sử tìm kiếm */}
+          {history.length > 0 && (
+            <>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <Text style={{ fontSize: 18, fontWeight: "600", color: "#333" }}>Tìm kiếm gần đây</Text>
+                <TouchableOpacity onPress={clearHistory}>
+                  <Text style={{ color: "#FF3B30", fontSize: 14 }}>Xoá tất cả</Text>
+                </TouchableOpacity>
               </View>
-            </View>
+              {history.map((h, i) => (
+                <TouchableOpacity key={i} onPress={() => handleSearch(h)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8 }}>
+                  <Feather name="clock" size={16} color="gray" />
+                  <Text style={{ marginLeft: 12, color: "#333" }}>{h}</Text>
+                </TouchableOpacity>
+              ))}
+            </>
           )}
-        />
+
+          {/* Từ khoá phổ biến */}
+          <Text style={{ fontSize: 18, fontWeight: "600", marginTop: 24, marginBottom: 8, color: "#333" }}>Từ khoá phổ biến</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {popularKeywords.map((kw, i) => (
+              <TouchableOpacity
+                key={i}
+                onPress={() => handleSearch(kw)}
+                style={{ backgroundColor: "#f0f0f0", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, margin: 4 }}
+              >
+                <Text style={{ color: "#333" }}>{kw}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <View style={{ height: 40 }} /> {/* padding bottom */}
+        </ScrollView>
       )}
     </SafeAreaView>
   );

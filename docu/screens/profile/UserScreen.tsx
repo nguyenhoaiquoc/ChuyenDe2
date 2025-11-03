@@ -8,13 +8,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-// <<< 1. SỬA IMPORT: Thêm useFocusEffect
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-// <<< 2. SỬA IMPORT: Thêm useState, và useCallback
 import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { path } from "../../config";
@@ -49,7 +47,7 @@ export default function UserScreen() {
           const userId = await AsyncStorage.getItem("userId");
           const token = await AsyncStorage.getItem("token");
           if (!userId) return;
-          const res = await axios.get(`${path}/users/${userId}/info`, {
+          const res = await axios.get(`${path}/users/${userId}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -106,16 +104,19 @@ export default function UserScreen() {
               }}
             >
               <Image
+                key={avatar}
+                className="w-full h-full object-cover rounded-full"
                 source={
                   avatar
                     ? {
-                      uri: avatar.startsWith("http")
+                     
+                      uri: (avatar.startsWith("http")
                         ? avatar
-                        : `${path}${avatar}`,
+                        : `${path}/${avatar.replace(/\\/g, '/')}`) + `?t=${Date.now()}`
                     }
-                    : require("../../assets/meo.jpg")
+                    : undefined
                 }
-                style={{ width: "100%", height: "100%", borderRadius: 48 }}
+                style={{ backgroundColor: '#d1d5db' }}
               />
             </View>
           </TouchableOpacity>
@@ -172,7 +173,7 @@ export default function UserScreen() {
             />
             <UtilityItem
               icon="heart-outline"
-              title="Tin đăng đã thích "
+              title="Tin đăng đã thích"
               onPress={() => navigation.navigate("SavedPostsScreen")}
             />
             <UtilityItem
@@ -200,13 +201,13 @@ export default function UserScreen() {
                 try {
                   const socket = getSocket();
                   if (socket) {
-                    console.log("⚠️ Gửi sự kiện logout");
+                    console.log(" Gửi sự kiện logout");
                     socket.emit("logout");  // Gửi sự kiện logout đến backend
                     disconnectSocket();     // Ngắt kết nối socket hiện tại
-                    console.log("✅ Socket đã ngắt kết nối!");
+                    console.log(" Socket đã ngắt kết nối!");
                   }
                 } catch (err) {
-                  console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
+                  console.log(" Lỗi khi gửi sự kiện logout:", err);
                 }
 
                 // Xoá thông tin người dùng và chuyển hướng

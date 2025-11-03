@@ -36,6 +36,9 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   SearchResultScreen:{ query: string };
   ManagerGroupsScreen: undefined;
+  ImageGalleryScreen?: {
+  onSelect?: (uri: string) => Promise<void>;
+};
   UserInforScreen: {
     onUpdate?: (updatedUser: any) => void; // cho phép truyền callback
   } | undefined;

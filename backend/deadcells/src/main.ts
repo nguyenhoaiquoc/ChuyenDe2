@@ -1,29 +1,36 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BadRequestException, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import * as fs from 'fs';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-   app.enableCors({
-    origin: '*',
-    credentials: true,
-  });
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
-  // console.log('Serving uploads from:', join(__dirname, '..', 'uploads'));
+  // ĐÚNG: Dùng process.cwd() để lấy root project
+  const uploadDir = join(process.cwd(), 'uploads');
+  
+  // Tạo thư mục nếu chưa có
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
 
+  // Serve file tĩnh
+  app.use('/uploads', require('express').static(uploadDir));
+
+  console.log('Serving uploads from:', uploadDir); // Kiểm tra đường dẫn
+
+  // CORS
+  app.enableCors({ origin: '*', credentials: true });
+
+  // Validation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
+      transformOptions: { enableImplicitConversion: true },
       exceptionFactory: (errors) => {
         for (const err of errors) {
           if (err.constraints) {
