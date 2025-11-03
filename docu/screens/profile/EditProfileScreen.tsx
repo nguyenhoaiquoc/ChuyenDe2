@@ -104,45 +104,61 @@ export default function EditProfileScreen({ navigation }: Props) {
   };
 
   // --- Lưu thông tin ---
-  const handleSave = async () => {
-    if (!name.trim()) return Alert.alert("Lỗi", "Họ và tên không được để trống!");
-    if (!phone.trim()) return Alert.alert("Lỗi", "Số điện thoại không được để trống!");
+const handleSave = async () => {
+  const phoneTrim = phone.trim();
+  const cccdTrim = cccd.trim();
+  const nameTrim = name.trim();
 
-    setLoading(true);
-    try {
-      const userId = await AsyncStorage.getItem("userId");
-      const token = await AsyncStorage.getItem("token");
-      if (!userId || !token) throw new Error("Thiếu thông tin xác thực.");
+  // --- Validation ---
+  if (!nameTrim) return Alert.alert("Lỗi", "Họ và tên không được để trống!");
 
-      const genderMap: Record<string, number> = { Nam: 1, Nữ: 2, Khác: 3 };
+  // Số điện thoại: 9-11 chữ số
+  const phoneRegex = /^[0-9]{9,11}$/;
+  if (!phoneTrim) return Alert.alert("Lỗi", "Số điện thoại không được để trống!");
+  if (!phoneRegex.test(phoneTrim))
+    return Alert.alert("Lỗi", "Số điện thoại phải từ 9 đến 11 chữ số và chỉ gồm số!");
 
-      const dataToSend = {
-        fullName: name,
-        phone,
-        address_json: { full: address },
-        bio,
-        nickname,
-        citizenId: cccd,
-        gender: genderMap[gender],
-        dob: formatISODate(dob),
-        allowContact,
-      };
+  // CCCD/CMND: 9 hoặc 12 chữ số
+  const cccdRegex = /^(?:\d{9}|\d{12})$/;
+  if (cccdTrim && !cccdRegex.test(cccdTrim))
+    return Alert.alert("Lỗi", "CCCD/CMND phải gồm 9 hoặc 12 chữ số!");
 
-      console.log("📤 Sending update:", dataToSend);
+  setLoading(true);
+  try {
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId || !token) throw new Error("Thiếu thông tin xác thực.");
 
-      await axios.patch(`${path}/users/${userId}`, dataToSend, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const genderMap: Record<string, number> = { Nam: 1, Nữ: 2, Khác: 3 };
 
-      Alert.alert("Thành công", "Thông tin đã được cập nhật!");
-      navigation.goBack();
-    } catch (error: any) {
-      console.error("❌ Lỗi khi lưu:", error.response?.data || error.message);
-      Alert.alert("Lỗi", "Không thể lưu thông tin, vui lòng thử lại!");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const dataToSend = {
+      fullName: nameTrim,
+      phone: phoneTrim,
+      address_json: { full: address },
+      bio,
+      nickname,
+      citizenId: cccdTrim,
+      gender: genderMap[gender],
+      dob: formatISODate(dob),
+      allowContact,
+    };
+
+    console.log("📤 Sending update:", dataToSend);
+
+    await axios.patch(`${path}/users/${userId}`, dataToSend, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    Alert.alert("Thành công", "Thông tin đã được cập nhật!");
+    navigation.goBack();
+  } catch (error: any) {
+    console.error("❌ Lỗi khi lưu:", error.response?.data || error.message);
+    Alert.alert("Lỗi", "Không thể lưu thông tin, vui lòng thử lại!");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // --- Hiển thị khi đang load ---
   if (initialLoading) {

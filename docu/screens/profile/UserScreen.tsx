@@ -25,7 +25,7 @@ export default function UserScreen() {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
 
-  // <<< 3. THAY THẾ useEffect bằng useFocusEffect
+ 
   useFocusEffect(
     useCallback(() => {
       // Hàm này sẽ chạy mỗi khi màn hình được focus
@@ -168,7 +168,7 @@ export default function UserScreen() {
             <UtilityItem
               icon="person-outline"
               title="Tài khoản của tôi"
-              // <<< LƯU Ý: Bạn đang navigate đến ViewHistory, có thể bạn muốn UserInforScreen?
+              
               onPress={() => navigation.navigate("ViewHistory")}
             />
             <UtilityItem
@@ -218,7 +218,6 @@ export default function UserScreen() {
                 });
               }}
             />
-
           </View>
         </View>
       </ScrollView>

@@ -254,6 +254,7 @@ export class ProductService {
       age_range_id: data.age_range_id,
       gender_id: data.gender_id,
       engine_capacity_id: data.engine_capacity_id,
+      product_status_id: data.product_status_id,
       mileage: data.mileage,
       author: data.author,
       year: data.year,
@@ -328,6 +329,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
     });
 
@@ -366,6 +368,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
 
       order: { created_at: 'DESC' },
@@ -403,6 +406,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
       order: { created_at: 'DESC' },
     });
@@ -441,6 +445,7 @@ export class ProductService {
         'ageRange',
         'gender',
         'engineCapacity',
+        'productStatus',
       ],
       order: { created_at: 'DESC' },
     });
@@ -516,6 +521,7 @@ export class ProductService {
         breed: p.breed ? { id: p.breed, name: p.breed.name } : null,
         ageRange: p.ageRange ? { id: p.ageRange, name: p.ageRange.name } : null,
         gender: p.gender ? { id: p.gender, name: p.gender.name } : null,
+        productStatus: p.productStatus ? { id: p.productStatus, name: p.productStatus.name } : null,
         engineCapacity: p.engineCapacity ? { id: p.engineCapacity, name: p.engineCapacity.name } : null,
         mileage: p.mileage ?? null,
         dealType: p.dealType
@@ -679,6 +685,7 @@ export class ProductService {
         'storageType',
         'graphicsCard',
         'engineCapacity',
+        'productStatus',
       ],
     });
 

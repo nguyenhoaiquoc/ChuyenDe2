@@ -35,6 +35,7 @@ import { Breed } from './breed.entity';
 import { AgeRange } from './age-range.entity';
 import { Gender } from './gender.entity';
 import { EngineCapacity } from './engine-capacity.entity';
+import { ProductStatus } from './product-status.entity';
 
 @Entity('products')
 export class Product {
@@ -159,6 +160,13 @@ export class Product {
   @ManyToOne(() => EngineCapacity, { nullable: true })
   @JoinColumn({ name: 'engine_capacity_id', referencedColumnName: 'id' })
   engineCapacity: EngineCapacity | null;
+
+  @Column({ name: 'product_status_id', type: 'bigint', nullable: true })
+  product_status_id: number | null;
+
+  @ManyToOne(() => ProductStatus, { nullable: true })
+ @JoinColumn({ name: 'product_status_id', referencedColumnName: 'id' })
+  productStatus: ProductStatus | null;
 
   @Column({ name: 'mileage', type: 'bigint', nullable: true })
   mileage: number | null;

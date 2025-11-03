@@ -43,6 +43,7 @@ import { GenderModule } from './genders/gender.module';
 import { EngineCapacityModule } from './engine-capacities/engine-capacity.module';
 import { ServeStaticModule } from '@nestjs/serve-static'; // <<< 1. THÊM IMPORT NÀY
 import { join } from 'path';
+import { ProductStatusModule } from './product-statuses/product-status.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -94,6 +95,7 @@ import { join } from 'path';
     AgeRangeModule,
     GenderModule,
     EngineCapacityModule,
+    ProductStatusModule,
     ServeStaticModule.forRoot({
       // Dòng này sẽ tạo URL: http://<server-ip>:3000/uploads/ten-file.jpg
       serveRoot: '/uploads',
