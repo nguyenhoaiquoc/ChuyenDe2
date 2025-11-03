@@ -211,7 +211,12 @@ export default function UserScreen() {
                 }
 
                 // Xoá thông tin người dùng và chuyển hướng
-                await AsyncStorage.multiRemove(["token", "userId", "userName", "userAvatar"]);
+                await AsyncStorage.multiRemove([
+                  "token",
+                  "userId",
+                  "userName",
+                  "userAvatar",
+                ]);
                 navigation.reset({
                   index: 0,
                   routes: [{ name: "LoginScreen" }],

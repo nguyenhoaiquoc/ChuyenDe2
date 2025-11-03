@@ -1,8 +1,12 @@
 import { GroupService } from './../groups/group.service';
-import { Injectable, NotFoundException,InternalServerErrorException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Product } from 'src/entities/product.entity';
 import { ProductImage } from 'src/entities/product-image.entity';
 import { DealType } from 'src/entities/deal-type.entity';
 import { Condition } from 'src/entities/condition.entity';
@@ -17,251 +21,308 @@ import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity
 import { DataSource } from 'typeorm';
 import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
-import { ProductType } from 'src/entities/product_types.entity';
 import { NotificationService } from 'src/notification/notification.service';
-import { Origin } from 'src/entities/origin.entity';
-import { Size } from 'src/entities/size.entity';
-import { Brand } from 'src/entities/brand.entity';
-import { Color } from 'src/entities/color.entity';
-import { Capacity } from 'src/entities/capacity.entity';
-import { Warranty } from 'src/entities/warranty.entity';
-import { ProductModel } from 'src/entities/product-model.entity';
-import { Processor } from 'src/entities/processor.entity';
-import { RamOption } from 'src/entities/ram-option.entity';
-import { StorageType } from 'src/entities/storage-type.entity';
-import { GraphicsCard } from 'src/entities/graphics-card.entity';
-import { Breed } from 'src/entities/breed.entity';
-import { AgeRange } from 'src/entities/age-range.entity';
-import { Gender } from 'src/entities/gender.entity';
-import { EngineCapacity } from 'src/entities/engine-capacity.entity';
+import { SizeService } from 'src/size/size.service';
+import { BrandService } from 'src/brands/brand.service';
+import { OriginService } from 'src/origin/origin.service';
+import { MaterialService } from 'src/material/material.service';
+import { ColorService } from 'src/colors/color.service';
+import { CapacityService } from 'src/capacitys/capacity.service';
+import { WarrantyService } from 'src/warrantys/warranty.service';
+import { ProductModelService } from 'src/product-models/product-model.service';
+import { ProcessorService } from 'src/processors/processor.service';
+import { AgeRangeService } from 'src/age-ranges/age-range.service';
+import { BreedService } from 'src/breeds/breed.service';
+import { EngineCapacityService } from 'src/engine-capacities/engine-capacity.service';
+import { GenderService } from 'src/genders/gender.service';
+import { GraphicsCardService } from 'src/graphics-cards/graphics-card.service';
+import { RamOptionService } from 'src/ram-options/ram-option.service';
+import { StorageTypeService } from 'src/storage-types/storage-type.service';
+import { ProductTypeService } from 'src/product-types/product-type.service';
+import { Category } from 'src/entities/category.entity';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductStatusDto } from './dto/update-status.dto';
+import { ProductStatusService } from 'src/product-statuses/product-status.service';
+import { GroupMember } from 'src/entities/group-member.entity';
+import { Product } from 'src/entities/product.entity';
+import { InternalServerErrorException } from '@nestjs/common';
 
 @Injectable()
 export class ProductService {
-  logger: any;
+  private readonly logger = new Logger(ProductService.name);
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
-
     @InjectRepository(ProductImage)
-    private readonly imageRepo: Repository<ProductImage>,
-
-    @InjectRepository(ProductType)
-    private readonly productTypeRepo: Repository<ProductType>,
+    private readonly imageRepo: Repository<ProductImage>, 
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-
     @InjectRepository(DealType)
     private readonly dealTypeRepo: Repository<DealType>,
-
     @InjectRepository(Condition)
     private readonly conditionRepo: Repository<Condition>,
-    @InjectRepository(Size)
-    private readonly sizeRepo: Repository<Size>,
-
-    @InjectRepository(Processor)
-    private readonly processorRepo: Repository<Processor>,
-
-    @InjectRepository(RamOption)
-    private readonly ramOptionRepo: Repository<RamOption>,
-
-    @InjectRepository(StorageType)
-    private readonly storageTypeRepo: Repository<StorageType>,
-
-    @InjectRepository(GraphicsCard)
-    private readonly graphicsCardRepo: Repository<GraphicsCard>,
-
-    @InjectRepository(Brand)
-    private readonly brandRepo: Repository<Brand>,
-
-    @InjectRepository(Color)
-    private readonly colorRepo: Repository<Color>,
-
-    @InjectRepository(Capacity)
-    private readonly capacityRepo: Repository<Capacity>,
-
-    @InjectRepository(Warranty)
-    private readonly warrantyRepo: Repository<Warranty>,
-
-    @InjectRepository(ProductModel)
-    private readonly productModelRepo: Repository<ProductModel>,
-
-    @InjectRepository(Breed)
-    private readonly breedRepo: Repository<Breed>,
-
-    @InjectRepository(AgeRange)
-    private readonly ageRangeRepo: Repository<AgeRange>,
-
-    @InjectRepository(Gender) 
-    private readonly genderRepo: Repository<Gender>,
-
-        @InjectRepository(EngineCapacity) 
-    private readonly egineCapacityRepo: Repository<EngineCapacity>,
-
     @InjectRepository(SubCategory)
     private readonly subCategoryRepo: Repository<SubCategory>,
-
+    @InjectRepository(Category)
+    private readonly categoryRepo: Repository<Category>,
     @InjectRepository(PostType)
     private readonly postTypeRepo: Repository<PostType>,
 
     @InjectRepository(FashionCategory)
     private readonly fashionRepo: Repository<FashionCategory>,
-
     @InjectRepository(GameCategory)
     private readonly gameRepo: Repository<GameCategory>,
-
     @InjectRepository(AcademicCategory)
     private readonly academicRepo: Repository<AcademicCategory>,
-
     @InjectRepository(AnimalCategory)
     private readonly animalRepo: Repository<AnimalCategory>,
-
     @InjectRepository(ElectronicCategory)
     private readonly electronicRepo: Repository<ElectronicCategory>,
-
     @InjectRepository(HouseCategory)
     private readonly houseRepo: Repository<HouseCategory>,
-
     @InjectRepository(VehicleCategory)
     private readonly vehicleRepo: Repository<VehicleCategory>,
 
-    private readonly groupService: GroupService,
+    // === THÊM CÁC SERVICE CON ===
+    private readonly sizeService: SizeService,
+    private readonly brandService: BrandService,
+    private readonly originService: OriginService,
+    private readonly materialService: MaterialService,
+    private readonly colorService: ColorService,
+    private readonly capacityService: CapacityService,
+    private readonly warrantyService: WarrantyService,
+    private readonly productModelService: ProductModelService,
+    private readonly processorService: ProcessorService,
+    private readonly ramOptionService: RamOptionService,
+    private readonly storageTypeService: StorageTypeService,
+    private readonly graphicsCardService: GraphicsCardService,
+    private readonly breedService: BreedService,
+    private readonly ageRangeService: AgeRangeService,
+    private readonly genderService: GenderService,
+    private readonly engineCapacityService: EngineCapacityService,
+    private readonly productTypeService: ProductTypeService,
+    private readonly productStatusService: ProductStatusService,
 
+    private readonly groupService: GroupService,
     private readonly dataSource: DataSource,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
 
     private readonly notificationService: NotificationService,
   ) {}
 
-  // 🧩 Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
-  async create(data: any, files?: Express.Multer.File[]) {
-    const dealType = await this.dealTypeRepo.findOne({
-      where: { id: data.deal_type_id },
-    });
-    if (!dealType) {
+  // Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
+  async create(data: CreateProductDto, files?: Express.Multer.File[]) {
+    // 1. Lấy các đối tượng (Entity) từ ID song song
+    const [
+      dealType,
+      condition,
+      postType,
+      user,
+      category,
+      subCategory,
+      productType,
+      origin,
+      material,
+      size,
+      brand,
+      productModel,
+      color,
+      capacity,
+      warranty,
+      processor,
+      ramOption,
+      storageType,
+      graphicsCard,
+      breed,
+      ageRange,
+      gender,
+      productStatus,
+      engineCapacity,
+      category_change,
+      sub_category_change,
+    ] = await Promise.all([
+      data.deal_type_id
+        ? this.dealTypeRepo.findOneBy({ id: data.deal_type_id })
+        : Promise.resolve(null),
+      data.condition_id
+        ? this.conditionRepo.findOneBy({ id: data.condition_id })
+        : Promise.resolve(null),
+      data.post_type_id
+        ? this.postTypeRepo.findOneBy({ id: data.post_type_id })
+        : Promise.resolve(null),
+      data.user_id
+        ? this.userRepo.findOneBy({ id: data.user_id })
+        : Promise.resolve(null),
+      data.category_id
+        ? this.categoryRepo.findOneBy({ id: data.category_id })
+        : Promise.resolve(null),
+      data.sub_category_id
+        ? this.subCategoryRepo.findOneBy({ id: data.sub_category_id })
+        : Promise.resolve(null),
+
+      // Dùng Service
+      data.product_type_id
+        ? this.productTypeService.findOne(data.product_type_id)
+        : Promise.resolve(null),
+      data.origin_id
+        ? this.originService.findOne(data.origin_id)
+        : Promise.resolve(null),
+      data.material_id
+        ? this.materialService.findOne(data.material_id)
+        : Promise.resolve(null),
+      data.size_id
+        ? this.sizeService.findOne(data.size_id)
+        : Promise.resolve(null),
+      data.brand_id
+        ? this.brandService.findOne(data.brand_id)
+        : Promise.resolve(null),
+      data.product_model_id
+        ? this.productModelService.findOne(data.product_model_id)
+        : Promise.resolve(null),
+      data.color_id
+        ? this.colorService.findOne(data.color_id)
+        : Promise.resolve(null),
+      data.capacity_id
+        ? this.capacityService.findOne(data.capacity_id)
+        : Promise.resolve(null),
+      data.warranty_id
+        ? this.warrantyService.findOne(data.warranty_id)
+        : Promise.resolve(null),
+      data.processor_id
+        ? this.processorService.findOne(data.processor_id)
+        : Promise.resolve(null),
+      data.ram_option_id
+        ? this.ramOptionService.findOne(data.ram_option_id)
+        : Promise.resolve(null),
+      data.storage_type_id
+        ? this.storageTypeService.findOne(data.storage_type_id)
+        : Promise.resolve(null),
+      data.graphics_card_id
+        ? this.graphicsCardService.findOne(data.graphics_card_id)
+        : Promise.resolve(null),
+      data.breed_id
+        ? this.breedService.findOne(data.breed_id)
+        : Promise.resolve(null),
+      data.age_range_id
+        ? this.ageRangeService.findOne(data.age_range_id)
+        : Promise.resolve(null),
+      data.gender_id
+        ? this.genderService.findOne(data.gender_id)
+        : Promise.resolve(null),
+      data.engine_capacity_id
+        ? this.engineCapacityService.findOne(data.engine_capacity_id)
+        : Promise.resolve(null),
+      data.product_status_id
+        ? this.productStatusService.findOne(data.product_status_id)
+        : Promise.resolve(null),
+
+      data.category_change_id
+        ? this.categoryRepo.findOneBy({ id: data.category_change_id })
+        : Promise.resolve(null),
+      data.sub_category_change_id
+        ? this.subCategoryRepo.findOneBy({ id: data.sub_category_change_id })
+        : Promise.resolve(null),
+    ]);
+
+    // 2. Kiểm tra các Entity bắt buộc
+    if (!dealType)
       throw new NotFoundException(
-        `Không tìm thấy dealType với ID ${data.deal_type_id}`,
+        `Không tìm thấy dealType ID ${data.deal_type_id}`,
+      );
+    if (!postType)
+      throw new NotFoundException(
+        `Không tìm thấy postType ID ${data.post_type_id}`,
+      );
+    if (!user)
+      throw new NotFoundException(`Không tìm thấy user ID ${data.user_id}`);
+    if (!category)
+      throw new NotFoundException(
+        `Không tìm thấy category ID ${data.category_id}`,
+      );
+    if (!subCategory)
+      throw new NotFoundException(
+        `Không tìm thấy subCategory ID ${data.sub_category_id}`,
+      );
+
+    // 'condition' là tùy chọn (cho Thú cưng)
+    if (data.condition_id && !condition) {
+      throw new NotFoundException(
+        `Không tìm thấy condition ID ${data.condition_id}`,
       );
     }
 
-    const condition = await this.conditionRepo.findOne({
-      where: { id: data.condition_id },
-    });
-    if (!condition) {
-      throw new NotFoundException(
-        `Không tìm thấy condition với ID ${data.condition_id}`,
-      );
-    }
+    // 3. Tạo sản phẩm
+    // 1.1. Kiểm tra xem đây có phải là bài đăng nhóm không
+    if (data.visibility_type && Number(data.visibility_type) === 1) {
+      // 1.2. Nếu là bài đăng nhóm, PHẢI có group_id và user_id
+      if (!data.group_id || !data.user_id) {
+        throw new NotFoundException(
+          'Bài đăng nhóm phải có group_id và user_id hợp lệ.',
+        );
+      }
 
-    const postType = await this.postTypeRepo.findOne({
-      where: { id: data.post_type_id },
-    });
-    if (!postType) {
-      throw new NotFoundException(
-        `Không tìm thấy postType với ID ${data.post_type_id}`,
-      );
-    }
-
-    let subCategoryId: number | null = null;
-
-    if (data.category_id && data.sub_category && data.sub_category.name) {
-      const existingSub = await this.subCategoryRepo.findOne({
+      // 1.3. (Bảo mật) Kiểm tra xem user này có phải là thành viên của nhóm không
+      const isMember = await this.groupMemberRepo.findOne({
         where: {
-          name: data.sub_category.name,
-          parent_category_id: data.category_id,
+          user_id: data.user_id,
+          group_id: Number(data.group_id),
         },
       });
 
-      if (existingSub) {
-        subCategoryId = existingSub.id;
-      } else {
-        let sourceTable: string | null = null;
-        switch (data.category_id) {
-          case 1:
-            sourceTable = 'fashion_categories';
-            break;
-          case 2:
-            sourceTable = 'game_categories';
-            break;
-          case 3:
-            sourceTable = 'academic_categories';
-            break;
-          case 4:
-            sourceTable = 'animal_categories';
-            break;
-          case 5:
-            sourceTable = 'electronic_categories';
-            break;
-          case 6:
-            sourceTable = 'house_categories';
-            break;
-          case 7:
-            sourceTable = 'vehicle_categories';
-            break;
-        }
-
-        const newSub = this.subCategoryRepo.create({
-          name: data.sub_category.name,
-          parent_category_id: data.category_id,
-          source_table: sourceTable || undefined,
-          source_id: null,
-        });
-        const savedSub = await this.subCategoryRepo.save(newSub);
-        subCategoryId = savedSub.id;
-      }
-    } else if (data.sub_category_id) {
-      subCategoryId = data.sub_category_id;
-    }
-
-    let user: User | null = null;
-    if (data.user_id) {
-      user = await this.userRepo.findOne({
-        where: { id: data.user_id },
-      });
-      if (!user) {
-        console.warn(`⚠️ User với ID ${data.user_id} không tồn tại, gán null`);
+      if (!isMember) {
+        throw new UnauthorizedException(
+          'Bạn không phải là thành viên của nhóm này để đăng bài.',
+        );
       }
     }
+
     const product = this.productRepo.create({
       name: data.name,
-      description: data.description || '',
-      price: data.price || 0,
-      user: user || null,
-      post_type_id: data.post_type_id || 1,
-      category_id: data.category_id || null,
-      sub_category_id: subCategoryId,
-      category_change_id: data.category_change_id || null,
-      sub_category_change_id: data.sub_category_change_id || null,
+      description: data.description,
+      price: Number(data.price),
+      author: data.author || undefined,
+      year: data.year || undefined,
+      mileage: data.mileage || undefined,
+      user: user || undefined,
+      dealType: dealType || undefined,
+      condition: condition || undefined,
+      postType: postType || undefined,
+      category: category || undefined,
+      subCategory: subCategory || undefined,
+      productType: productType || undefined,
+      origin: origin || undefined,
+      material: material || undefined,
+      size: size || undefined,
+      brand: brand || undefined,
+      productModel: productModel || undefined,
+      color: color || undefined,
+      capacity: capacity || undefined,
+      warranty: warranty || undefined,
+      processor: processor || undefined,
+      ramOption: ramOption || undefined,
+      storageType: storageType || undefined,
+      graphicsCard: graphicsCard || undefined,
+      breed: breed || undefined,
+      ageRange: ageRange || undefined,
+      gender: gender || undefined,
+      engineCapacity: engineCapacity || undefined,
+      category_change: category_change || undefined,
+      sub_category_change: sub_category_change || undefined,
+
+      productStatus: { id: 1 },
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
       is_approved: false,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
-      dealType: dealType,
-      condition: condition,
-      postType: postType,
-      product_type_id: data.product_type_id,
-     
-      
-      size_id: data.size_id,
-      brand_id: data.brand_id,
-      color_id: data.color_id,
-      capacity_id: data.capacity_id,
-      warranty_id: data.warranty_id,
-      product_model_id: data.product_model_id,
-      processor_id: data.processor_id,
-      ram_option_id: data.ram_option_id,
-      storage_type_id: data.storage_type_id,
-      graphics_card_id: data.graphics_card_id,
-      breed_id: data.breed_id,
-      age_range_id: data.age_range_id,
-      gender_id: data.gender_id,
-      engine_capacity_id: data.engine_capacity_id,
-      product_status_id: data.product_status_id,
-      mileage: data.mileage,
-      author: data.author,
-      year: data.year,
+
+      visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
+      group_id: data.group_id ? Number(data.group_id) : undefined,
     });
 
     const savedProduct = await this.productRepo.save(product);
 
+    // 4. Lưu ảnh
     if (files && files.length > 0) {
       const imagesToSave = files.map((file) =>
         this.imageRepo.create({
@@ -270,36 +331,33 @@ export class ProductService {
           image_url: file.path,
         }),
       );
-
       await this.imageRepo.save(imagesToSave);
-      console.log(
-        ` Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
+      this.logger.log(
+        `🖼️ Đã lưu ${imagesToSave.length} ảnh cho sản phẩm ID=${savedProduct.id}`,
       );
-
-      if (savedProduct) {
-        // 1. Gửi cho chính người đăng
-        this.notificationService
-          .notifyUserOfPostSuccess(savedProduct)
-          .catch((err) =>
-            this.logger.error(
-              'Lỗi (từ service) notifyUserOfPostSuccess:',
-              err.message,
-            ),
-          );
-
-        // 2. Gửi cho Admin ("tui")
-        this.notificationService
-          .notifyAdminsOfNewPost(savedProduct)
-          .catch((err) =>
-            this.logger.error(
-              'Lỗi (từ service) notifyAdminsOfNewPost:',
-              err.message,
-            ),
-          );
-      }
-      return savedProduct;
     }
 
+    // 5. Gửi thông báo
+    if (savedProduct) {
+      this.notificationService
+        .notifyUserOfPostSuccess(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi (từ service) notifyUserOfPostSuccess:',
+            err.message,
+          ),
+        );
+      this.notificationService
+        .notifyAdminsOfNewPost(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi (từ service) notifyAdminsOfNewPost:',
+            err.message,
+          ),
+        );
+    }
+
+    // 6. Trả về sản phẩm đầy đủ (Query lại để lấy đủ relations)
     const fullProduct = await this.productRepo.findOne({
       where: { id: savedProduct.id },
       relations: [
@@ -340,7 +398,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, status_id: 1 }],
+      where: [{ category_id: categoryId, product_status_id: 2 }],
       relations: [
         'images',
         'user',
@@ -417,7 +475,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { status_id: 1 },
+      where: { is_approved: true, product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -486,7 +544,7 @@ export class ProductService {
         price: Number(p.price),
         thumbnail_url: p.images?.[0]?.image_url || null,
         phone: p.user?.phone || null,
-        user_id: p.user_id,
+        user_id: p.user?.id, // Sửa: Lấy từ p.user.id
         user: p.user
           ? {
               id: p.user.id,
@@ -498,32 +556,55 @@ export class ProductService {
         author_name: p.user?.fullName || 'Người bán',
         author: p.author || null,
         year: p.year || null,
+        mileage: p.mileage ?? null, // Sửa: Dùng ??
+        // ===== SỬA LỖI FORMAT (p.FIELD.id) TỪ ĐÂY =====
 
-        // Loại bài đăng, tình trạng, loại sản phẩm, loại giao dịch, xuất xứ
         postType: p.postType
           ? { id: p.postType.id, name: p.postType.name }
           : null,
         productType: p.productType
           ? { id: p.productType.id, name: p.productType.name }
           : null,
-       
-       
-        size: p.size ? { id: p.size_id, name: p.size.name } : null,
-        brand: p.brand ? { id: p.brand, name: p.brand.name } : null,
-        color: p.color ? { id: p.color, name: p.color.name } : null,
-        capacity: p.capacity ? { id: p.capacity, name: p.capacity.name } : null,
-        warranty: p.warranty ? { id: p.warranty, name: p.warranty.name } : null,
-        productModel: p.productModel ? { id: p.productModel, name: p.productModel.name } : null,
-        processor: p.processor ? { id: p.processor, name: p.processor.name } : null,
-        ramOption: p.ramOption ? { id: p.ramOption, name: p.ramOption.name } : null,
-        storageType: p.storageType ? { id: p.storageType, name: p.storageType.name } : null,
-        graphicsCard: p.graphicsCard ? { id: p.graphicsCard, name: p.graphicsCard.name } : null,
-        breed: p.breed ? { id: p.breed, name: p.breed.name } : null,
-        ageRange: p.ageRange ? { id: p.ageRange, name: p.ageRange.name } : null,
-        gender: p.gender ? { id: p.gender, name: p.gender.name } : null,
-        productStatus: p.productStatus ? { id: p.productStatus, name: p.productStatus.name } : null,
-        engineCapacity: p.engineCapacity ? { id: p.engineCapacity, name: p.engineCapacity.name } : null,
-        mileage: p.mileage ?? null,
+        origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
+        material: p.material
+          ? { id: p.material.id, name: p.material.name }
+          : null,
+        size: p.size ? { id: p.size.id, name: p.size.name } : null,
+        brand: p.brand ? { id: p.brand.id, name: p.brand.name } : null,
+        color: p.color ? { id: p.color.id, name: p.color.name } : null,
+        capacity: p.capacity
+          ? { id: p.capacity.id, name: p.capacity.name }
+          : null,
+        warranty: p.warranty
+          ? { id: p.warranty.id, name: p.warranty.name }
+          : null,
+        productModel: p.productModel
+          ? { id: p.productModel.id, name: p.productModel.name }
+          : null,
+        processor: p.processor
+          ? { id: p.processor.id, name: p.processor.name }
+          : null,
+        ramOption: p.ramOption
+          ? { id: p.ramOption.id, name: p.ramOption.name }
+          : null,
+        storageType: p.storageType
+          ? { id: p.storageType.id, name: p.storageType.name }
+          : null,
+        graphicsCard: p.graphicsCard
+          ? { id: p.graphicsCard.id, name: p.graphicsCard.name }
+          : null,
+        breed: p.breed ? { id: p.breed.id, name: p.breed.name } : null,
+        ageRange: p.ageRange
+          ? { id: p.ageRange.id, name: p.ageRange.name }
+          : null,
+        gender: p.gender ? { id: p.gender.id, name: p.gender.name } : null,
+        engineCapacity: p.engineCapacity
+          ? { id: p.engineCapacity.id, name: p.engineCapacity.name }
+          : null,
+        productStatus: p.productStatus
+          ? { id: p.productStatus.id, name: p.productStatus.name }
+          : null,
+
         dealType: p.dealType
           ? { id: p.dealType.id, name: p.dealType.name }
           : null,

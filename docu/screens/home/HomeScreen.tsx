@@ -8,6 +8,8 @@ import {
   StatusBar,
   FlatList,
   GestureResponderEvent,
+  useColorScheme,
+  Alert,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -27,12 +29,11 @@ type Props = {
 };
 
 const filters = [
-  { id: "1", label: "Dành cho bạn" },
+  { id: "1", label: "Mới nhất" },
   { id: "2", label: "Đang tìm mua" },
-  { id: "3", label: "Mới nhất" },
-  { id: "4", label: "Đồ miễn phí" },
-  { id: "5", label: "Trao đổi" },
-  { id: "6", label: "Gợi ý cho bạn " },
+  { id: "3", label: "Đồ miễn phí" },
+  { id: "4", label: "Trao đổi" },
+  { id: "5", label: "Gợi ý cho bạn " },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -40,7 +41,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const [selectedFilter, setSelectedFilter] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -129,8 +130,13 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
-
-          // THAY THẾ TOÀN BỘ KHỐI 'return' TRONG HÀM .map() CỦA BẠN BẰNG CODE NÀY:
+          console.log(
+            "Product ID:",
+            item.id,
+            "is_approved:",
+            item.is_approved,
+            typeof item.is_approved
+          );
 
           return {
             id: item.id.toString(),
@@ -148,12 +154,7 @@ export default function HomeScreen({ navigation }: Props) {
             tag: tagText,
             authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
-
-            // === SỬA LỖI LOGIC ===
-
-            category: item.category || null, // Dùng null
-
-            // Sửa logic 'subCategory' cho đúng với 'types.ts'
+            category: item.category || null,
             subCategory: item.subCategory
               ? {
                   id: item.subCategory.id,
@@ -162,22 +163,22 @@ export default function HomeScreen({ navigation }: Props) {
                   source_table: item.subCategory.source_table,
                   source_id: item.subCategory.source_id,
                 }
-              : null, // <-- SỬA TỪ 'undefined' THÀNH 'null'
+              : null,
 
-            category_change: item.category_change || null, // <-- SỬA THÀNH 'null'
-            sub_category_change: item.sub_category_change || null, // <-- SỬA THÀNH 'null'
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
 
             imageCount: item.images?.length || (imageUrl ? 1 : 0),
             isFavorite: false,
             images: item.images || [],
             description: item.description || "",
 
-            // Chuẩn hóa và fallback về 'null'
             postType: item.postType || null,
             condition: item.condition || null,
             dealType: item.dealType || null,
 
-            // Sửa logic fallback (kiểm tra .name)
+            productStatus: item.productStatus || null,
+            
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -224,19 +225,16 @@ export default function HomeScreen({ navigation }: Props) {
             year: item.year || null,
 
             created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined, // (optional '?' có thể là undefined)
+            updated_at: item.updated_at || undefined,
 
-            // Sửa fallback sang 'null'
             sub_category_id: item.sub_category_id || null,
-            status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
-            visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
+            status_id: item.status_id?.toString() || undefined,
+            visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
-            is_approved:
-              typeof item.is_approved === "boolean"
-                ? item.is_approved
-                : undefined, // (optional '?' có thể là undefined)
+            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
+
         setProducts(mapped);
       })
       .catch((err) => {
@@ -263,8 +261,28 @@ export default function HomeScreen({ navigation }: Props) {
       }
     };
 
-    fetchFavorites(); // gọi hàm async
+    fetchFavorites();
   }, []);
+
+  useEffect(() => {
+    // Định nghĩa hàm lọc
+    const filterProducts = () => {
+      console.log("Chạy logic filter cho:", selectedFilter);
+
+      if (selectedFilter === "Đồ miễn phí") {
+        setFilteredProducts(products.filter((p) => p.price === "Miễn phí"));
+      } else if (selectedFilter === "Trao đổi") {
+        setFilteredProducts(products.filter((p) => p.price === "Trao đổi"));
+      } else if (selectedFilter == "Đang tìm mua") {
+        setFilteredProducts(products.filter((p) => p.postType?.id == "2"));
+      } else {
+        // "Mới nhất", "Gợi ý" và các trường hợp khác sẽ hiển thị tất cả
+        setFilteredProducts(products);
+      }
+    }; // Gọi hàm lọc
+
+    filterProducts(); // useEffect này sẽ chạy lại mỗi khi selectedFilter hoặc products thay đổi
+  }, [selectedFilter, products]);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -273,7 +291,10 @@ export default function HomeScreen({ navigation }: Props) {
   const handleToggleFavorite = async (productId: string) => {
     try {
       const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) return; // nếu null thì bỏ qua
+      if (!userIdStr) {
+        Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
+        return;
+      }
       const userId = parseInt(userIdStr, 10);
       await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
       const res = await axios.get(`${path}/favorites/user/${userId}`);
@@ -325,9 +346,10 @@ export default function HomeScreen({ navigation }: Props) {
       navigation.navigate("NotificationScreen");
     }
   };
+
   return (
-    <View className="flex-1 bg-[#f5f6fa] mt-6">
-      <StatusBar className="auto" />
+    <View className="flex-1 bg-[#f5f6fa]">
+      <StatusBar hidden={true} />
 
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
@@ -350,17 +372,14 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Icon chuông */}
-        <TouchableOpacity
-          className="p-2 relative"
-          onPress={handleBellPress}
-        >
+        <TouchableOpacity className="p-2 relative" onPress={handleBellPress}>
           <Feather name="bell" size={22} color="#333" />
 
           {/* 3. Thêm cái badge (chấm đỏ) */}
           {unreadCount > 0 && (
             <View className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
               <Text className="text-white text-[10px] font-bold">
-                {unreadCount > 9 ? '9+' : unreadCount}
+                {unreadCount > 9 ? "9+" : unreadCount}
               </Text>
             </View>
           )}
@@ -430,39 +449,27 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters}
+            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className={`px-4 py-2 mr-3 rounded-full border ${selectedFilter === item.label
-                  ? "bg-blue-500 border-blue-500"
-                  : "bg-white border-gray-300"
-                  }`}
+                className={`px-4 py-2 mr-3 rounded-full border ${
+                  selectedFilter === item.label
+                    ? "bg-blue-500 border-blue-500"
+                    : "bg-white border-gray-300"
+                }`}
                 onPress={() => {
-                  console.log("Chọn bộ lọc:", item.label);
                   setSelectedFilter(item.label);
-
-                  if (item.label === "Đồ miễn phí") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Miễn phí")
-                    );
-                  } else if (item.label === "Trao đổi") {
-                    setFilteredProducts(
-                      products.filter((p) => p.price === "Trao đổi")
-                    );
-                  } else if (item.label == "Đang tìm mua") {
-                    setFilteredProducts(
-                      products.filter((p) => p.postType?.id == "2")
-                    );
-                  } else {
-                    setFilteredProducts(products); // các filter khác hiển thị tất cả
-                  }
                 }}
               >
                 <Text
-                  className={`${selectedFilter === item.label ? "text-white" : "text-gray-700"} text-sm`}
+                  className={`${
+                    selectedFilter === item.label
+                      ? "text-white"
+                      : "text-gray-700"
+                  } text-sm`}
                 >
                   {item.label}
                 </Text>
@@ -473,7 +480,9 @@ export default function HomeScreen({ navigation }: Props) {
         {/* Danh sách sản phẩm */}
         <View className="px-4 mt-4">
           <FlatList
-            data={selectedFilter ? filteredProducts : products} // 🔹
+            data={(selectedFilter ? filteredProducts : products).filter(
+              (p) => p.is_approved === true
+            )}
             numColumns={2}
             keyExtractor={(item) => item.id}
             columnWrapperStyle={{ justifyContent: "space-between" }}

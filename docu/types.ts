@@ -13,9 +13,16 @@ export type RootStackParamList = {
   OTPVerifyScreen: { email: string };
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
-  ChooseCategoryScreen: undefined;
+  ChooseCategoryScreen:
+    | {
+        group?: GroupType;
+      }
+    | undefined;
   ChooseSubCategoryScreen:
-    | { category: { id: string; name: string } }
+    | {
+        category: Category;
+        group?: GroupType;
+      }
     | undefined;
   PostFormScreen:
     | {
@@ -30,11 +37,10 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
-  SearchProduct: undefined;
-  ChooseExchangeCategoryScreen: undefined;
+  ChooseExchangeCategoryScreen: {
+    onSelectCategory: (category: Category, subCategory: SubCategory) => void;
+  };
   ChooseExchangeSubCategoryScreen: undefined;
-  HomeAdminScreen: undefined;
-  SearchResultScreen:{ query: string };
   ManagerGroupsScreen: undefined;
   ImageGalleryScreen?: {
   onSelect?: (uri: string) => Promise<void>;
@@ -50,6 +56,15 @@ export type RootStackParamList = {
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
+  HomeAdminScreen: undefined;
+  ManageProductsScreen: undefined;
+
+  GroupDetailScreen: { group: GroupType };
+  PostGroupFormScreen: {
+    group: GroupType;
+    category?: Category;
+    subCategory?: SubCategory;
+  };
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
     roomId: string | number;
@@ -101,6 +116,17 @@ export type ChatRoomNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ChatRoomScreen"
 >;
+
+export type HomeAdminScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "HomeAdminScreen"
+>;
+
+export type ManageProductsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageProductsScreen"
+>;
+
 export type ProductImage = {
   id: string;
   product_id: string;
@@ -188,6 +214,10 @@ export type EngineCapacity = {
   id: string | number;
   name: string;
 };
+export type ProductStatus = {
+  id: string | number;
+  name: string;
+};
 export type AddressJson = {
   full: string;
   province?: string;
@@ -213,6 +243,7 @@ export type Product = {
   sub_category_change?: { id: string; name: string } | null;
   postType: PostType | null;
 
+  productStatus: ProductStatus | null;
   productType: ProductType | null;
   origin: Origin | null;
   material: Material | null;
@@ -234,7 +265,7 @@ export type Product = {
 
   condition: Condition | null;
   address_json?: AddressJson;
-  status_id?: string;
+  status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
   is_approved?: boolean;
@@ -317,4 +348,13 @@ export type Notification = {
     name: string;
     // Thêm các trường khác của Product nếu ông cần
   };
+};
+
+export type GroupType = {
+  id: number;
+  name: string;
+  image: string | number;
+  memberCount: string;
+  isPublic: boolean;
+  mustApprovePosts?: boolean;
 };

@@ -6,7 +6,9 @@ import {
   Param,
   Post,
   Query,
+  Req,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { GroupService } from './group.service';
@@ -16,6 +18,8 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from 'src/entities/product.entity';
+import { Group } from 'src/entities/group.entity';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('groups')
 export class GroupController {
@@ -24,46 +28,66 @@ export class GroupController {
 
     @InjectRepository(GroupMember)
     private readonly groupMemberRepo: Repository<GroupMember>,
-
-    @InjectRepository(Product)
-    private readonly productRepo: Repository<Product>,
   ) {}
 
+  // Lấy danh sách nhóm mà user đã tham gia
   @Get()
-  async getGroups() {
-    const groups = await this.groupService.findAll();
-    return groups.map((g) => ({
-      id: g.id,
-      name: g.name,
-      members: `${g.count_member} thành viên`,
-      posts: 'Chưa có dữ liệu bài viết', // sau này nối thêm 
-      image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
-    }));
-  }
+  @UseGuards(JwtAuthGuard)
+  async getGroups(@Req() req) {
+    const userId = req.user.id;
+    const groups = await this.groupService.findGroupsOfUser(userId);
 
-  @Get('latest')
-  async getLatestGroups() {
-    const groups = await this.groupService.findAll({ take: 5 });
     return groups.map((g) => ({
       id: g.id,
       name: g.name,
-      members: `${g.count_member} thành viên`,
+      memberCount: `${g.count_member}`,
+      isPublic: g.isPublic,
       posts: 'Chưa có dữ liệu bài viết',
       image: g.thumbnail_url?.startsWith('http') ? g.thumbnail_url : null,
     }));
   }
 
+  @Get('suggestions')
+  @UseGuards(JwtAuthGuard)
+  async getSuggestedGroups(@Req() req) {
+    const userId = req.user?.id;
+
+    return this.groupService.findGroupsUserNotJoined(userId);
+  }
+
+  @Get('latest')
+  @UseGuards(JwtAuthGuard)
+  async getLatestGroups(@Req() req) {
+    const userId = req.user.id;
+    return this.groupService.getLatestGroups(userId);
+  }
+
+  @Get('featured')
+  async getFeaturedGroups() {
+    return this.groupService.getFeaturedGroups();
+  }
+
+  @Get(':groupId/products')
+  @UseGuards(JwtAuthGuard)
+  async getGroupProducts(@Param('groupId') groupId: number, @Req() req) {
+    const userId = req.user.id;
+    return this.groupService.getGroupProducts(groupId, userId);
+  }
+
   @Post('upload-image')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file', CloudinaryMulter))
   async uploadGroupImage(@UploadedFile() file: Express.Multer.File) {
-    console.log('📤 Ảnh nhóm đã upload:', file?.path);
+    console.log(' Ảnh nhóm đã upload:', file?.path);
     return { url: file?.path }; // ✅ secure_url từ Cloudinary
   }
 
   // Tạo nhóm
   @Post()
-  async createGroup(@Body() body: any) {
-    const group = await this.groupService.create(body);
+  @UseGuards(JwtAuthGuard)
+  async createGroup(@Req() req, @Body() data: Partial<Group>) {
+    const userId = req.user.id;
+    const group = await this.groupService.create(data, userId);
 
     return {
       id: group.id,
@@ -77,8 +101,17 @@ export class GroupController {
     };
   }
 
+  @Get(':groupId/role')
+  @UseGuards(JwtAuthGuard)
+  async getUserRole(@Req() req, @Param('groupId') groupId: number) {
+    const userId = req.user.id;
+    const role = await this.groupService.getUserRole(groupId, userId);
+    return { role }; // "leader" | "member" | "none"
+  }
+
   // Check user có trong group không
   @Get(':groupId/is-member/:userId')
+  @UseGuards(JwtAuthGuard)
   async checkMember(
     @Param('groupId') groupId: number,
     @Param('userId') userId: number,
@@ -87,33 +120,26 @@ export class GroupController {
     return { groupId, userId, isMember };
   }
 
-  // User vào group
-  @Post(':groupId/join/:userId')
-  async joinGroup(
-    @Param('groupId') groupId: number,
-    @Param('userId') userId: number,
-  ): Promise<GroupMember> {
-    return this.groupService.joinGroup(+groupId, +userId);
+  // vào nhóm
+  @Post(':groupId/join')
+  @UseGuards(JwtAuthGuard)
+  async joinGroup(@Req() req, @Param('groupId') groupId: number) {
+    const result = await this.groupService.joinGroup(groupId, req.user.id);
+    return { success: true, message: 'Tham gia nhóm thành công', result };
   }
 
-  // User leave group
-  @Delete(':groupId/leave/:userId')
-  async leaveGroup(
-    @Param('groupId') groupId: number,
-    @Param('userId') userId: number,
-  ): Promise<{ success: boolean }> {
-    await this.groupService.leaveGroup(+groupId, +userId);
-    return { success: true };
+  // rời nhóm
+  @Delete(':groupId/leave')
+  @UseGuards(JwtAuthGuard)
+  async leaveGroup(@Req() req, @Param('groupId') groupId: number) {
+    await this.groupService.leaveGroup(groupId, req.user.id);
+    return { success: true, message: 'Rời nhóm thành công' };
   }
 
-  @Get('users/:userId/group-posts')
-  async getGroupPosts(
-    @Param('userId') userId: number,
-    @Query('limit') limit?: number,
-  ) {
-    return this.groupService.findPostsFromUserGroups(
-      +userId,
-      limit ? +limit : undefined,
-    );
+  // Lấy bài viết từ các nhóm user đã tham gia
+  @Get('my/group-posts')
+  @UseGuards(JwtAuthGuard)
+  async getMyGroupPosts(@Req() req, @Query('limit') limit?: number) {
+    return this.groupService.findPostsFromUserGroups(req.user.id, limit);
   }
 }

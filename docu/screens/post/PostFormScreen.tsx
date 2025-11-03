@@ -423,12 +423,35 @@ const PostFormScreen = ({
     setEngineCapacityId(id);
     setShowEngineCapacityModal(false);
   };
+
+  // Hàm xử lý ảnh mới
+  const processImageForUpload = async (uri: string) => {
+    try {
+      console.log("Đang xử lý ảnh:", uri);
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [
+          { resize: { width: 1080 } }, // Thay đổi kích thước, giữ tỷ lệ
+        ],
+        {
+          compress: 0.7, // Nén ảnh (0.7 = 70% chất lượng)
+          format: ImageManipulator.SaveFormat.JPEG,
+        }
+      );
+      console.log("Đã xử lý xong:", manipResult.uri);
+      return manipResult.uri; // Trả về uri của ảnh mới đã nén
+    } catch (error) {
+      console.error("Lỗi khi xử lý ảnh:", error);
+      return uri; // Nếu lỗi, trả về ảnh gốc (rủi ro)
+    }
+  };
+
   const handleUploadImage = async (useCamera: boolean) => {
     let result;
     if (useCamera) {
       result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
+        quality: 0.7, // Giảm chất lượng ngay khi chụp
       });
     } else {
       result = await ImagePicker.launchImageLibraryAsync({
@@ -440,38 +463,23 @@ const PostFormScreen = ({
     }
 
     if (!result.canceled && result.assets) {
-      const selected: string[] = [];
-      for (const asset of result.assets) {
-        // Convert HEIC sang JPEG nếu cần
-        const uri = await convertToJpgIfNeeded(asset.uri);
-        selected.push(uri);
-      }
-
-      if (images.length + selected.length > 4) {
+      // Kiểm tra giới hạn TỔNG SỐ ẢNH
+      if (images.length + result.assets.length > 4) {
         alert("Bạn chỉ được chọn tối đa 4 ảnh.");
         return;
       }
 
+      const selected: string[] = []; // Bật loading hoặc spinner ở đây nếu bạn muốn
+      console.log("Bắt đầu xử lý nén ảnh...");
+
+      for (const asset of result.assets) {
+        // LUÔN LUÔN xử lý ảnh (nén + resize)
+        const processedUri = await processImageForUpload(asset.uri);
+        selected.push(processedUri);
+      }
+      console.log("Đã xử lý ảnh xong."); // Tắt loading
       setImages((prev) => [...prev, ...selected]);
     }
-  };
-
-  const convertToJpgIfNeeded = async (uri: string) => {
-    const ext = uri.split(".").pop()?.toLowerCase();
-
-    if (ext === "heic" || ext === "heif") {
-      try {
-        const manipResult = await ImageManipulator.manipulateAsync(uri, [], {
-          format: ImageManipulator.SaveFormat.JPEG,
-          compress: 0.8,
-        });
-        return manipResult.uri;
-      } catch (error) {
-        console.error("Lỗi convert HEIC/HEIF:", error);
-        return uri; // fallback
-      }
-    }
-    return uri;
   };
 
   useEffect(() => {
@@ -643,7 +651,7 @@ const PostFormScreen = ({
       });
 
       if (response.status === 201 || response.status === 200) {
-        Alert.alert("Thành công", "Đăng tin thành công!");
+        Alert.alert("Thành công", "Đăng tin thành công. Đang chờ duyệt");
         navigation.navigate("Home");
       } else {
         Alert.alert("Lỗi", "Không thể đăng tin. Vui lòng thử lại.");

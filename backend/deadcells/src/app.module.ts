@@ -41,9 +41,10 @@ import { BreedModule } from './breeds/breed.module';
 import { AgeRangeModule } from './age-ranges/age-range.module';
 import { GenderModule } from './genders/gender.module';
 import { EngineCapacityModule } from './engine-capacities/engine-capacity.module';
-import { ServeStaticModule } from '@nestjs/serve-static'; // <<< 1. THÊM IMPORT NÀY
-import { join } from 'path';
+import { ProductStatus } from './entities/product-status.entity';
+import { GroupMember } from './entities/group-member.entity';
 import { ProductStatusModule } from './product-statuses/product-status.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -96,13 +97,6 @@ import { ProductStatusModule } from './product-statuses/product-status.module';
     GenderModule,
     EngineCapacityModule,
     ProductStatusModule,
-    ServeStaticModule.forRoot({
-      // Dòng này sẽ tạo URL: http://<server-ip>:3000/uploads/ten-file.jpg
-      serveRoot: '/uploads',
-
-      // Dòng này chỉ định thư mục thật trên ổ cứng
-      rootPath: join(__dirname, '..', 'uploads'),
-    }),
   ],
   
   controllers: [AppController],

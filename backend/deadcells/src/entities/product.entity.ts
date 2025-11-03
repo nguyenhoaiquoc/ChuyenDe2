@@ -105,6 +105,13 @@ export class Product {
   @JoinColumn({ name: 'product_model_id', referencedColumnName: 'id' })
   productModel: ProductModel | null;
 
+  @Column({ name: 'product_status_id', type: 'bigint', nullable: true })
+  product_status_id: number | null;
+
+  @ManyToOne(() => ProductStatus, { nullable: true })
+  @JoinColumn({ name: 'product_status_id', referencedColumnName: 'id' })
+  productStatus: ProductStatus | null;
+
   @Column({ name: 'processor_id', type: 'bigint', nullable: true })
   processor_id: number | null;
 
@@ -252,7 +259,8 @@ export class Product {
   @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
   // ===== Trạng thái bài đăng =====
-  @Column({ type: 'bigint', default: 1 })
+
+  @Column({ type: 'int', nullable: true })
   status_id: number;
 
   @Column({ type: 'bigint', default: 0 })

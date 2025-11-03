@@ -36,7 +36,25 @@ import { Breed } from 'src/entities/breed.entity';
 import { AgeRange } from 'src/entities/age-range.entity';
 import { Gender } from 'src/entities/gender.entity';
 import { EngineCapacity } from 'src/entities/engine-capacity.entity';
-import { ProductStatus } from 'src/entities/product-status.entity';
+import { SizeModule } from 'src/size/size.module';
+import { BrandModule } from 'src/brands/brand.module';
+import { OriginModule } from 'src/origin/origin.module';
+import { MaterialModule } from 'src/material/material.module';
+import { ColorModule } from 'src/colors/color.module';
+import { CapacityModule } from 'src/capacitys/capacity.module';
+import { WarrantyModule } from 'src/warrantys/warranty.module';
+import { ProductModelModule } from 'src/product-models/product-model.module';
+import { ProcessorModule } from 'src/processors/processor.module';
+import { RamOptionModule } from 'src/ram-options/ram-option.module';
+import { StorageTypeModule } from 'src/storage-types/storage-type.module';
+import { GraphicsCardModule } from 'src/graphics-cards/graphics-card.module';
+import { BreedModule } from 'src/breeds/breed.module';
+import { AgeRangeModule } from 'src/age-ranges/age-range.module';
+import { GenderModule } from 'src/genders/gender.module';
+import { EngineCapacityModule } from 'src/engine-capacities/engine-capacity.module';
+import { ProductTypeModule } from 'src/product-types/product-type.module';
+import { ProductStatusModule } from 'src/product-statuses/product-status.module';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Module({
   imports: [
@@ -47,7 +65,7 @@ import { ProductStatus } from 'src/entities/product-status.entity';
       DealType,
       Condition,
       SubCategory,
-      Category,
+      Category, 
       FashionCategory,
       GameCategory,
       AcademicCategory,
@@ -56,28 +74,29 @@ import { ProductStatus } from 'src/entities/product-status.entity';
       HouseCategory,
       VehicleCategory,
       PostType,
-      ProductType,
-      Origin,
-      Material,
-      Size,
-      Brand,
-      Color,
-      Capacity,
-      Warranty,
-      ProductModel,
-      Processor,
-      RamOption,
-      StorageType,
-      GraphicsCard,
-      Breed,
-      AgeRange,
-      Gender,
-      EngineCapacity,
-      ProductStatus
+      GroupMember,
     ]),
 
     NotificationModule,
     forwardRef(() => GroupModule),
+    SizeModule,
+    BrandModule,
+    OriginModule,
+    MaterialModule,
+    ColorModule,
+    CapacityModule,
+    WarrantyModule,
+    ProductModelModule,
+    ProcessorModule,
+    RamOptionModule,
+    StorageTypeModule,
+    GraphicsCardModule,
+    BreedModule,
+    AgeRangeModule,
+    GenderModule,
+    EngineCapacityModule,
+    ProductTypeModule,
+    ProductStatusModule,
   ],
   providers: [ProductService],
   controllers: [ProductController],

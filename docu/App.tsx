@@ -39,15 +39,21 @@ import GroupDetailScreen from './screens/groups/GroupDetailScreen';
 import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
+import { StatusBar } from 'expo-status-bar';
+import ManageProductsScreen from './screens/admin/ManageProductsScreen';
+import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
 import SearchProduct from './screens/products/SearchProduct';
 import SearchResultScreen from './screens/products/SearchResultScreen';
-import ImageGalleryScreen from './screens/profile/ImageGalleryScreen';
+
+// import TestApi from './screens/TestApi';
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
     <NotificationProvider>
       <NavigationContainer>
+        <StatusBar hidden />
         <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
           {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
           <Stack.Screen name="Home" component={HomeScreen} />
@@ -75,6 +81,7 @@ export default function App() {
           <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
           <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
           <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
+          <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} />
           <Stack.Screen name="UserDetail" component={UserDetail} />
           <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
           <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
@@ -85,7 +92,7 @@ export default function App() {
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
           <Stack.Screen name="SearchProduct" component={SearchProduct} />
           <Stack.Screen name="SearchResultScreen" component={SearchResultScreen} />
-          <Stack.Screen name="ImageGalleryScreen" component={ImageGalleryScreen} />
+         
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
           <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
           />
