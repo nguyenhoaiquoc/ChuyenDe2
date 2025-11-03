@@ -1,6 +1,7 @@
 import { GroupService } from './../groups/group.service';
 import {
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
@@ -45,7 +46,6 @@ import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { ProductStatusService } from 'src/product-statuses/product-status.service';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
-import { InternalServerErrorException } from '@nestjs/common';
 
 @Injectable()
 export class ProductService {
@@ -870,4 +870,100 @@ async searchAndFilterFormatted(filters: any, userId?: number): Promise<any[]> {
 }
 
 
+
+  // 🟢 Người dùng xem tất cả sản phẩm của chính họ
+  async findByUserId(userId: number): Promise<any[]> {
+    const products = await this.productRepo.find({
+      where: { user: { id: userId } }, // không lọc is_approved
+      order: { created_at: 'DESC' },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+      ],
+    });
+
+    return this.formatProducts(products);
+  }
+
+  async findAllForAdmin(): Promise<any[]> {
+    const products = await this.productRepo.find({
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+      ],
+      order: { created_at: 'DESC' },
+    });
+    return this.formatProducts(products);
+  }
+
+  // Cập nhật trạng thái (Duyệt/Từ chối)
+  async updateProductStatus(
+    id: number,
+    dto: UpdateProductStatusDto,
+  ): Promise<Product> {
+    const product = await this.productRepo.findOneBy({ id });
+    if (!product) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
+    }
+
+    product.is_approved = dto.is_approved;
+    product.product_status_id = dto.product_status_id;
+
+    const updatedProduct = await this.productRepo.save(product);
+
+    // Thông báo
+    // this.notificationService.notifyUserOfApproval(updatedProduct);
+
+    return updatedProduct;
+  }
 }
