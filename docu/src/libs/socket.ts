@@ -13,7 +13,7 @@ type InitOpts = {
 // Khởi tạo socket nếu chưa có
 export function initSocket({ token, userId }: InitOpts) {
   if (!socket) {
-    socket = io(path, {
+    socket = io(`${path}/chat`, {
       auth: { token, userId: userId ? String(userId) : undefined },
       transports: ["websocket"], // Chỉ dùng WebSocket cho ổn định
       reconnection: false,        // Tắt tự động reconnect khi logout
