@@ -64,7 +64,7 @@ export default function GroupDetailScreen({
       });
 
       const r = roleRes.data.role;
-      console.log("User role:", r);
+      // console.log("User role:", r);
       if (r === "leader" || r === "member" || r === "none") {
         setRole(r);
       } else {
@@ -155,6 +155,7 @@ export default function GroupDetailScreen({
               Alert.alert("Thành công", "Bạn đã rời nhóm");
               setRole("none");
               setMenuVisible(false);
+              navigation.goBack();
               await fetchData();
             } catch (error: any) {
               console.log("Lỗi rời nhóm:", error);
@@ -242,8 +243,18 @@ export default function GroupDetailScreen({
             {
               text: "Xóa nhóm",
               style: "destructive",
-              onPress: () => {
-                console.log("Xoá nhóm");
+              onPress: async () => {
+                try {
+                  const token = await AsyncStorage.getItem("token");
+                  await axios.delete(`${path}/groups/${group.id}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  Alert.alert("✅ Đã xóa nhóm");
+                  navigation.goBack();
+                } catch (err) {
+                  console.log("❌ Lỗi xóa nhóm:", err);
+                  Alert.alert("Lỗi", "Không thể xóa nhóm");
+                }
               },
             },
           ]
@@ -355,12 +366,18 @@ export default function GroupDetailScreen({
       <FlatList
         data={products}
         keyExtractor={(item: any) => String(item.id)}
-        numColumns={2}
-        ListHeaderComponent={renderHeader}
-        columnWrapperStyle={{
-          justifyContent: "space-between",
-          paddingHorizontal: 16,
-        }}
+        numColumns={1} // ✅ chỉ 1 sản phẩm mỗi hàng
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            <View className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800">
+                Các bài viết nhóm
+              </Text>
+            </View>
+          </>
+        }
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -369,46 +386,88 @@ export default function GroupDetailScreen({
             tintColor="#3B82F6"
           />
         }
-        renderItem={({ item }) => (
-          <View className="mb-6 p-3 bg-white rounded-lg shadow flex-1 mx-2">
-            <View className="flex-row items-center mb-2">
-              <Image
-                source={
-                  item.groupImage
-                    ? { uri: item.groupImage }
-                    : require("../../assets/meo.jpg")
-                }
-                className="w-8 h-8 rounded-full"
-              />
-              <Text className="text-sm ml-2 font-semibold" numberOfLines={1}>
-                {item.groupName}
+        renderItem={({ item }) => {
+          // ✅ Lấy ảnh sản phẩm
+          const imageUrl =
+            item.thumbnail_url ||
+            (item.images?.length > 0 ? item.images[0].image_url : null) ||
+            "Không có hình";
+          console.log(item);
+
+          const priceFormat = item.price === 0  ? "Miễn phí" : item.price == null ? "Trao đổi" : item.price;
+
+
+          return (
+            <View className="mb-8 p-3 bg-white rounded-xl shadow-md">
+              {/* 🧑‍💼 Thông tin người đăng */}
+              <View className="flex-row items-center mb-3">
+                <Image
+                  source={
+                    item.user?.avatar
+                      ? { uri: item.user.avatar }
+                      : require("../../assets/khi.png")
+                  }
+                  className="w-10 h-10 rounded-full border border-gray-300"
+                />
+                <View className="ml-3 flex-1">
+                  <Text className="text-gray-800 font-semibold">
+                    {item.user?.name || "Người dùng"}
+                  </Text>
+
+                  <TouchableOpacity
+                    className={`mb-1.5 px-2 py-1 rounded-full self-start ${
+                      item?.postType?.name === "Đăng bán"
+                        ? "bg-green-500"
+                        : "bg-blue-500"
+                    }`}
+                  >
+                    <Text className="text-[10px] text-white font-semibold">
+                      {item?.postType?.name || "Không rõ"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* 💰 Giá sản phẩm */}
+                <Text className="text-red-400 font-semibold text-lg mt-2 pr-5">
+                  {priceFormat}
+                </Text>
+              </View>
+
+              {/* 🏷️ Tên sản phẩm */}
+              <Text className="font-bold text-base text-gray-900 mb-2">
+                {item.name}
               </Text>
+
+              {/* 📍 Địa chỉ */}
+              {item.location && (
+                <View className="flex-row items-center my-2">
+                  <Feather name="map-pin" size={14} color="#6b7280" />
+                  <Text className="text-gray-500 text-sm ml-1">
+                    {item.location}
+                  </Text>
+                </View>
+              )}
+
+              {/* 🖼️ Hình ảnh sản phẩm */}
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("ProductDetail", { product: item })
+                }
+              >
+                <Image
+                  source={{ uri: imageUrl }}
+                  className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
             </View>
-            <Text className="text-gray-600 text-xs">
-              Đăng bởi {item.authorName}
-            </Text>
-            <Text className="font-bold text-base mt-1" numberOfLines={2}>
-              {item.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("ProductDetail", { product: item })
-              }
-            >
-              <Image
-                source={{ uri: item.image }}
-                className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
-          // ✅ CHỈ HIỆN KHI KHÔNG CÓ SẢN PHẨM NÀO
           <View className="items-center justify-center mt-10 px-4">
             <Feather name="package" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 mt-4 text-center">
-              Chưa có sản phẩm nào trong nhóm này.
+              Chưa có bài viết nào trong nhóm này.
             </Text>
             {isMember && (
               <TouchableOpacity
@@ -416,7 +475,7 @@ export default function GroupDetailScreen({
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
               >
                 <Text className="text-white font-semibold">
-                  Đăng sản phẩm đầu tiên
+                  Đăng bài viết đầu tiên
                 </Text>
               </TouchableOpacity>
             )}
@@ -424,7 +483,7 @@ export default function GroupDetailScreen({
         }
       />
 
-      {/* Menu */}
+      {/* Menu (giữ nguyên phần này) */}
       {isMember && (
         <Modal
           visible={isMenuVisible}
@@ -466,7 +525,6 @@ export default function GroupDetailScreen({
                   </TouchableOpacity>
                 ))}
 
-                {/* Chỉ leader có switch */}
                 {isLeader && (
                   <View className="flex-row items-center justify-between p-3 border-t border-gray-100">
                     <View className="flex-row items-center flex-1 pr-2">

@@ -95,6 +95,18 @@ export class User {
   @OneToMany(() => Comment, (comment) => comment.user)
   comments: Comment[];
 
+  @Column({ type: 'text', nullable: true })
+  bio: string; // Giới thiệu
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nickname: string; // Tên gợi nhớ
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  citizenId: string; // CCCD / CMND
+
+  @Column({ type: 'date', nullable: true })
+  dob: Date; // Ngày sinh
+
   @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
   lastOnlineAt?: Date | null;
 

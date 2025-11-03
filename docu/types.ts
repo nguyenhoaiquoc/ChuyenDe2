@@ -53,6 +53,7 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsScreen: undefined;
+  PostsTab: undefined;
 
   GroupDetailScreen: { group: GroupType };
   PostGroupFormScreen: {
