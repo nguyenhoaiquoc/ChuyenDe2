@@ -1,1 +1,1 @@
-export const path = "http://192.168.1.135:3000";
+export const path = "http://192.168.40.176:3000";

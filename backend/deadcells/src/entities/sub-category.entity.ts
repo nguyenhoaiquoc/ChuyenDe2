@@ -102,6 +102,7 @@ export class SubCategory {
   @OneToMany(() => AgeRange, (ageRange) => ageRange.subCategory)
   ageRanges: AgeRange[];
 
+  
   @OneToMany(() => Gender, (gender) => gender.subCategory)
   genders: Gender[];
 
