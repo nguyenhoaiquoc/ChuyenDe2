@@ -41,7 +41,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     otherUserName: otherUserNameFromParams,
     otherUserAvatar: otherUserAvatarFromParams,
     highlightMessageId,
-    searchKeyword: searchKeywordFromParams, // 👈 nhận keyword từ Search
+    searchKeyword: searchKeywordFromParams, // nhận keyword từ Search
   } = route.params || {};
 
   const [jwt, setJwt] = useState<string | null>(null);
@@ -59,7 +59,6 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   }, []);
 
   const [headerMeta, setHeaderMeta] = useState<{ name?: string; avatar?: string } | null>(null);
-
   const [contextVisible, setContextVisible] = useState(false);
   const [contextMsg, setContextMsg] = useState<UiMsg | null>(null);
   const [messages, setMessages] = useState<UiMsg[]>([]);
@@ -76,15 +75,22 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     mediaUrl?: string | null;
     senderId: string;
   }>(null);
-
   const [editTarget, setEditTarget] = useState<null | { id: string }>(null);
+
+  // Theo dõi vị trí scroll và điều khiển auto-scroll lần đầu vào phòng
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const initialAutoScrollDoneRef = useRef(false);
+
+  // Reset cờ auto-scroll khi đổi phòng hoặc có highlight
+  useEffect(() => {
+    initialAutoScrollDoneRef.current = false;
+  }, [roomId, highlightMessageId]);
 
   const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   const otherUserId = otherUserIdFromParams ?? null;
   const otherUserName = otherUserNameFromParams ?? headerMeta?.name ?? "Người dùng";
   const otherUserAvatar = otherUserAvatarFromParams ?? headerMeta?.avatar ?? DEFAULT_AVATAR;
 
-  // 👇 keyword để tô đậm trong bong bóng
   const searchKeyword = (searchKeywordFromParams ?? "").toString().trim();
 
   const timeAgo = (dateString?: string) => {
@@ -280,17 +286,42 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     run();
   }, [jwt, roomId, highlightMessageId]);
 
+  // Auto scroll khi có tin mới (nếu đang ở gần cuối và không xem highlight)
   useEffect(() => {
-    if (!highlightMessageId) {
+    if (!highlightMessageId && isNearBottom) {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }
-  }, [messages, highlightMessageId]);
+  }, [messages, highlightMessageId, isNearBottom]);
 
   const msgById = useMemo(() => {
     const map = new Map<string, UiMsg>();
     messages.forEach((m) => map.set(m.id, m));
     return map;
   }, [messages]);
+
+  // Theo dõi scroll để biết có đang gần đáy không
+  const handleScroll = (event: any) => {
+    const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    setIsNearBottom(distanceFromBottom < 100);
+  };
+
+  // Đảm bảo cuộn đúng thời điểm sau khi nội dung render xong:
+  const handleContentSizeChange = () => {
+    if (highlightMessageId) return; // đang xem anchor thì không kéo xuống cuối
+
+    // Lần đầu mở phòng: cuộn xuống cuối ngay (không animation để tránh nháy)
+    if (!initialAutoScrollDoneRef.current) {
+      scrollViewRef.current?.scrollToEnd({ animated: false });
+      initialAutoScrollDoneRef.current = true;
+      return;
+    }
+
+    // Các lần nội dung tăng sau đó: chỉ auto-scroll nếu đang ở gần đáy
+    if (isNearBottom) {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }
+  };
 
   const handleSend = async () => {
     if (!selfId || (!content.trim() && selectedImages.length === 0)) return;
@@ -456,7 +487,6 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     return (
       <View className={`${String(msg.senderId) === String(selfId) ? "bg-yellow-100" : "bg-gray-100"} px-3 py-2 rounded-lg mb-1`} style={{ opacity: 0.7 }}>
         <Text className="text-[11px] text-gray-600" numberOfLines={1}>Trả lời {who}</Text>
-        {/* Tô đậm keyword trong trích dẫn luôn */}
         <Text className="text-[12px] text-gray-700" numberOfLines={2}>
           <InlineHighlight text={txt} keyword={searchKeyword} />
         </Text>
@@ -478,24 +508,43 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       <StatusBar style="auto" />
 
       {/* Header */}
-      <View className="flex flex-row mt-14 items-center px-5 justify-between border-b border-gray-200 pb-2">
-        <View className="flex flex-row items-center gap-4">
-          <FontAwesome5 name="arrow-left" size={20} color="gray" onPress={() => navigation.goBack()} />
-          <View className="flex flex-row gap-2 items-center">
-            <Image className="w-[46px] h-[46px] rounded-full" source={{ uri: otherUserAvatar }} />
-            <View>
-              <Text className="font-semibold">{otherUserName}</Text>
-              <Text className="text-gray-400 text-xs">
-                {onlineStatus.online ? "Đang hoạt động" : `Hoạt động ${timeAgo(onlineStatus.lastOnlineAt)} trước`}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <FontAwesome5 name="bars" size={20} color="gray" />
+<View className="flex flex-row mt-14 items-center px-5 justify-between border-b border-gray-200 pb-2">
+  <View className="flex flex-row items-center gap-4">
+    <FontAwesome5 name="arrow-left" size={20} color="gray" onPress={() => navigation.goBack()} />
+
+    {/* 👇 Bọc avatar + tên bằng TouchableOpacity để mở UserInforScreen */}
+    <TouchableOpacity
+      className="flex flex-row gap-2 items-center"
+      activeOpacity={0.7}
+      onPress={() =>
+        navigation.navigate("UserInforScreen", {
+          userId: otherUserId ?? selfId, // nếu không có otherUserId thì mở profile của chính mình
+        })
+      }
+    >
+      <Image className="w-[46px] h-[46px] rounded-full" source={{ uri: otherUserAvatar }} />
+      <View>
+        <Text className="font-semibold">{otherUserName}</Text>
+        <Text className="text-gray-400 text-xs">
+          {onlineStatus.online ? "Đang hoạt động" : `Hoạt động ${timeAgo(onlineStatus.lastOnlineAt)} trước`}
+        </Text>
       </View>
+    </TouchableOpacity>
+  </View>
+
+  <FontAwesome5 name="bars" size={20} color="gray" />
+</View>
+
 
       {/* Danh sách tin nhắn */}
-      <ScrollView ref={scrollViewRef} className="flex-1 px-5" contentContainerStyle={{ paddingVertical: 10 }}>
+      <ScrollView
+        ref={scrollViewRef}
+        className="flex-1 px-5"
+        contentContainerStyle={{ paddingVertical: 10 }}
+        onScroll={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
+        scrollEventThrottle={100}
+      >
         {messages.map((msg) => {
           const isMe = selfId && String(msg.senderId) === String(selfId);
           return (
@@ -517,7 +566,6 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                         className={`${isMe ? "bg-yellow-200" : "bg-gray-200"} px-3 py-3 rounded-xl`}
                         style={{ overflow: "hidden" }}
                       >
-                        {/* 👇 TÔ ĐẬM KEYWORD TRONG BONG BÓNG */}
                         <InlineHighlight text={msg.text} keyword={searchKeyword} />
                         {msg.edited ? <Text className="text-gray-500 text-xs"> (đã chỉnh sửa)</Text> : null}
                       </Text>

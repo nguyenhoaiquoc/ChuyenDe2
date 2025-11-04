@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConversationRoom } from 'src/entities/conversation-room.entity';
@@ -431,5 +431,23 @@ async getRoomMetaData(userId: number, roomId: number) {
   return meta;
 }
 
+  async getUnreadMessages(userId: number) {
+    const unreadMessages = await this.messageRepo.find({
+      where: {
+        receiver_id: userId, // Lọc theo người nhận
+        is_read: false, // Lọc các tin nhắn chưa đọc
+      },
+      relations: ['sender'], // Nếu bạn muốn lấy thông tin người gửi
+      order: {
+        created_at: 'DESC', // Sắp xếp theo thời gian tạo tin nhắn
+      },
+    });
+
+    if (!unreadMessages || unreadMessages.length === 0) {
+      throw new NotFoundException('Không có tin nhắn chưa đọc');
+    }
+
+    return unreadMessages;
+  }
 
 }
