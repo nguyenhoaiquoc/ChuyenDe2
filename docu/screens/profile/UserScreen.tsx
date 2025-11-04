@@ -18,6 +18,7 @@ import axios from "axios";
 import { path } from "../../config";
 import { io } from "socket.io-client";
 import { disconnectSocket, getSocket } from "../../src/libs/socket";
+import React from "react";
 
 export default function UserScreen() {
   const navigation =
