@@ -10,7 +10,6 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Repository, FindManyOptions, In } from 'typeorm';
 import { ProductStatus } from 'src/entities/product-status.entity';
-import { User } from 'src/entities/user.entity';
 
 @Injectable()
 export class GroupService {
@@ -44,14 +43,23 @@ export class GroupService {
     });
     const savedGroup = await this.groupRepo.save(group);
 
+    // Leader tự động có pending = 3 (joined)
     const member = this.groupMemberRepo.create({
       group_id: savedGroup.id,
       user_id: userId,
       group_role_id: 2, // leader
+      pending: 3, // joined
     });
     await this.groupMemberRepo.save(member);
 
     return savedGroup;
+  }
+
+  /** Đếm số thành viên của nhóm (chỉ đếm pending = 3) */
+  async countMembers(groupId: number): Promise<number> {
+    return this.groupMemberRepo.count({
+      where: { group_id: groupId, pending: 3 },
+    });
   }
 
   /** Cập nhật thông tin nhóm */
@@ -148,7 +156,7 @@ export class GroupService {
 
   // ==================== Quản Lý Thành Viên ====================
 
-  /** Lấy danh sách thành viên trong nhóm */
+  /** Lấy danh sách thành viên trong nhóm (pending = 3) */
   async getMembers(groupId: number, userId: number) {
     const isMember = await this.isMember(groupId, userId);
     if (!isMember) {
@@ -156,7 +164,7 @@ export class GroupService {
     }
 
     const members = await this.groupMemberRepo.find({
-      where: { group_id: groupId },
+      where: { group_id: groupId, pending: 3 },
       relations: ['user', 'role'],
       order: { created_at: 'ASC' },
     });
@@ -172,58 +180,66 @@ export class GroupService {
     }));
   }
 
-  /** Lấy danh sách yêu cầu tham gia chờ duyệt (cho nhóm private) */
+  /** Lấy danh sách yêu cầu tham gia chờ duyệt (pending = 2) */
   async getPendingMembers(groupId: number, userId: number) {
     const role = await this.getUserRole(groupId, userId);
     if (role !== 'leader') {
-      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt thành viên');
+      throw new ForbiddenException('Chỉ trưởng nhóm mới được xem yêu cầu');
     }
 
-    const group = await this.groupRepo.findOne({ where: { id: groupId } });
-    if (!group) throw new NotFoundException('Nhóm không tồn tại');
+    const pending = await this.groupMemberRepo.find({
+      where: { group_id: groupId, pending: 2 },
+      relations: ['user'],
+      order: { created_at: 'DESC' },
+    });
 
-    // Giả sử bạn có bảng group_join_requests hoặc dùng cột pending trong group_members
-    // Ở đây tôi giả định bạn thêm cột is_approved vào GroupMember
-    // Nếu chưa có, bạn cần tạo bảng riêng: group_join_requests
-
-    // Tạm thời return empty array, bạn cần tạo entity GroupJoinRequest
-    return [];
+    return pending.map((p) => ({
+      user_id: p.user_id,
+      name: p.user.fullName,
+      email: p.user.email,
+      avatar: p.user.image,
+      requested_at: p.created_at,
+    }));
   }
 
-  /** Duyệt thành viên vào nhóm (cho nhóm private) */
+  /** Duyệt thành viên vào nhóm (từ pending = 2 → 3) */
   async approveMember(
     groupId: number,
     targetUserId: number,
     approve: boolean,
-    userId: number,
+    leaderId: number,
   ) {
-    const role = await this.getUserRole(groupId, userId);
+    console.log('🔍 approveMember called:', {
+      groupId,
+      targetUserId,
+      approve,
+      leaderId,
+    });
+
+    const role = await this.getUserRole(groupId, leaderId);
+    console.log('👤 Leader role:', role);
+
     if (role !== 'leader') {
-      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt thành viên');
+      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt');
     }
 
-    // Logic duyệt thành viên
-    // Giả sử bạn có bảng group_join_requests
-    // Xóa request và thêm vào group_members nếu approve = true
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: targetUserId, pending: 2 },
+    });
+
+    console.log('📝 Found member:', member);
+
+    if (!member) throw new NotFoundException('Không tìm thấy yêu cầu');
 
     if (approve) {
-      const exists = await this.groupMemberRepo.findOne({
-        where: { group_id: groupId, user_id: targetUserId },
-      });
-      if (exists)
-        throw new BadRequestException('Người này đã là thành viên rồi');
-
-      const member = this.groupMemberRepo.create({
-        group_id: groupId,
-        user_id: targetUserId,
-        group_role_id: 1,
-      });
+      member.pending = 3; // Chuyển sang joined
       await this.groupMemberRepo.save(member);
       await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
-
+      console.log('✅ Approved successfully');
       return { success: true, message: 'Đã duyệt thành viên' };
     } else {
-      // Xóa request nếu từ chối
+      await this.groupMemberRepo.remove(member);
+      console.log('❌ Rejected successfully');
       return { success: true, message: 'Đã từ chối yêu cầu tham gia' };
     }
   }
@@ -254,7 +270,11 @@ export class GroupService {
       group_id: groupId,
       user_id: targetUserId,
     });
-    await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
+
+    // Chỉ giảm count nếu user đã joined (pending = 3)
+    if (member.pending === 3) {
+      await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
+    }
   }
 
   /** Chuyển quyền trưởng nhóm */
@@ -269,7 +289,7 @@ export class GroupService {
     }
 
     const newLeaderMember = await this.groupMemberRepo.findOne({
-      where: { group_id: groupId, user_id: newLeaderId },
+      where: { group_id: groupId, user_id: newLeaderId, pending: 3 },
     });
 
     if (!newLeaderMember) {
@@ -315,36 +335,66 @@ export class GroupService {
     };
   }
 
-  // ==================== Join/Leave Group ====================
+  // ==================== Join / Leave Group ====================
 
-  async joinGroup(groupId: number, userId: number): Promise<GroupMember> {
+  /**
+   * Tham gia nhóm
+   * - Public: pending = 3 (joined ngay)
+   * - Private: pending = 2 (chờ duyệt)
+   */
+  async joinGroup(groupId: number, userId: number): Promise<any> {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
-    const exists = await this.groupMemberRepo.findOne({
+    const existing = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
     });
-    if (exists) throw new BadRequestException('Bạn đã là thành viên');
 
-    // Nếu là nhóm private, cần tạo request thay vì join trực tiếp
-    if (!group.isPublic) {
-      // TODO: Tạo group_join_request
-      throw new BadRequestException(
-        'Nhóm riêng tư, vui lòng chờ trưởng nhóm duyệt',
-      );
+    if (existing) {
+      if (existing.pending === 2) {
+        throw new BadRequestException('Bạn đã gửi yêu cầu tham gia rồi');
+      }
+      if (existing.pending === 3) {
+        throw new BadRequestException('Bạn đã là thành viên');
+      }
     }
+
+    // Public: pending = 3, Private: pending = 2
+    const pendingStatus = group.isPublic ? 3 : 2;
 
     const member = this.groupMemberRepo.create({
       group_id: groupId,
       user_id: userId,
-      group_role_id: 1,
+      group_role_id: 1, // member
+      pending: pendingStatus,
     });
-    const saved = await this.groupMemberRepo.save(member);
 
-    await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
-    return saved;
+    await this.groupMemberRepo.save(member);
+
+    // Chỉ tăng count_member nếu là public (joined ngay)
+    if (group.isPublic) {
+      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
+    }
+
+    return {
+      success: true,
+      message: group.isPublic
+        ? 'Bạn đã tham gia nhóm thành công'
+        : 'Yêu cầu tham gia đã được gửi, chờ trưởng nhóm duyệt',
+      joinStatus: group.isPublic ? 'joined' : 'pending',
+    };
   }
 
+  /** Hủy yêu cầu tham gia (xóa pending = 2) */
+  async cancelJoinRequest(groupId: number, userId: number) {
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: userId, pending: 2 },
+    });
+    if (!member) throw new NotFoundException('Không có yêu cầu nào để hủy');
+    await this.groupMemberRepo.remove(member);
+  }
+
+  /** Rời nhóm (chỉ cho pending = 3) */
   async leaveGroup(groupId: number, userId: number): Promise<void> {
     const member = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
@@ -352,19 +402,22 @@ export class GroupService {
 
     if (!member) throw new BadRequestException('Bạn không phải là thành viên');
 
+    if (member.pending !== 3) {
+      throw new BadRequestException('Bạn chưa là thành viên chính thức');
+    }
+
     if (member.group_role_id === 2) {
       throw new BadRequestException(
         'Leader không thể rời nhóm. Hãy chuyển quyền leader trước.',
       );
     }
 
-    const result = await this.groupMemberRepo.delete({
+    await this.groupMemberRepo.delete({
       group_id: groupId,
       user_id: userId,
     });
-    if (result.affected) {
-      await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
-    }
+
+    await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
   }
 
   // ==================== Get/List Groups ====================
@@ -390,10 +443,11 @@ export class GroupService {
     return Promise.all(
       groups.map(async (g) => {
         const postCount = await this.countPostsByGroup(g.id);
+        const memberCount = await this.countMembers(g.id);
         return {
           id: g.id,
           name: g.name,
-          members: `${g.count_member} thành viên`,
+          members: `${memberCount} thành viên`,
           posts: `${postCount} bài viết`,
           image: g.thumbnail_url || null,
           isPublic: g.isPublic,
@@ -404,7 +458,7 @@ export class GroupService {
 
   async getLatestGroups(userId: number, limit = 5) {
     const memberships = await this.groupMemberRepo.find({
-      where: { user_id: userId },
+      where: { user_id: userId, pending: 3 },
       relations: ['group'],
     });
 
@@ -417,10 +471,11 @@ export class GroupService {
     return Promise.all(
       joinedGroups.map(async (g) => {
         const postCount = await this.countPostsByGroup(g.id);
+        const memberCount = await this.countMembers(g.id);
         return {
           id: g.id,
           name: g.name,
-          members: `${g.count_member} thành viên`,
+          members: `${memberCount} thành viên`,
           posts: `${postCount} bài viết`,
           image: g.thumbnail_url || null,
           isPublic: g.isPublic,
@@ -431,7 +486,7 @@ export class GroupService {
 
   async findGroupsOfUser(userId: number) {
     const memberships = await this.groupMemberRepo.find({
-      where: { user_id: userId },
+      where: { user_id: userId, pending: 3 },
       relations: ['group'],
     });
 
@@ -441,7 +496,7 @@ export class GroupService {
       groups.map(async (g) => ({
         id: g.id,
         name: g.name,
-        memberCount: `${g.count_member}`,
+        memberCount: `${await this.countMembers(g.id)}`,
         posts: `${await this.countPostsByGroup(g.id)}`,
         image: g.thumbnail_url || null,
         isPublic: g.isPublic,
@@ -464,33 +519,67 @@ export class GroupService {
       allGroups = allGroups.filter((g) => !joinedSet.has(g.id));
     }
 
-    return allGroups.map((g) => ({
-      id: g.id,
-      name: g.name,
-      image: g.thumbnail_url || null,
-      memberCount: `${g.count_member}`,
-      isPublic: g.isPublic,
-    }));
+    return Promise.all(
+      allGroups.map(async (g) => {
+        const memberCount = await this.countMembers(g.id);
+        return {
+          id: g.id,
+          name: g.name,
+          image: g.thumbnail_url || null,
+          memberCount: `${memberCount}`,
+          isPublic: g.isPublic,
+        };
+      }),
+    );
   }
 
   // ==================== Utilities ====================
 
+  /**
+   * Lấy role của user trong nhóm
+   * Chỉ trả về role nếu pending = 3 (joined)
+   */
   async getUserRole(
     groupId: number,
     userId: number,
   ): Promise<'leader' | 'member' | 'none'> {
     const member = await this.groupMemberRepo.findOne({
-      where: { group_id: groupId, user_id: userId },
+      where: { group_id: groupId, user_id: userId, pending: 3 },
     });
     if (!member) return 'none';
     return Number(member.group_role_id) === 2 ? 'leader' : 'member';
   }
 
+  /**
+   * Kiểm tra user có phải thành viên không (pending = 3)
+   */
   async isMember(groupId: number, userId: number): Promise<boolean> {
     const count = await this.groupMemberRepo.count({
-      where: { group_id: groupId, user_id: userId },
+      where: { group_id: groupId, user_id: userId, pending: 3 },
     });
     return count > 0;
+  }
+
+  /**
+   * Lấy trạng thái tham gia nhóm
+   * pending = 1: none (chưa tham gia)
+   * pending = 2: pending (chờ duyệt)
+   * pending = 3: joined (đã tham gia)
+   */
+  async getJoinStatus(
+    groupId: number,
+    userId: number,
+  ): Promise<'none' | 'pending' | 'joined'> {
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: userId },
+    });
+
+    if (!member) return 'none';
+
+    if (member.pending === 2) return 'pending';
+    if (member.pending === 3) return 'joined';
+
+    return 'none';
   }
 
   private async countPostsByGroup(groupId: number): Promise<number> {
@@ -528,7 +617,7 @@ export class GroupService {
 
   async findPostsFromUserGroups(userId: number, limit?: number) {
     const memberships = await this.groupMemberRepo.find({
-      where: { user_id: userId },
+      where: { user_id: userId, pending: 3 },
       select: ['group_id'],
     });
 

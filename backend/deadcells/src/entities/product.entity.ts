@@ -205,6 +205,12 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   deal_type_id: number | null;
 
+  @Column({ default: false })
+  is_deleted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date | null;
+
   @ManyToOne(() => DealType)
   @JoinColumn({ name: 'deal_type_id' })
   dealType: DealType;

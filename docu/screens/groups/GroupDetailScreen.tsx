@@ -40,33 +40,43 @@ export default function GroupDetailScreen({
     group.mustApprovePosts || false
   );
   const [role, setRole] = useState<"leader" | "member" | "none" | null>(null);
+  const [joinStatus, setJoinStatus] = useState<"none" | "pending" | "joined">(
+    "none"
+  );
 
   const isMember = role === "leader" || role === "member";
   const isLeader = role === "leader";
-  const isGroupPublic = group.isPublic || true;
 
   const fetchData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
+      if (!token) return;
 
-      const res = await axios.get(`${path}/groups/${group.id}/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProducts(res.data);
+      const [productsRes, roleRes, statusRes] = await Promise.all([
+        axios.get(`${path}/groups/${group.id}/products`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${path}/groups/${group.id}/role`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${path}/groups/${group.id}/join-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      const roleRes = await axios.get(`${path}/groups/${group.id}/role`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      setProducts(productsRes.data);
 
       const r = roleRes.data.role;
-      if (r === "leader" || r === "member" || r === "none") {
-        setRole(r);
-      } else {
-        setRole("none");
-      }
+      setRole(r === "leader" || r === "member" || r === "none" ? r : "none");
+
+      const s = statusRes.data.status;
+      setJoinStatus(
+        s === "none" || s === "pending" || s === "joined" ? s : "none"
+      );
     } catch (err) {
       console.log("Lỗi khi tải dữ liệu nhóm:", err);
       setRole("none");
+      setJoinStatus("none");
     }
   }, [group?.id]);
 
@@ -85,6 +95,60 @@ export default function GroupDetailScreen({
     setRefreshing(false);
   }, [fetchData]);
 
+  const handleJoinGroup = async () => {
+    const token = await AsyncStorage.getItem("token");
+    try {
+      const res = await axios.post(
+        `${path}/groups/${group.id}/join`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Alert.alert("Thành công", res.data.message);
+
+      // Cập nhật trạng thái dựa trên response
+      if (res.data.joinStatus === "joined") {
+        setJoinStatus("joined");
+        setRole("member");
+      } else if (res.data.joinStatus === "pending") {
+        setJoinStatus("pending");
+      }
+
+      await fetchData();
+    } catch (error: any) {
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Không thể tham gia nhóm"
+      );
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    Alert.alert("Xác nhận hủy", "Bạn có chắc chắn muốn hủy yêu cầu tham gia?", [
+      { text: "Không", style: "cancel" },
+      {
+        text: "Hủy yêu cầu",
+        style: "destructive",
+        onPress: async () => {
+          const token = await AsyncStorage.getItem("token");
+          try {
+            await axios.delete(`${path}/groups/${group.id}/join-request`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            Alert.alert("Đã hủy", "Yêu cầu tham gia đã được hủy");
+            setJoinStatus("none");
+            await fetchData();
+          } catch (error: any) {
+            Alert.alert(
+              "Lỗi",
+              error.response?.data?.message || "Không thể hủy"
+            );
+          }
+        },
+      },
+    ]);
+  };
+
   const handleCreatePost = () => {
     navigation.navigate("PostGroupFormScreen", {
       group,
@@ -94,30 +158,11 @@ export default function GroupDetailScreen({
     });
   };
 
-  const handleJoinGroup = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      await axios.post(
-        `${path}/groups/${group.id}/join`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      Alert.alert("Thành công", "Bạn đã tham gia nhóm");
-      setRole("member");
-      await fetchData();
-    } catch (error: any) {
-      console.log("Lỗi tham gia nhóm:", error);
-      const errorMsg =
-        error.response?.data?.message || "Không thể tham gia nhóm";
-      Alert.alert("Lỗi", errorMsg);
-    }
-  };
-
   const handleLeaveGroup = async () => {
     if (isLeader) {
       Alert.alert(
         "Không thể rời nhóm",
-        "Bạn là trưởng nhóm. Vui lòng chuyển quyền trưởng nhóm cho thành viên khác trước khi rời nhóm.",
+        "Bạn là trưởng nhóm. Vui lòng chuyển quyền trước khi rời nhóm.",
         [{ text: "Đã hiểu" }]
       );
       setMenuVisible(false);
@@ -140,12 +185,14 @@ export default function GroupDetailScreen({
               });
               Alert.alert("Thành công", "Bạn đã rời nhóm");
               setRole("none");
+              setJoinStatus("none");
               setMenuVisible(false);
               navigation.goBack();
             } catch (error: any) {
-              const errorMsg =
-                error.response?.data?.message || "Không thể rời nhóm";
-              Alert.alert("Lỗi", errorMsg);
+              Alert.alert(
+                "Lỗi",
+                error.response?.data?.message || "Không thể rời nhóm"
+              );
             }
           },
         },
@@ -203,30 +250,25 @@ export default function GroupDetailScreen({
       icon: "trash-2",
       action: () => {
         setMenuVisible(false);
-        Alert.alert(
-          "Xác nhận xóa nhóm",
-          "Bạn có chắc chắn muốn xóa nhóm này? Hành động này không thể hoàn tác.",
-          [
-            { text: "Hủy", style: "cancel" },
-            {
-              text: "Xóa nhóm",
-              style: "destructive",
-              onPress: async () => {
-                try {
-                  const token = await AsyncStorage.getItem("token");
-                  await axios.delete(`${path}/groups/${group.id}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  Alert.alert("Thành công", "Đã xóa nhóm");
-                  navigation.goBack();
-                } catch (err) {
-                  console.log("Lỗi xóa nhóm:", err);
-                  Alert.alert("Lỗi", "Không thể xóa nhóm");
-                }
-              },
+        Alert.alert("Xác nhận xóa nhóm", "Hành động này không thể hoàn tác.", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Xóa nhóm",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem("token");
+                await axios.delete(`${path}/groups/${group.id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                Alert.alert("Thành công", "Đã xóa nhóm");
+                navigation.goBack();
+              } catch (err) {
+                Alert.alert("Lỗi", "Không thể xóa nhóm");
+              }
             },
-          ]
-        );
+          },
+        ]);
       },
       isDestructive: true,
     },
@@ -235,6 +277,81 @@ export default function GroupDetailScreen({
   const menuItems = isLeader
     ? [...leaderMenuItems, ...userMenuItems]
     : userMenuItems;
+
+  const renderStatusBadge = () => {
+    if (joinStatus === "pending") {
+      return (
+        <View className="mt-2 bg-yellow-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">
+            Chờ phê duyệt
+          </Text>
+        </View>
+      );
+    }
+    if (isLeader) {
+      return (
+        <View className="mt-2 bg-green-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">Trưởng nhóm</Text>
+        </View>
+      );
+    }
+    if (role === "member") {
+      return (
+        <View className="mt-2 bg-blue-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">Thành viên</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderActionButton = () => {
+    if (joinStatus === "none") {
+      return (
+        <TouchableOpacity
+          onPress={handleJoinGroup}
+          className="bg-blue-600 px-4 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">
+            {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (joinStatus === "pending") {
+      return (
+        <TouchableOpacity
+          onPress={handleCancelRequest}
+          className="bg-red-500 px-4 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">Hủy yêu cầu</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (joinStatus === "joined") {
+      return (
+        <View className="flex-row items-center space-x-3">
+          <TouchableOpacity
+            onPress={handleCreatePost}
+            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+          >
+            <Feather name="edit" size={20} color="black" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+          >
+            <Feather name="more-vertical" size={20} color="black" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
 
   const renderHeader = () => (
     <ImageBackground
@@ -252,30 +369,7 @@ export default function GroupDetailScreen({
             <Feather name="arrow-left" size={20} color="#000" />
           </TouchableOpacity>
 
-          {isMember ? (
-            <View className="flex-row items-center space-x-3">
-              <TouchableOpacity
-                onPress={handleCreatePost}
-                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center mr-2"
-              >
-                <Feather name="edit" size={20} color="black" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
-              >
-                <Feather name="more-vertical" size={20} color="black" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={handleJoinGroup}
-              className="bg-blue-600 px-4 py-2 rounded-full"
-            >
-              <Text className="text-white font-semibold">Tham gia nhóm</Text>
-            </TouchableOpacity>
-          )}
+          {renderActionButton()}
         </View>
 
         <View>
@@ -296,20 +390,7 @@ export default function GroupDetailScreen({
               {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"}
             </Text>
           </View>
-          {isLeader && (
-            <View className="mt-2 bg-green-500/80 px-3 py-1 rounded-full self-start">
-              <Text className="text-white text-xs font-semibold">
-                Trưởng nhóm
-              </Text>
-            </View>
-          )}
-          {role === "member" && (
-            <View className="mt-2 bg-blue-500/80 px-3 py-1 rounded-full self-start">
-              <Text className="text-white text-xs font-semibold">
-                Thành viên
-              </Text>
-            </View>
-          )}
+          {renderStatusBadge()}
         </View>
       </View>
     </ImageBackground>
@@ -408,10 +489,12 @@ export default function GroupDetailScreen({
 
               <TouchableOpacity
                 onPress={() => {
-                  if (!isMember && group.isPublic) {
+                  if (joinStatus !== "joined") {
                     Alert.alert(
                       "Thông báo",
-                      "Bạn cần tham gia nhóm để xem chi tiết bài viết."
+                      joinStatus === "pending"
+                        ? "Yêu cầu tham gia của bạn đang chờ phê duyệt."
+                        : "Bạn cần tham gia nhóm để xem chi tiết bài viết."
                     );
                     return;
                   }
@@ -435,7 +518,7 @@ export default function GroupDetailScreen({
             <Text className="text-gray-500 mt-4 text-center">
               Chưa có bài viết nào trong nhóm này.
             </Text>
-            {isMember && (
+            {joinStatus === "joined" && (
               <TouchableOpacity
                 onPress={handleCreatePost}
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
@@ -449,7 +532,7 @@ export default function GroupDetailScreen({
         }
       />
 
-      {isMember && (
+      {joinStatus === "joined" && (
         <Modal
           visible={isMenuVisible}
           transparent
@@ -488,7 +571,7 @@ export default function GroupDetailScreen({
                   </TouchableOpacity>
                 ))}
 
-                {isLeader && isGroupPublic && (
+                {isLeader && group.isPublic && (
                   <View className="flex-row items-center justify-between p-3 border-t border-gray-100">
                     <View className="flex-row items-center flex-1 pr-2">
                       <Feather name="check-circle" size={20} color="#333" />
@@ -502,9 +585,7 @@ export default function GroupDetailScreen({
                       onValueChange={async (v) => {
                         if (!v) {
                           Alert.alert(
-                            "Cảnh báo",
-                            "Nếu tắt chế độ duyệt bài, các bài viết sẽ được đăng tự động mà không cần phê duyệt",
-                            [{ text: "Đã hiểu" }]
+                            "Nếu tắt, bài viết sẽ được đăng tự động."
                           );
                         }
                         setIsApprovalEnabled(v);
@@ -516,7 +597,6 @@ export default function GroupDetailScreen({
                             { headers: { Authorization: `Bearer ${token}` } }
                           );
                         } catch (err) {
-                          console.error("Lỗi cập nhật:", err);
                           setIsApprovalEnabled(!v);
                         }
                       }}
