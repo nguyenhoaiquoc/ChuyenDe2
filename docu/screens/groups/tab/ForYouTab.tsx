@@ -91,7 +91,13 @@ export default function ForYouTab({
         </View>
 
         {groups.map((g) => (
-          <View key={g.id} className="flex-row items-center mb-4">
+          <TouchableOpacity
+            key={g.id}
+            className="flex-row items-center mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm"
+            onPress={() =>
+              navigation.navigate("GroupDetailScreen", { group: g })
+            }
+          >
             <Image
               source={
                 g.image ? { uri: g.image } : require("../../../assets/khi.png")
@@ -99,13 +105,16 @@ export default function ForYouTab({
               className="w-14 h-14 rounded-full"
             />
             <View className="ml-3 flex-1">
-              <Text className="font-semibold text-base text-gray-800">
+              <Text
+                className="font-semibold text-base text-gray-800"
+                numberOfLines={1}
+              >
                 {g.name}
               </Text>
               <Text className="text-gray-500 text-sm mt-0.5">{g.members}</Text>
               <Text className="text-gray-500 text-sm mt-0.5">{g.posts}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {groups.length < 5 ? (
@@ -135,6 +144,12 @@ export default function ForYouTab({
           }}
           scrollEnabled={false}
           renderItem={({ item }) => {
+            const priceFormat =
+              item.price === 0
+                ? "Miễn phí"
+                : item.price == null
+                  ? "Trao đổi"
+                  : item.price;
             return (
               <View className="w-[48%] bg-white rounded-lg shadow p-2">
                 <TouchableOpacity
@@ -144,7 +159,7 @@ export default function ForYouTab({
                 >
                   {/* Ảnh bài viết */}
                   <Image
-                    source={{ uri: item.image }}
+                    source={{ uri: item.thumbnail_url }}
                     className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
                     resizeMode="contain"
                   />
@@ -152,7 +167,7 @@ export default function ForYouTab({
 
                 {/* Tên người đnăg */}
                 <Text className="font-semibold text-sm mt-2" numberOfLines={1}>
-                  {item.authorName}
+                  {item.author_name}
                 </Text>
 
                 {/* Tiêu đề */}
@@ -161,14 +176,22 @@ export default function ForYouTab({
                 </Text>
 
                 {/* Giá + vị trí */}
-                <Text className="text-gray-500 text-xs">
-                  {item.price ? `${item.price}` : "Thỏa thuận"}
-                </Text>
+                <Text className="text-red-500 text-xs">{priceFormat}</Text>
                 <Text className="text-gray-400 text-xs">{item.location}</Text>
               </View>
             );
           }}
         />
+        <View className="items-center my-4">
+          {/* <TouchableOpacity
+            onPress={() => navigation.navigate("PostsTab")}
+            className="bg-blue-600 px-6 py-3 rounded-full"
+          >
+            <Text className="text-white font-semibold text-base">
+              Xem bài viết khac
+            </Text>
+          </TouchableOpacity> */}
+        </View>
       </View>
     </ScrollView>
   );

@@ -10,6 +10,7 @@ import {
   GestureResponderEvent,
   useColorScheme,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -37,6 +38,7 @@ const filters = [
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+  const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,76 +50,86 @@ export default function HomeScreen({ navigation }: Props) {
 
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
-  useEffect(() => {
-    axios
-      .get(`${path}/categories`)
-      .then((res) => {
-        const mapped = res.data.map((item: Category) => ({
-          id: item.id.toString(),
-          name: item.name,
-          image: item.image
-            ? item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : `${path}/uploads/categories/${item.image}`
-            : `${path}/uploads/categories/default.png`,
-        }));
-        setCategories(mapped);
-      })
-      .catch((err) => console.log("Lỗi khi lấy danh mục:", err.message));
-  }, []);
+  const fetchCategories = async () => {
+    const res = await axios.get(`${path}/categories`);
+    const mapped = res.data.map((item: Category) => ({
+      id: item.id.toString(),
+      name: item.name,
+      image: item.image
+        ? item.image.startsWith("/uploads")
+          ? `${path}${item.image}`
+          : `${path}/uploads/categories/${item.image}`
+        : `${path}/uploads/categories/default.png`,
+    }));
+    setCategories(mapped);
+  };
 
-  useEffect(() => {
-    axios
-      .get(`${path}/products`)
-      .then((res) => {
-        // dữ liệu là mảng
-        const rawData = Array.isArray(res.data) ? res.data : [res.data];
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${path}/products`);
+      const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
-        const mapped = rawData.map((item: any) => {
-          // Lấy URL ảnh chính
-          const imageUrl = (() => {
-            if (!item.thumbnail_url && item.images?.length)
-              return item.images[0].image_url;
+      const mapped = rawData.map((item: any) => {
+        // Xử lý ảnh (giống bên detail)
+        const imageUrl = (() => {
+          if (!item.thumbnail_url && item.images?.length)
+            return item.images[0].image_url;
+          const url = item.thumbnail_url || "";
+          if (url.startsWith("http")) return url;
+          return `${path}${url}`;
+        })();
 
-            const url = item.thumbnail_url || "";
-            if (url.startsWith("http")) return url;
-
-            return `${path}${url}`;
-          })();
-          let locationText = "Chưa rõ địa chỉ";
-          if (item.address_json) {
-            try {
-              const addr =
-                typeof item.address_json === "string"
-                  ? JSON.parse(item.address_json)
-                  : item.address_json;
-              if (addr.full) {
-                locationText = addr.full;
-              } else {
-                const parts = [addr.ward, addr.district, addr.province]
-                  .filter(Boolean)
-                  .slice(-2);
-                locationText =
-                  parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
-              }
-            } catch (e) {
-              console.log("Lỗi parse address cho product", item.id, ":", e);
-              locationText = "Chưa rõ địa chỉ";
+        // Xử lý địa chỉ
+        let locationText = "Chưa rõ địa chỉ";
+        if (item.address_json) {
+          try {
+            const addr =
+              typeof item.address_json === "string"
+                ? JSON.parse(item.address_json)
+                : item.address_json;
+            if (addr.full) {
+              locationText = addr.full;
+            } else {
+              const parts = [addr.ward, addr.district, addr.province]
+                .filter(Boolean)
+                .slice(-2);
+              locationText =
+                parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
             }
+          } catch (e) {
+            console.log("Lỗi parse address:", item.id, e);
           }
+        }
 
-          // Thời gian đăng
-          const createdAt = item.created_at
-            ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
-            : new Date();
+        // Format giá (phục vụ filter)
+        const price = (() => {
+          if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+          if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+          return item.price
+            ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+            : "Liên hệ";
+        })();
 
-          const timeDisplay = timeSince(createdAt);
+        const createdAt = item.created_at
+          ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
+          : new Date();
 
-          // Danh mục
-          let tagText = "Không có danh mục";
+        return {
+          ...item,
+          id: item.id.toString(),
+          image: imageUrl,
+          price,
+          location: locationText,
+          createdAt,
+          is_approved: item.is_approved == 1 || item.is_approved === true,
+        };
+      });
 
-          const categoryName = item.category?.name || null; // Tên danh mục cha
-          const subCategoryName = item.subCategory?.name || null; // Tên danh mục con
+      setProducts(mapped);
+    } catch (err) {
+      console.log("Lỗi khi lấy danh sách sản phẩm:", err);
+    }
+  };
 
           if (categoryName && subCategoryName) {
             // Trường hợp đầy đủ: Cha - Con
@@ -247,22 +259,49 @@ export default function HomeScreen({ navigation }: Props) {
         }
       });
   }, []);
+  const fetchFavorites = async () => {
+    try {
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) return;
+      const userId = parseInt(userIdStr, 10);
+      const res = await axios.get(`${path}/favorites/user/${userId}`);
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi khi lấy danh sách yêu thích:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchFavorites = async () => {
+    (async () => {
       try {
-        const userIdStr = await AsyncStorage.getItem("userId");
-        if (!userIdStr) return;
-        const userId = parseInt(userIdStr, 10);
-        const res = await axios.get(`${path}/favorites/user/${userId}`);
-        setFavoriteIds(res.data.productIds || []);
-      } catch (err) {
-        console.log("Lỗi khi lấy danh sách yêu thích:", err);
+        await Promise.all([
+          fetchCategories(),
+          fetchProducts(),
+          fetchFavorites(),
+          fetchUnreadCount(),
+        ]);
+      } catch (e) {
+        console.log("Lỗi load dữ liệu:", e);
       }
-    };
-
-    fetchFavorites();
+    })();
   }, []);
+
+  // --- Hàm refresh khi kéo xuống ---
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+        fetchFavorites(),
+        fetchUnreadCount(),
+      ]);
+    } catch (err) {
+      console.log("Lỗi khi refresh:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     // Định nghĩa hàm lọc
@@ -352,7 +391,7 @@ export default function HomeScreen({ navigation }: Props) {
       <StatusBar hidden={true} />
 
       {/* Header */}
-      <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
+      <View className="flex-row items-center px-3 py-10 bg-white shadow z-1">
         {/* Icon menu */}
         <TouchableOpacity className="p-2">
           <Feather name="menu" size={24} color="#333" />
@@ -386,7 +425,17 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#007AFF"]}
+            tintColor="#007AFF"
+          />
+        }
+      >
         {/* Banner */}
         <View className="bg-white">
           <View className="flex-row items-center px-4 py-4">

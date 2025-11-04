@@ -7,9 +7,10 @@ import { GroupRole } from '../entities/group-role.entity';
 import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
 import { Product } from 'src/entities/product.entity';
+import { ProductStatus } from 'src/entities/product-status.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Group, GroupMember, GroupRole, Product])],
+  imports: [TypeOrmModule.forFeature([Group, GroupMember, GroupRole, Product, ProductStatus])],
   providers: [GroupService],
   controllers: [GroupController],
   exports: [GroupService],

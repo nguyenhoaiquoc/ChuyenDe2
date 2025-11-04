@@ -49,7 +49,17 @@ export default function ManagerGroupsScreen() {
     setSelectedTab("Nhóm của bạn");
   };
 
-  // 🔍 Tìm kiếm bài viết trong tất cả nhóm
+  //  Tìm kiếm bài viết trong tất cả nhóm
+  const regax = (str: string): string => {
+    if (!str) return "";
+    return str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D");
+  };
+
+  //  Tìm kiếm bài viết + user trong tất cả nhóm
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
@@ -62,20 +72,25 @@ export default function ManagerGroupsScreen() {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      // Lấy tất cả bài viết từ các nhóm user đã tham gia
       const res = await axios.get(`${path}/groups/my/group-posts`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 100 }, // Lấy nhiều để filter
+        params: { limit: 20 },
       });
 
-      // Filter theo query
+      const q = regax(query.toLowerCase());
       const filtered = res.data.filter((post: any) => {
-        const q = query.toLowerCase();
+        const name = regax(post.name?.toLowerCase() || "");
+        const author = regax(
+          post.authorName?.toLowerCase() || post.user?.name?.toLowerCase() || ""
+        );
+        const groupName = regax(post.groupName?.toLowerCase() || "");
+        const tag = regax(post.tag?.toLowerCase() || "");
+
         return (
-          post.name?.toLowerCase().includes(q) ||
-          post.authorName?.toLowerCase().includes(q) ||
-          post.groupName?.toLowerCase().includes(q) ||
-          post.tag?.toLowerCase().includes(q)
+          name.includes(q) ||
+          author.includes(q) ||
+          groupName.includes(q) ||
+          tag.includes(q)
         );
       });
 
@@ -188,7 +203,7 @@ export default function ManagerGroupsScreen() {
           >
             <SafeAreaView className="flex-1 bg-white">
               {/* Header */}
-              <View className="flex-row items-center px-4 py-3 border-b border-gray-200">
+              <View className="flex-row items-center px-4 py-3 border-b border-gray-200 mt-5">
                 <TouchableOpacity onPress={closeSearchModal}>
                   <Feather name="arrow-left" size={24} color="black" />
                 </TouchableOpacity>
@@ -243,7 +258,13 @@ export default function ManagerGroupsScreen() {
                       >
                         <View className="flex-row">
                           <Image
-                            source={{ uri: item.image }}
+                            source={{
+                              uri:
+                                item.thumbnail_url ||
+                                (item.images?.length > 0
+                                  ? item.images[0].image_url
+                                  : null),
+                            }}
                             className="w-24 h-24 rounded-lg bg-gray-100"
                             resizeMode="cover"
                           />
@@ -251,8 +272,8 @@ export default function ManagerGroupsScreen() {
                             <View className="flex-row items-center mb-1">
                               <Image
                                 source={
-                                  item.groupImage
-                                    ? { uri: item.groupImage }
+                                  item.group.image
+                                    ? { uri: item.group.image }
                                     : require("../../assets/meo.jpg")
                                 }
                                 className="w-5 h-5 rounded-full"
@@ -261,7 +282,7 @@ export default function ManagerGroupsScreen() {
                                 className="text-xs text-gray-600 ml-1"
                                 numberOfLines={1}
                               >
-                                {item.groupName}
+                                {item.group.name}
                               </Text>
                             </View>
                             <Text
@@ -271,13 +292,13 @@ export default function ManagerGroupsScreen() {
                               {item.name}
                             </Text>
                             <Text className="text-xs text-gray-500 mt-1">
-                              Đăng bởi {item.authorName}
+                              Đăng bởi {item.user.name}
                             </Text>
-                            {item.price && (
+                            {item.price ? (
                               <Text className="text-blue-600 font-semibold mt-1">
-                                {item.price}
+                                {String(item.price)}
                               </Text>
-                            )}
+                            ) : null}
                           </View>
                         </View>
                       </TouchableOpacity>

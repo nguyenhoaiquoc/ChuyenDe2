@@ -16,7 +16,7 @@ import { categoryEndpoints } from "../../src/constants/category-endpoints";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseSubCategoryScreen({ navigation, route }: any) {
-  const { category, group } = route.params;
+  const { category, group, onPostSuccess } = route.params;
   interface SubCategory {
     id: number;
     name: string;
@@ -61,6 +61,7 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
         group: group,
         category: category,
         subCategory: sub,
+        onPostSuccess: onPostSuccess,
       });
     } else {
       navigation.navigate("PostFormScreen", {

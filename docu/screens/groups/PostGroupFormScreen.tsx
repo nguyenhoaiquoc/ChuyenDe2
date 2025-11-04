@@ -37,7 +37,7 @@ type PostGroupFormProps = NativeStackScreenProps<
 // 2. Đổi tên component
 const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
   // 3. LẤY 'group' TỪ PARAMS (BẮT BUỘC)
-  const { group } = route.params;
+  const { group, onPostSuccess } = route.params;
   const { category, subCategory } = (route.params as any) || {};
 
   // --- TOÀN BỘ STATE (BAO GỒM CẢ STATE CỦA MODAL) ---
@@ -323,8 +323,22 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        Alert.alert("Thành công", "Đăng tin vào nhóm thành công!");
-        navigation.goBack(); // Quay về màn hình chi tiết nhóm
+        // ✅ GỌI CALLBACK TRƯỚC (để reload data trong GroupDetailScreen)
+        if (onPostSuccess && typeof onPostSuccess === "function") {
+          onPostSuccess();
+        }
+
+        Alert.alert("Thành công", "Đăng tin vào nhóm thành công!", [
+          {
+            text: "OK",
+            onPress: () => {
+              // ✅ Navigate về GroupDetailScreen
+              navigation.navigate("GroupDetailScreen", {
+                group: group,
+              });
+            },
+          },
+        ]);
       } else {
         Alert.alert("Lỗi", "Không thể đăng tin. Vui lòng thử lại.");
       }
@@ -375,6 +389,7 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
             onPress={() =>
               navigation.navigate("ChooseCategoryScreen", {
                 group: group, // Truyền 'group' đi
+                onPostSuccess: onPostSuccess,
               })
             }
           >
@@ -577,7 +592,10 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
                 navigation.navigate("ChooseExchangeCategoryScreen", {
                   onSelectCategory: (cat: Category, sub: SubCategory) => {
                     setExchangeCategory(cat);
-                    setExchangeSubCategory(sub);
+                    setExchangeSubCategory({
+                      id: String(sub.id),
+                      name: sub.name,
+                    });
                   },
                 });
               }}

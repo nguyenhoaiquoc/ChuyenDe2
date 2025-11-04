@@ -257,29 +257,43 @@ export class ProductService {
       );
     }
 
-    // 3. Tạo sản phẩm
-    // 1.1. Kiểm tra xem đây có phải là bài đăng nhóm không
+    // 3. Set default productStatus + isApproved
+    let productStatusGr;
+    let isApproved;
+
+    // 4. Nếu là bài đăng nhóm
     if (data.visibility_type && Number(data.visibility_type) === 1) {
-      // 1.2. Nếu là bài đăng nhóm, PHẢI có group_id và user_id
       if (!data.group_id || !data.user_id) {
         throw new NotFoundException(
           'Bài đăng nhóm phải có group_id và user_id hợp lệ.',
         );
       }
 
-      // 1.3. (Bảo mật) Kiểm tra xem user này có phải là thành viên của nhóm không
       const isMember = await this.groupMemberRepo.findOne({
-        where: {
-          user_id: data.user_id,
-          group_id: Number(data.group_id),
-        },
+        where: { user_id: data.user_id, group_id: Number(data.group_id) },
       });
-
-      if (!isMember) {
+      if (!isMember)
         throw new UnauthorizedException(
           'Bạn không phải là thành viên của nhóm này để đăng bài.',
         );
+
+      const group = await this.groupService.findOneById(Number(data.group_id));
+      if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+      // optional field mustApprovePosts
+      const mustApprove = (group as any).mustApprovePosts ?? false;
+
+      if (!group.isPublic || mustApprove) {
+        productStatusGr = await this.productStatusService.findOne(1); // cần duyệt
+        isApproved = false;
+      } else {
+        productStatusGr = await this.productStatusService.findOne(2); // approved
+        isApproved = true;
       }
+    } else {
+      // Công khai (không nhóm) → luôn cần duyệt
+      productStatusGr = await this.productStatusService.findOne(1);
+      isApproved = false;
     }
 
     const product = this.productRepo.create({
@@ -315,9 +329,9 @@ export class ProductService {
       category_change: category_change || undefined,
       sub_category_change: sub_category_change || undefined,
 
-      productStatus: { id: 1 },
+      productStatus: productStatusGr,
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
-      is_approved: false,
+      is_approved: isApproved,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
 
       visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,

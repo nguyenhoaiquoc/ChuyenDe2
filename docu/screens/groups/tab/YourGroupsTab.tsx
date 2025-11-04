@@ -48,7 +48,7 @@ export default function YourGroupsTab({
       console.log("❌ Lỗi khi lấy nhóm đã tham gia:", err);
     } finally {
       setLoading(false);
-      setRefreshing(false); // 👈 reset refreshing
+      setRefreshing(false);
     }
   };
 
@@ -126,7 +126,9 @@ export default function YourGroupsTab({
                 <Text className="text-gray-600 text-sm mt-1">
                   {g.memberCount} thành viên
                 </Text>
-                <Text className="text-gray-600 text-sm mt-1">{g.posts}</Text>
+                <Text className="text-gray-600 text-sm mt-1">
+                  {g.posts > 0 ? `${g.posts} bài viết` : "Chưa có bài viết"}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}
