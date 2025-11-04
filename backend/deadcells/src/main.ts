@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -35,7 +36,7 @@ async function bootstrap() {
       },
     }),
   );
-
+  app.useWebSocketAdapter(new IoAdapter(app));
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();
