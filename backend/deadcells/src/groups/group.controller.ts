@@ -58,6 +58,24 @@ export class GroupController {
     return { success: true, message: 'Xóa nhóm thành công' };
   }
 
+  /** Lấy danh sách bài viết chờ duyệt */
+  @Get(':groupId/pending-posts')
+  @UseGuards(JwtAuthGuard)
+  async getPendingPosts(@Req() req, @Param('groupId') groupId: number) {
+    return this.groupService.getPendingPosts(groupId, req.user.id);
+  }
+
+  /** Duyệt / từ chối bài viết */
+  @Post('posts/:postId/approve')
+  @UseGuards(JwtAuthGuard)
+  async approvePost(
+    @Req() req,
+    @Param('postId') postId: number,
+    @Body('approve') approve: boolean,
+  ) {
+    return this.groupService.approvePost(postId, approve, req.user.id);
+  }
+
   // Join / Leave Group
 
   /** User tham gia nhóm */

@@ -48,7 +48,7 @@ export default function YourGroupsTab({
       console.log("❌ Lỗi khi lấy nhóm đã tham gia:", err);
     } finally {
       setLoading(false);
-      setRefreshing(false); // 👈 reset refreshing
+      setRefreshing(false);
     }
   };
 

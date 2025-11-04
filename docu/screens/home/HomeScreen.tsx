@@ -10,6 +10,7 @@ import {
   GestureResponderEvent,
   useColorScheme,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -37,7 +38,7 @@ const filters = [
 ];
 
 export default function HomeScreen({ navigation }: Props) {
-   const [refreshing, setRefreshing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,222 +49,131 @@ export default function HomeScreen({ navigation }: Props) {
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
-  
-  useEffect(() => {
-    axios
-      .get(`${path}/categories`)
-      .then((res) => {
-        const mapped = res.data.map((item: Category) => ({
-          id: item.id.toString(),
-          name: item.name,
-          image: item.image
-            ? item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : `${path}/uploads/categories/${item.image}`
-            : `${path}/uploads/categories/default.png`,
-        }));
-        setCategories(mapped);
-      })
-      .catch((err) => console.log("Lỗi khi lấy danh mục:", err.message));
-  }, []);
 
-  useEffect(() => {
-    axios
-      .get(`${path}/products`)
-      .then((res) => {
-        // dữ liệu là mảng
-        const rawData = Array.isArray(res.data) ? res.data : [res.data];
+  const fetchCategories = async () => {
+    const res = await axios.get(`${path}/categories`);
+    const mapped = res.data.map((item: Category) => ({
+      id: item.id.toString(),
+      name: item.name,
+      image: item.image
+        ? item.image.startsWith("/uploads")
+          ? `${path}${item.image}`
+          : `${path}/uploads/categories/${item.image}`
+        : `${path}/uploads/categories/default.png`,
+    }));
+    setCategories(mapped);
+  };
 
-        const mapped = rawData.map((item: any) => {
-          // Lấy URL ảnh chính
-          const imageUrl = (() => {
-            if (!item.thumbnail_url && item.images?.length)
-              return item.images[0].image_url;
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${path}/products`);
+      const rawData = Array.isArray(res.data) ? res.data : [res.data];
 
-            const url = item.thumbnail_url || "";
-            if (url.startsWith("http")) return url;
+      const mapped = rawData.map((item: any) => {
+        // Xử lý ảnh (giống bên detail)
+        const imageUrl = (() => {
+          if (!item.thumbnail_url && item.images?.length)
+            return item.images[0].image_url;
+          const url = item.thumbnail_url || "";
+          if (url.startsWith("http")) return url;
+          return `${path}${url}`;
+        })();
 
-            return `${path}${url}`;
-          })();
-          let locationText = "Chưa rõ địa chỉ";
-          if (item.address_json) {
-            try {
-              const addr =
-                typeof item.address_json === "string"
-                  ? JSON.parse(item.address_json)
-                  : item.address_json;
-              if (addr.full) {
-                locationText = addr.full;
-              } else {
-                const parts = [addr.ward, addr.district, addr.province]
-                  .filter(Boolean)
-                  .slice(-2);
-                locationText =
-                  parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
-              }
-            } catch (e) {
-              console.log("Lỗi parse address cho product", item.id, ":", e);
-              locationText = "Chưa rõ địa chỉ";
+        // Xử lý địa chỉ
+        let locationText = "Chưa rõ địa chỉ";
+        if (item.address_json) {
+          try {
+            const addr =
+              typeof item.address_json === "string"
+                ? JSON.parse(item.address_json)
+                : item.address_json;
+            if (addr.full) {
+              locationText = addr.full;
+            } else {
+              const parts = [addr.ward, addr.district, addr.province]
+                .filter(Boolean)
+                .slice(-2);
+              locationText =
+                parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
             }
+          } catch (e) {
+            console.log("Lỗi parse address:", item.id, e);
           }
-
-          // Thời gian đăng
-          const createdAt = item.created_at
-            ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
-            : new Date();
-
-          const timeDisplay = timeSince(createdAt);
-
-          // Danh mục
-          let tagText = "Không có danh mục";
-
-          const categoryName = item.category?.name || null; // Tên danh mục cha
-          const subCategoryName = item.subCategory?.name || null; // Tên danh mục con
-
-          if (categoryName && subCategoryName) {
-            // Trường hợp đầy đủ: Cha - Con
-            tagText = `${categoryName} - ${subCategoryName}`;
-          } else if (categoryName) {
-            // Chỉ có tên cha
-            tagText = categoryName;
-          } else if (subCategoryName) {
-            // Chỉ có tên con
-            tagText = subCategoryName;
-          }
-          const authorName = item.user?.name || "Ẩn danh";
-          console.log(
-            "Product ID:",
-            item.id,
-            "is_approved:",
-            item.is_approved,
-            typeof item.is_approved
-          );
-
-          return {
-            id: item.id.toString(),
-            image: imageUrl,
-            name: item.name || "Không có tiêu đề",
-            price: (() => {
-              if (item.dealType?.name === "Miễn phí") return "Miễn phí";
-              if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-              return item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-                : "Liên hệ";
-            })(),
-            location: locationText,
-            time: timeDisplay,
-            tag: tagText,
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
-            user_id: item.user?.id ?? item.user_id ?? 0,
-            category: item.category || null,
-            subCategory: item.subCategory
-              ? {
-                  id: item.subCategory.id,
-                  name: item.subCategory.name,
-                  parent_category_id: item.subCategory.parent_category_id,
-                  source_table: item.subCategory.source_table,
-                  source_id: item.subCategory.source_id,
-                }
-              : null,
-
-            category_change: item.category_change || null,
-            sub_category_change: item.sub_category_change || null,
-
-            imageCount: item.images?.length || (imageUrl ? 1 : 0),
-            isFavorite: false,
-            images: item.images || [],
-            description: item.description || "",
-
-            postType: item.postType || null,
-            condition: item.condition || null,
-            dealType: item.dealType || null,
-
-            productStatus: item.productStatus || null,
-
-            productType:
-              item.productType && item.productType.name
-                ? item.productType
-                : null,
-            origin: item.origin && item.origin.name ? item.origin : null,
-            material:
-              item.material && item.material.name ? item.material : null,
-            size: item.size && item.size.name ? item.size : null,
-            brand: item.brand && item.brand.name ? item.brand : null,
-            color: item.color && item.color.name ? item.color : null,
-            capacity:
-              item.capacity && item.capacity.name ? item.capacity : null,
-            warranty:
-              item.warranty && item.warranty.name ? item.warranty : null,
-            productModel:
-              item.productModel && item.productModel.name
-                ? item.productModel
-                : null,
-            processor:
-              item.processor && item.processor.name ? item.processor : null,
-            ramOption:
-              item.ramOption && item.ramOption.name ? item.ramOption : null,
-            storageType:
-              item.storageType && item.storageType.name
-                ? item.storageType
-                : null,
-            graphicsCard:
-              item.graphicsCard && item.graphicsCard.name
-                ? item.graphicsCard
-                : null,
-            breed: item.breed && item.breed.name ? item.breed : null,
-            ageRange:
-              item.ageRange && item.ageRange.name ? item.ageRange : null,
-            gender: item.gender && item.gender.name ? item.gender : null,
-            engineCapacity:
-              item.engineCapacity && item.engineCapacity.name
-                ? item.engineCapacity
-                : null,
-            mileage: item.mileage || null,
-
-            address_json: item.address_json || { full: locationText },
-            phone: item.user?.phone || null,
-            author: item.author || null,
-            year: item.year || null,
-
-            created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined,
-
-            sub_category_id: item.sub_category_id || null,
-            status_id: item.status_id?.toString() || undefined,
-            visibility_type: item.visibility_type?.toString() || undefined,
-            group_id: item.group_id || null,
-            is_approved: item.is_approved == 1 || item.is_approved === true,
-          };
-        });
-
-        setProducts(mapped);
-      })
-      .catch((err) => {
-        if (err.response) {
-          console.log("Lỗi từ server:", err.response.data);
-        } else if (err.request) {
-          console.log("Không nhận được phản hồi từ server:", err.request);
-        } else {
-          console.log("Lỗi khi gọi API:", err.message);
         }
+
+        // Format giá (phục vụ filter)
+        const price = (() => {
+          if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+          if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+          return item.price
+            ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+            : "Liên hệ";
+        })();
+
+        const createdAt = item.created_at
+          ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
+          : new Date();
+
+        return {
+          ...item,
+          id: item.id.toString(),
+          image: imageUrl,
+          price,
+          location: locationText,
+          createdAt,
+          is_approved: item.is_approved == 1 || item.is_approved === true,
+        };
       });
-  }, []);
+
+      setProducts(mapped);
+    } catch (err) {
+      console.log("Lỗi khi lấy danh sách sản phẩm:", err);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) return;
+      const userId = parseInt(userIdStr, 10);
+      const res = await axios.get(`${path}/favorites/user/${userId}`);
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi khi lấy danh sách yêu thích:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchFavorites = async () => {
+    (async () => {
       try {
-        const userIdStr = await AsyncStorage.getItem("userId");
-        if (!userIdStr) return;
-        const userId = parseInt(userIdStr, 10);
-        const res = await axios.get(`${path}/favorites/user/${userId}`);
-        setFavoriteIds(res.data.productIds || []);
-      } catch (err) {
-        console.log("Lỗi khi lấy danh sách yêu thích:", err);
+        await Promise.all([
+          fetchCategories(),
+          fetchProducts(),
+          fetchFavorites(),
+          fetchUnreadCount(),
+        ]);
+      } catch (e) {
+        console.log("Lỗi load dữ liệu:", e);
       }
-    };
-
-    fetchFavorites();
+    })();
   }, []);
+
+  // --- Hàm refresh khi kéo xuống ---
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+        fetchFavorites(),
+        fetchUnreadCount(),
+      ]);
+    } catch (err) {
+      console.log("Lỗi khi refresh:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     // Định nghĩa hàm lọc
@@ -387,7 +297,17 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1">
+      <ScrollView
+        className="flex-1"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#007AFF"]}
+            tintColor="#007AFF"
+          />
+        }
+      >
         {/* Banner */}
         <View className="bg-white">
           <View className="flex-row items-center px-4 py-4">

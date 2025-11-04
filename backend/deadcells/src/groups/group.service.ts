@@ -9,6 +9,7 @@ import { Group } from '../entities/group.entity';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Repository, FindManyOptions, In } from 'typeorm';
+import { ProductStatus } from 'src/entities/product-status.entity';
 
 @Injectable()
 export class GroupService {
@@ -21,6 +22,9 @@ export class GroupService {
 
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+
+    @InjectRepository(ProductStatus)
+    private readonly productStatusRepo: Repository<ProductStatus>,
   ) {}
 
   // CRUD Groups
@@ -30,6 +34,7 @@ export class GroupService {
     const group = this.groupRepo.create({
       name: data.name,
       isPublic: data.isPublic ?? true,
+      mustApprovePosts: data.isPublic ? true : false,
       thumbnail_url: data.thumbnail_url || undefined,
       owner_id: userId,
       count_member: 1,
@@ -65,6 +70,42 @@ export class GroupService {
     await this.groupRepo.remove(group);
   }
 
+  async getPendingPosts(groupId: number, userId: number) {
+    const role = await this.getUserRole(groupId, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException('Chỉ leader mới được duyệt bài viết');
+    }
+
+    return this.productRepo.find({
+      where: { group_id: groupId, productStatus: { id: 1 } }, // 1 = chờ duyệt
+      relations: ['user', 'images', 'postType'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  async approvePost(postId: number, approve: boolean, userId: number) {
+    const post = await this.productRepo.findOne({
+      where: { id: postId },
+      relations: ['group'],
+    });
+    if (!post) throw new NotFoundException('Bài viết không tồn tại');
+
+    const role = await this.getUserRole(post.group_id, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException('Chỉ leader mới được duyệt bài viết');
+    }
+
+    if (approve) {
+      const status = await this.productStatusRepo.findOne({ where: { id: 2 } });
+      post.productStatus = status;
+      await this.productRepo.save(post);
+      return { message: 'Đã duyệt bài viết' };
+    } else {
+      await this.productRepo.delete(postId);
+      return { message: 'Đã từ chối và xóa bài viết' };
+    }
+  }
+
   /** Lấy tất cả nhóm (tùy chọn filter/take) */
   async findAll(options?: FindManyOptions<Group>): Promise<Group[]> {
     return this.groupRepo.find({
@@ -72,6 +113,10 @@ export class GroupService {
       order: { created_at: 'DESC' },
       ...options,
     });
+  }
+
+  async findOneById(id: number) {
+    return this.groupRepo.findOne({ where: { id } });
   }
 
   // Join/Leave Group
@@ -250,12 +295,19 @@ export class GroupService {
 
   /** Lấy danh sách sản phẩm của nhóm (kiểm tra quyền) */
   async getGroupProducts(groupId: number, userId: number) {
-    const isMember = await this.isMember(groupId, userId);
-    if (!isMember)
-      throw new ForbiddenException('Bạn không phải thành viên nhóm');
+    const group = await this.groupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
+    const isMember = await this.isMember(groupId, userId);
+
+    //  Nếu nhóm PRIVATE và user chưa tham gia → chặn luôn
+    if (!group.isPublic && !isMember) {
+      throw new ForbiddenException('Bạn cần tham gia nhóm để xem bài viết');
+    }
+
+    // Nếu nhóm PUBLIC thì user vẫn xem được danh sách
     const products = await this.productRepo.find({
-      where: { group_id: groupId },
+      where: { group_id: groupId, productStatus: { id: 2 } },
       relations: [
         'images',
         'user',
@@ -271,8 +323,9 @@ export class GroupService {
     return products.map((p) => this.formatPost(p));
   }
 
-  /** Lấy bài viết từ các nhóm user tham gia */
+  /** Lấy bài viết từ các nhóm user tham gia (chỉ bài đã duyệt) */
   async findPostsFromUserGroups(userId: number, limit?: number) {
+    // Lấy danh sách group user tham gia
     const memberships = await this.groupMemberRepo.find({
       where: { user_id: userId },
       select: ['group_id'],
@@ -281,8 +334,12 @@ export class GroupService {
     const groupIds = memberships.map((m) => m.group_id);
     if (!groupIds.length) return [];
 
+    // Lấy bài viết từ các group, chỉ các bài đã duyệt
     const products = await this.productRepo.find({
-      where: { group_id: In(groupIds) },
+      where: {
+        group_id: In(groupIds),
+        productStatus: { id: 2 }, // ✅ chỉ lấy bài đã duyệt
+      },
       relations: ['images', 'user', 'category', 'subCategory', 'group'],
       order: { created_at: 'DESC' },
       take: limit,

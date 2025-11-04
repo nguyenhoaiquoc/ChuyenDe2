@@ -394,8 +394,12 @@ export default function GroupDetailScreen({
             "Không có hình";
           console.log(item);
 
-          const priceFormat = item.price === 0  ? "Miễn phí" : item.price == null ? "Trao đổi" : item.price;
-
+          const priceFormat =
+            item.price === 0
+              ? "Miễn phí"
+              : item.price == null
+                ? "Trao đổi"
+                : item.price;
 
           return (
             <View className="mb-8 p-3 bg-white rounded-xl shadow-md">
@@ -450,9 +454,17 @@ export default function GroupDetailScreen({
 
               {/* 🖼️ Hình ảnh sản phẩm */}
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("ProductDetail", { product: item })
-                }
+                onPress={() => {
+                  if (!isMember && group.isPublic) {
+                    Alert.alert(
+                      "Thông báo",
+                      "Bạn cần tham gia nhóm để xem chi tiết bài viết."
+                    );
+                    return;
+                  }
+
+                  navigation.navigate("ProductDetail", { product: item });
+                }}
               >
                 <Image
                   source={{ uri: imageUrl }}
@@ -525,7 +537,7 @@ export default function GroupDetailScreen({
                   </TouchableOpacity>
                 ))}
 
-                {isLeader && (
+                {isLeader && isGroupPublic && (
                   <View className="flex-row items-center justify-between p-3 border-t border-gray-100">
                     <View className="flex-row items-center flex-1 pr-2">
                       <Feather name="check-circle" size={20} color="#333" />
@@ -537,11 +549,20 @@ export default function GroupDetailScreen({
                       trackColor={{ false: "#E5E7EB", true: "#3B82F6" }}
                       thumbColor={"#f4f3f4"}
                       onValueChange={async (v) => {
+                        if (!v) {
+                          Alert.alert(
+                            "Cảnh báo",
+                            "Nếu có những bài viết vi phạm, sẽ bị xóa!",
+                            [{ text: "Đã hiểu" }]
+                          );
+                        }
                         setIsApprovalEnabled(v);
-                        console.log("Toggle approval mode:", v);
+                        // Gọi API update group.mustApprovePosts
+                        await axios.patch(`${path}/groups/${group.id}`, {
+                          mustApprovePosts: v,
+                        });
                       }}
-                      value={!isGroupPublic ? true : isApprovalEnabled}
-                      disabled={!isGroupPublic}
+                      value={isApprovalEnabled}
                     />
                   </View>
                 )}

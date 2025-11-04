@@ -91,7 +91,13 @@ export default function ForYouTab({
         </View>
 
         {groups.map((g) => (
-          <View key={g.id} className="flex-row items-center mb-4">
+          <TouchableOpacity
+            key={g.id}
+            className="flex-row items-center mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm"
+            onPress={() =>
+              navigation.navigate("GroupDetailScreen", { group: g })
+            }
+          >
             <Image
               source={
                 g.image ? { uri: g.image } : require("../../../assets/khi.png")
@@ -99,13 +105,16 @@ export default function ForYouTab({
               className="w-14 h-14 rounded-full"
             />
             <View className="ml-3 flex-1">
-              <Text className="font-semibold text-base text-gray-800">
+              <Text
+                className="font-semibold text-base text-gray-800"
+                numberOfLines={1}
+              >
                 {g.name}
               </Text>
               <Text className="text-gray-500 text-sm mt-0.5">{g.members}</Text>
               <Text className="text-gray-500 text-sm mt-0.5">{g.posts}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {groups.length < 5 ? (
