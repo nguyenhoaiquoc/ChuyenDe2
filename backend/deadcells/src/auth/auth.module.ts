@@ -9,6 +9,19 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { RoleSeedService } from './seed/role.seed.service';
+<<<<<<< HEAD
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([User, Role, Status,OtpVerification]),
+    JwtModule.register({
+      secret: '********', // đổi thành key riêng của bạn
+      signOptions: { expiresIn: '1d' },
+    }),
+  ],
+  providers: [AuthService,MailService,RoleSeedService],
+  controllers: [AuthController],
+=======
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
@@ -30,5 +43,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   controllers: [AuthController],
   providers: [AuthService, MailService, RoleSeedService],
   exports: [AuthService],
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 })
 export class AuthModule {}

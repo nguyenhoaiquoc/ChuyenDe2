@@ -8,6 +8,8 @@ export type RootStackParamList = {
   RegisterScreen: undefined;
   VerifyAccountScreen: { email: string };
   ForgotPasswordScreen: undefined;
+  
+  
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
@@ -39,6 +41,7 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };

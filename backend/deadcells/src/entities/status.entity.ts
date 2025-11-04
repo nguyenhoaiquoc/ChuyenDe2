@@ -1,6 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { Report } from './report.entity';
-import { Product } from './product.entity';
+import { Report } from "./report.entity";
 
 @Entity('statuses')
 export class Status {
@@ -14,13 +13,11 @@ export class Status {
   description: string;
 
   @OneToMany(() => Report, (report) => report.status)
-  reports: Report[];
+reports: Report[];
 
   @Column({ type: 'timestamp', nullable: true, name: 'created_at' })
   createdAt: Date;
 
   @Column({ type: 'timestamp', nullable: true, name: 'updated_at' })
   updatedAt: Date;
-
-   
 }

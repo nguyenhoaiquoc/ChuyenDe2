@@ -1,5 +1,9 @@
 import '../../global.css';
+<<<<<<< HEAD
+import { Text, View, TouchableOpacity, Alert } from 'react-native';
+=======
 import { Text, View, Alert } from 'react-native';
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 import { StatusBar } from 'expo-status-bar';
 import { FontAwesome } from '@expo/vector-icons';
 import Button from '../../components/Button';
@@ -12,12 +16,42 @@ import axios from 'axios';
 import { path } from '../../config';
 
 type Props = {
+<<<<<<< HEAD
+    navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>
+}
+export default function ForgotPasswordScreen({ navigation }: Props) {
+    const [email, setEmail] = useState("");
+      const [isLoading, setIsLoading] = useState(false);
+
+const handleSendOtp = async () => {
+    if (!email) return Alert.alert('Vui lòng nhập email');
+
+    try {
+        setIsLoading(true);
+      const res = await axios.post(`${path}:3000/auth/forgot-password`, { email });
+      Alert.alert(res.data.message);
+      // Điều hướng sang màn OTPVerifyScreen kèm param email
+      navigation.navigate('OTPVerifyScreen', { email });
+    } catch (err: any) {
+      Alert.alert(err.response?.data?.message || 'Gửi OTP thất bại');
+    } finally {
+           setIsLoading(false);
+    }
+  };
+    return (
+        <View className="">
+            <View className="pl-5 pt-20" >
+
+                <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
+            </View>
+=======
   navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>;
 };
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
   const onChangeEmail = (t: string) => setEmail(t);
 
@@ -55,7 +89,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     }
   };
 
+<<<<<<< HEAD
+                    <Button value="Tiếp tục" onPress ={handleSendOtp} loading={isLoading}/>
+=======
   const canSubmit = !!email.trim() && !isLoading;
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
   return (
     <View>

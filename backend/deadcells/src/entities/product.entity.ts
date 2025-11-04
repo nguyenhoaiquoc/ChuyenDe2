@@ -2,41 +2,16 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
+  ManyToMany,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
-import { ProductImage } from './product-image.entity';
-import { DealType } from './deal-type.entity';
-import { Condition } from './condition.entity';
-import { Category } from './category.entity';
-import { SubCategory } from './sub-category.entity';
-import { Report } from './report.entity';
-import { User } from './user.entity';
+import { Report } from "./report.entity";
 import { ProductType } from './product_types.entity';
-import { PostType } from './post-type.entity';
-import { Comment } from './comment.entity';
-import { Group } from './group.entity';
 import { Origin } from './origin.entity';
-import { Material } from './material.entity';
-import { Size } from './size.entity';
-import { Brand } from './brand.entity';
-import { Color } from './color.entity';
-import { Warranty } from './warranty.entity';
-import { Capacity } from './capacity.entity';
-import { ProductModel } from './product-model.entity';
-import { Processor } from './processor.entity';
-import { RamOption } from './ram-option.entity';
-import { GraphicsCard } from './graphics-card.entity';
-import { StorageType } from './storage-type.entity';
-import { Breed } from './breed.entity';
-import { AgeRange } from './age-range.entity';
-import { Gender } from './gender.entity';
-import { EngineCapacity } from './engine-capacity.entity';
-import { ProductStatus } from './product-status.entity';
-
 @Entity('products')
 export class Product {
   @PrimaryGeneratedColumn({ type: 'bigint' })
@@ -180,8 +155,11 @@ export class Product {
   @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
   price: number;
 
-  @Column({ type: 'varchar', length: 191, nullable: true })
-  thumbnail_url?: string | null;
+  @Column({ type: 'bigint' })
+  condition_id: number;
+
+  @Column({ type: 'json', nullable: true })
+  address_json: object;
 
   @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
   images: ProductImage[];
@@ -272,12 +250,8 @@ export class Product {
   @Column({ type: 'boolean', default: false })
   is_approved: boolean;
 
-  // ===== Thông tin tài liệu khoa =====
-  @Column({ type: 'varchar', length: 191, nullable: true })
-  author: string | null;
-
-  @Column({ type: 'int', nullable: true })
-  year: number | null;
+  @OneToMany(() => Report, (report) => report.product)
+  reports: Report[];
 
   @Column({ default: false })
   is_deleted: boolean;
@@ -290,4 +264,5 @@ export class Product {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
 }

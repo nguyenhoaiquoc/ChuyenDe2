@@ -1,40 +1,21 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  DeleteDateColumn,
-} from 'typeorm';
-import { Role } from './role.entity';
-import { Status } from './status.entity';
-import { Report } from './report.entity';
-import { Comment } from './comment.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Role } from './role.entity';       // Entity roles
+import { Status } from './status.entity';   // Entity statuses
+import { Report } from "./report.entity";
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
-  /** --------- Quan hệ & FK rõ ràng --------- */
-  @ManyToOne(() => Role, { nullable: false })
+  @ManyToOne(() => Role)
   @JoinColumn({ name: 'role_id' })
   role: Role;
-
+  
+  
   @Column({ type: 'bigint', name: 'role_id' })
-  roleId: number;
-
-  @ManyToOne(() => Status, { nullable: false })
-  @JoinColumn({ name: 'status_id' })
-  status: Status;
-
-  @Column({ type: 'bigint', name: 'status_id' })
-  statusId: number;
-
-  /** --------- Hồ sơ cơ bản --------- */
+  roleId: number; // 
+  
   @Column({ type: 'varchar', length: 191 })
   fullName: string;
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
@@ -55,15 +36,13 @@ export class User {
   dob: Date; // Ngày sinh
 
 
-  // Khuyến nghị: dùng CITEXT để unique không phân biệt hoa/thường (Postgres cần EXTENSION citext)
-  @Column({ type: 'citext', unique: true })
+  @Column({ type: 'varchar', length: 191, unique: true })
   email: string;
 
-  // Lưu hash, không lưu password thuần
-  @Column({ type: 'varchar', length: 191, name: 'password_hash' })
-  passwordHash: string;
+  @Column({ type: 'varchar', length: 191 })
+  password: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
+  @Column({ type: 'varchar', length: 191, nullable: true })
   phone: string;
 
   @Column({ type: 'varchar', length: 191, nullable: true })
@@ -71,12 +50,18 @@ export class User {
 
   @Column({ type: 'varchar', length: 191, nullable: true })
   coverImage: string | null; // ảnh bìa
+@Column({ type: 'json', nullable: true })
+address_json: object;
 
-  @Column({ type: 'json', nullable: true })
-  address_json: object;
+
+@Column({ type: 'tinyint', default: 0 })
+gender: number; // 0 = không xác định
 
 
-  /** --------- Trạng thái xác minh --------- */
+  @ManyToOne(() => Status)
+  @JoinColumn({ name: 'status_id' })
+  status: Status;
+
   @Column({ type: 'boolean', default: false })
   is_verified: boolean;
 
@@ -124,18 +109,13 @@ export class User {
   @OneToMany(() => Report, (report) => report.reporter)
   reports: Report[];
 
-  @OneToMany(() => Comment, (comment) => comment.user)
-  comments: Comment[];
+  @OneToMany(() => Report, (report) => report.reporter)
+reports: Report[];
 
-  @Column({ type: 'timestamp', nullable: true, name: 'last_online_at' })
-  lastOnlineAt?: Date | null;
 
   @CreateDateColumn({ type: 'timestamp', name: 'created_at' })
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamp', name: 'updated_at' })
   updatedAt: Date;
-
-  @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
-  deletedAt?: Date | null;
 }

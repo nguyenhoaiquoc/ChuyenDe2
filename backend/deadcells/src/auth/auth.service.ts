@@ -1,8 +1,12 @@
+<<<<<<< HEAD
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+=======
 import {
   Injectable,
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 import { RegisterDto } from './dto/register-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,6 +30,31 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
+<<<<<<< HEAD
+  async register(dto: RegisterDto) {
+    const existing = await this.userRepository.findOne({ where: { email: dto.email } });
+    if (existing) throw new BadRequestException('Email đã tồn tại');
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = this.userRepository.create({
+      email: dto.email,
+      password: hashedPassword,
+      fullName: dto.fullName,
+      phone: dto.phone,
+        roleId: 2,
+    });
+    await this.userRepository.save(user);
+
+    // Tạo OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 5 số
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 phút
+
+    const otpEntity = this.otpRepository.create({
+      user,
+      otp,
+=======
   async getUsers() {
     return this.userRepository.find();
   }
@@ -71,16 +100,34 @@ export class AuthService {
       otp_hash: otpHash,
       type: 'verify',
       used: false,
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
       expires_at: expiresAt,
     });
     await this.otpRepository.save(otpEntity);
 
+<<<<<<< HEAD
+    // Gửi mail
+    await this.mailService.sendOTP(user.email, otp);
+=======
     // Gửi mail (gửi mã thô)
     await this.mailService.sendOTP(user.email, rawOtp);
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
     return { message: 'Đăng ký thành công. OTP đã được gửi về email' };
   }
 
+<<<<<<< HEAD
+  async verifyOtp(email: string, otp: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new BadRequestException('Email không tồn tại');
+
+    const otpRecord = await this.otpRepository.findOne({
+      where: { user: { id: user.id }, otp, used: false },
+      order: { created_at: 'DESC' },
+    });
+    if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
+    if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
+=======
   /** ---------------- Verify Email OTP ---------------- */
   async verifyOtp(email: string, otp: string) {
     const user = await this.userRepository.findOne({ where: { email } });
@@ -98,10 +145,68 @@ export class AuthService {
 
     const ok = await bcrypt.compare(otp, otpRecord.otp_hash);
     if (!ok) throw new BadRequestException('OTP không hợp lệ');
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
     otpRecord.used = true;
     await this.otpRepository.save(otpRecord);
 
+<<<<<<< HEAD
+    return { message: 'Xác thực thành công' };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.userRepository.findOne({ where: { email: dto.email }, 
+      relations: ['role', 'status'], // load role
+     });
+
+    if (!user) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+
+    const passwordValid = await bcrypt.compare(dto.password, user.password);
+    if (!passwordValid) throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
+
+    const payload = { id: user.id, email: user.email };
+    const token = this.jwtService.sign(payload);
+
+    return { token,   role: user.role.name, fullName: user.fullName, };
+  }
+
+ // --- Gửi OTP quên mật khẩu ---
+  async forgotPassword(email: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new BadRequestException('Email không tồn tại');
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 chữ số
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5 phút
+
+    const otpEntity = this.otpRepository.create({
+      user,
+      otp,
+      expires_at: expiresAt,
+      type: 'reset', // phân biệt OTP reset mật khẩu
+    });
+
+    await this.otpRepository.save(otpEntity);
+
+    // Gửi OTP qua email
+    await this.mailService.sendOTP(user.email, otp);
+
+    return { message: 'OTP đã được gửi về email' };
+  }
+
+  // --- Verify OTP quên mật khẩu ---
+  async verifyResetOtp(email: string, otp: string) {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) throw new BadRequestException('Email không tồn tại');
+
+    const otpRecord = await this.otpRepository.findOne({
+      where: { user: { id: user.id }, otp, used: false, type: 'reset' },
+      order: { created_at: 'DESC' },
+    });
+
+    if (!otpRecord) throw new BadRequestException('OTP không hợp lệ');
+    if (otpRecord.expires_at < new Date()) throw new BadRequestException('OTP đã hết hạn');
+=======
     // ✅ Cập nhật trạng thái xác thực tài khoản
     user.is_verified = true;
     user.verifiedAt = new Date();
@@ -189,10 +294,41 @@ export class AuthService {
 
     const ok = await bcrypt.compare(otp, otpRecord.otp_hash);
     if (!ok) throw new BadRequestException('OTP không hợp lệ');
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
     otpRecord.used = true;
     await this.otpRepository.save(otpRecord);
 
+<<<<<<< HEAD
+    // Tạo resetToken tạm để đổi mật khẩu
+    const resetToken = uuidv4();
+    user.resetToken = resetToken;
+    await this.userRepository.save(user);
+
+    return { resetToken };
+  }
+
+async resetPasswordWithDto(body: ResetPasswordDto) {
+  const { token, newPassword } = body;
+  const user = await this.userRepository.findOne({ where: { resetToken: token } });
+  if (!user) throw new BadRequestException('Token không hợp lệ hoặc đã hết hạn');
+
+  // Kiểm tra mật khẩu mới có trùng mật khẩu cũ không
+  const isSame = await bcrypt.compare(newPassword, user.password);
+  if (isSame) {
+    throw new BadRequestException('Mật khẩu mới không được trùng với mật khẩu hiện tại');
+  }
+
+  // Hash và lưu mật khẩu mới
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.resetToken = null; 
+  await this.userRepository.save(user);
+
+  return { message: 'Đặt lại mật khẩu thành công' };
+}
+
+
+=======
     // 🔐 Cấp reset token tạm: LƯU HASH + có hạn
     const rawResetToken = uuidv4();
     user.resetTokenHash = await bcrypt.hash(rawResetToken, 10);
@@ -239,4 +375,5 @@ export class AuthService {
 
     return { message: 'Đặt lại mật khẩu thành công' };
   }
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 }

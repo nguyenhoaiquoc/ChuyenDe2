@@ -22,71 +22,15 @@ import { disconnectSocket, getSocket } from "../../src/libs/socket";
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null); 
+const [name, setName] = useState('');
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userId = await AsyncStorage.getItem("userId");
-        const token = await AsyncStorage.getItem("token");
-
-        // Nếu không có userId (ví dụ: người dùng chưa đăng nhập),
-        // thử tải dữ liệu local (nếu có) rồi thoát
-        if (!userId || !token) {
-          const localName = await AsyncStorage.getItem("userName");
-          const localAvatar = await AsyncStorage.getItem("userAvatar");
-          const localRoleId = await AsyncStorage.getItem("role_id");
-          if (localName) setName(localName);
-          if (localAvatar) setAvatar(localAvatar);
-          if (localRoleId) setRoleId(localRoleId);
-          return;
-        }
-
-        // Nếu có userId, gọi API để lấy dữ liệu MỚI NHẤT
-        const res = await axios.get(`${path}/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // Lấy dữ liệu từ API response
-        const fullName = res.data.fullName || res.data.name || "";
-        const image = res.data.image || null;
-
-        // ✨ LẤY ROLE_ID TỪ API ✨
-        const apiRoleId =
-          res.data.roleId != null ? String(res.data.roleId) : null;
-        // Cập nhật State
-        setName(fullName);
-        setAvatar(image);
-        if (apiRoleId) {
-          setRoleId(apiRoleId); // Set state bằng dữ liệu mới từ API
-        }
-
-        // Cập nhật lại AsyncStorage bằng dữ liệu mới nhất
-        await AsyncStorage.setItem("userName", fullName);
-        if (image) {
-          await AsyncStorage.setItem("userAvatar", image);
-        } else {
-          await AsyncStorage.removeItem("userAvatar"); // Xóa nếu avatar bị gỡ
-        }
-        if (apiRoleId) {
-          await AsyncStorage.setItem("role_id", apiRoleId); // Cập nhật role_id
-        }
-      } catch (err) {
-        // Nếu API lỗi, TẠM DÙNG dữ liệu cũ trong Storage
-        console.log("Lỗi fetchUser, dùng fallback data:", err);
-        const localName = await AsyncStorage.getItem("userName");
-        const localAvatar = await AsyncStorage.getItem("userAvatar");
-        const localRoleId = await AsyncStorage.getItem("role_id");
-        if (localName) setName(localName);
-        if (localAvatar) setAvatar(localAvatar);
-        if (localRoleId) setRoleId(localRoleId);
-      }
-    };
-
-    fetchUser();
+useEffect(() => {
+  AsyncStorage.getItem('userName').then(value => {
+    if (value) setName(value);
+  });
+}, []);
   }, []); 
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -95,51 +39,25 @@ export default function UserScreen() {
         <View
           style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}
         >
-          {/* Avatar */}
-          <TouchableOpacity
-            onPress={() => navigation.navigate("UserInforScreen")}
-          >
-            <View
-              style={{
-                width: 96,
-                height: 96,
-                borderRadius: 48,
-                backgroundColor: "#d1d5db",
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 4,
-                borderColor: "white",
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-            >
-              <Image
-                source={
-                  avatar
-                    ? {
-                        uri: avatar.startsWith("http")
-                          ? avatar
-                          : `${path}${avatar}`,
-                      }
-                    : require("../../assets/meo.jpg")
-                }
-                style={{ width: "100%", height: "100%", borderRadius: 48 }}
-              />
-            </View>
-          </TouchableOpacity>
-          {/* Tên và thông tin*/}
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "bold",
-              marginTop: 12,
-              color: "#1f2937",
-            }}
-          >
-            {name || "Đang tải..."}
+          <Image
+            source={require("../../assets/meo.jpg")}
+            style={{ width: "100%", height: "100%", borderRadius: 48 }}
+          />
+        </View>
+        {/* Tên và thông tin theo dõi */}
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "bold",
+            marginTop: 12,
+            color: "#1f2937",
+          }}
+        >
+        {name || "Đang tải..."}
+        </Text>
+        <View style={{ flexDirection: "row", marginTop: 4 }}>
+          <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
+            Người theo dõi 1
           </Text>
           <View style={{ flexDirection: "row", marginTop: 4 }}>
             <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
@@ -248,7 +166,79 @@ export default function UserScreen() {
             />
           </View>
         </View>
-      </ScrollView>
+      </View>
+      {/* --- Phần Tiện ích --- */}
+      <View style={{ paddingHorizontal: 16 }}>
+        {/* Tiêu đề nhỏ bên ngoài card */}
+        <Text
+          style={{
+            color: "#6b7280",
+            fontWeight: "600",
+            marginBottom: 8,
+            marginLeft: 8,
+          }}
+        >
+          Tiện ích
+        </Text>
+        {/* Card chứa các mục tiện ích */}
+        <View
+          style={{
+            backgroundColor: "white",
+            borderRadius: 12,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 2,
+          }}
+        >
+          <UtilityItem
+            icon="person-outline"
+            title="Tài khoản của tôi  "
+            onPress={() => navigation.navigate("ViewHistory")}
+          />
+          <UtilityItem
+            icon="heart-outline"
+            title="Tin đăng đã lưu "
+            onPress={() => navigation.navigate("ViewHistory")}
+          />
+          <UtilityItem
+            icon="trash-outline"
+            title="Tìm kiếm đã lưu"
+            onPress={() => navigation.navigate("SavedSearchScreen")}
+          />
+          <UtilityItem
+            icon="time-outline"
+            title="Lịch sử xem tin"
+            onPress={() => navigation.navigate("SavedPosts")}
+          />
+          <UtilityItem
+            icon="star-outline"
+            title="Đánh giá từ tôi"
+            isLast={true}
+            onPress={() => navigation.navigate("FeedbackScreen")}
+          />
+          <UtilityItem
+            icon="log-out-outline"
+            title="Đăng xuất"
+            isLast={true}
+            color="red"
+            onPress={async () => {
+              // Xóa token đăng nhập
+              await AsyncStorage.removeItem("token");
+              // Nếu có lưu thông tin user khác cũng xóa luôn
+              // await AsyncStorage.removeItem("userInfo");
+
+              // Chuyển về màn hình đăng nhập
+              navigation.reset({
+                index: 0,
+                routes: [{ name: "LoginScreen" }],
+              });
+            }}
+          />
+
+        </View>
+      </View>
       <Menu />
     </SafeAreaView>
   );
@@ -267,6 +257,8 @@ function UtilityItem({
   onPress?: () => void;
   textStyle?: object;
   color?: string;
+
+
 }) {
   const textColor = color || "#1f2937";
   const iconColor = color || "#6b7280";
@@ -286,12 +278,7 @@ function UtilityItem({
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Ionicons name={icon} size={24} color={iconColor} />
-        <Text
-          style={[
-            { marginLeft: 16, fontSize: 16, color: textColor }, 
-            textStyle,
-          ]}
-        >
+        <Text style={[{ marginLeft: 16, fontSize: 16, color: "#1f2937" }, textStyle]}>
           {title}
         </Text>
       </View>

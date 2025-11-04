@@ -12,6 +12,25 @@ import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { path } from '../../config';
 
+<<<<<<< HEAD
+const pass = ["Mật khẩu mới", "Xác nhận mật khẩu mới"];
+
+type RouteParams = {
+  token?: string;
+};
+
+type Props = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'NewPasswordScreen'>;
+};
+
+export default function NewPasswordScreen({ navigation }: Props) {
+  const route = useRoute();
+  const { token } = route.params as RouteParams
+const [isLoading, setIsLoading] = useState(false);
+const [loginError, setLoginError] = useState<string | null>(null);
+
+  const [values, setValues] = useState<string[]>(["", ""]);
+=======
 type RouteParams = { email?: string; token?: string };
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'NewPasswordScreen'>;
@@ -24,9 +43,12 @@ export default function NewPasswordScreen({ navigation }: Props) {
   const { email, token } = (route.params as RouteParams) || {};
 
   const [values, setValues] = useState<string[]>(['', '']); // [newPw, confirmPw]
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]);
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+
 
   const togglePassword = (index: number) => {
     setShowPasswords((prev) => {
@@ -71,6 +93,27 @@ export default function NewPasswordScreen({ navigation }: Props) {
       setIsLoading(false);
     }
   };
+const handleResetPassword = async () => {
+    if (!values[0] || !values[1]) return Alert.alert('Vui lòng nhập đầy đủ mật khẩu');
+    if (values[0] !== values[1]) return Alert.alert('Mật khẩu không trùng khớp');
+
+    try {
+      setIsLoading(true)
+      const res = await axios.post(`${path}:3000/auth/reset-password`, {
+        token,
+       newPassword: values[0],
+
+
+      });
+      Alert.alert(res.data.message);
+      navigation.navigate('LoginScreen'); // quay về login
+    } catch (err: any) {
+  setLoginError(err.response?.data?.message || 'Mật khẩu chưa phù hợp');
+    } finally {
+      setIsLoading(false)
+    }
+  };
+ 
 
   return (
     <View>
@@ -80,6 +123,16 @@ export default function NewPasswordScreen({ navigation }: Props) {
 
       <StatusBar style="auto" />
       <HeaderAuth value="Đặt lại mật khẩu" />
+<<<<<<< HEAD
+{loginError && (
+  <View className="flex items-center px-2">
+    <View className="flex-row gap-2 bg-red-100 py-4 justify-center  w-full rounded-xl">
+      <FontAwesome name="warning" className="mt-0.5" size={16} color="red" />
+      <Text>{loginError}</Text>
+    </View>
+  </View>
+)}
+=======
 
       {loginError && (
         <View className="flex items-center px-2">
@@ -90,12 +143,31 @@ export default function NewPasswordScreen({ navigation }: Props) {
         </View>
       )}
 
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
       <View className="px-2 mt-10">
         <Text>Nhập mật khẩu mới của bạn</Text>
         {email ? <Text className="text-xs text-gray-500 mt-1">Email: {email}</Text> : null}
       </View>
 
       <View className="mt-5 px-2">
+<<<<<<< HEAD
+        {pass.map((p, index) => (
+          <FloatingInput
+            key={index}
+            label={p}
+            value={values[index]}
+            onChangeText={(text) => {
+              const newValues = [...values];
+              newValues[index] = text;
+              setValues(newValues);
+            }}
+            secureTextEntry={!showPasswords[index]}
+            toggleSecure={() => togglePassword(index)}
+          />
+        ))}
+
+        <Button value="Tiếp tục" onPress={handleResetPassword} loading={isLoading}/>
+=======
         <FloatingInput
           label="Mật khẩu mới"
           value={values[0]}
@@ -134,6 +206,7 @@ export default function NewPasswordScreen({ navigation }: Props) {
           loading={isLoading}
           disabled={isLoading || !values[0] || !values[1]}
         />
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
       </View>
     </View>
   );

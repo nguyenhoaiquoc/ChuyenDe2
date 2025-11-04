@@ -4,7 +4,7 @@ import { Image } from 'react-native';
 
 export default function Header_lg_reg({ value }: { value: string }) {
     return (
-        <View className="flex flex-row mt-20 justify-between items-center px-2">
+        <View className="flex flex-row mt-14 justify-between items-center px-2">
             <View>
                 <Text className="text-3xl font-bold ">
                     {value}
