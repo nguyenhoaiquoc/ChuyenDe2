@@ -7,20 +7,12 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import "../global.css";
-<<<<<<< HEAD
-import { useNavigation } from '@react-navigation/native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types';
-import { useEffect } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-=======
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
 import { path } from "../config"; // ✅ nhớ import path server (VD: http://192.168.x.x:3000)
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
 export default function Menu() {
   const navigation =
@@ -39,18 +31,6 @@ export default function Menu() {
     return unsub;
   }, [navigation]);
 
-<<<<<<< HEAD
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-// Kiểm tra trạng thái đăng nhập khi component mount
-useEffect(() => {
-  const checkLogin = async () => {
-    const token = await AsyncStorage.getItem('token');
-    setIsLoggedIn(!!token); // true nếu có token
-  };
-  checkLogin();
-}, []);
-=======
   // ✅ Kiểm tra đăng nhập
   useEffect(() => {
     const checkLogin = async () => {
@@ -91,7 +71,6 @@ useEffect(() => {
     connectSocket();
   }, []);
 
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
   return (
     <View className="absolute bottom-0 left-0 right-0">
       <View className="flex-row justify-around items-end bg-white pt-3 pb-4 border-t border-[#f0f0f0]">
@@ -190,38 +169,24 @@ useEffect(() => {
         <TouchableOpacity
           className="items-center flex-1"
           onPress={() => {
-<<<<<<< HEAD
-  if (isLoggedIn) {
-    navigation.navigate("UserScreen");
-  } else {
-    navigation.navigate("LoginScreen");
-  }
-}}
-=======
             if (isLoggedIn) {
               navigation.navigate("UserScreen");
             } else {
               navigation.navigate("LoginScreen");
             }
           }}
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
         >
           <FontAwesome
             name="user"
             size={22}
             color={activeTab === "userscreen" ? "#4285F4" : "#aaa"}
           />
-<<<<<<< HEAD
-          <Text 
-            className={`text-[10px] mt-1 font-medium ${activeTab === "userscreen" ? "text-blue-500 font-semibold" : "text-[#aaa]"}`}
-=======
           <Text
             className={`text-[10px] mt-1 font-medium ${
               activeTab === "userscreen"
                 ? "text-blue-500 font-semibold"
                 : "text-[#aaa]"
             }`}
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
           >
             Tài khoản
           </Text>

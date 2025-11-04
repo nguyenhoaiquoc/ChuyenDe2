@@ -12,18 +12,6 @@ import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { path } from '../../config';
 
-<<<<<<< HEAD
-type RouteParams = {
-  email: string;
-};
-type Props = {
-    navigation: NativeStackNavigationProp<RootStackParamList, 'OTPVerifyScreen'>
-}
-export default function OTPVerifyScreen({ navigation }: Props) {
-  const [otp, setOtp] = useState("");
-const [isLoading, setIsLoading] = useState(false);
-const [loginError, setLoginError] = useState<string | null>(null);
-=======
 type RouteParams = { email: string };
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'OTPVerifyScreen'>;
@@ -60,30 +48,7 @@ export default function OTPVerifyScreen({ navigation }: Props) {
       setIsLoading(false);
     }
   };
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 
-  const route = useRoute();
-  const { email } = route.params as RouteParams;
-const handleVerifyOtp = async () => {
-    if (!otp) return Alert.alert('Vui lòng nhập OTP');
-
-    try {
-      setIsLoading(true)
-      const res = await axios.post(`${path}:3000/auth/verify-reset-otp`, {
-        email,
-        otp,
-      });
-
-      Alert.alert(res.data.message || 'OTP xác thực thành công');
-
-      // Điều hướng sang màn NewPasswordScreen kèm token reset
-      navigation.navigate('NewPasswordScreen', { token: res.data.resetToken });
-    } catch (err: any) {
-  setLoginError(err.response?.data?.message || 'Xác thực OTP thất bại');
-    } finally {
-      setIsLoading(false)
-    }
-  };
   return (
     <View>
       <View className="pl-5 pt-20">
@@ -91,17 +56,6 @@ const handleVerifyOtp = async () => {
       </View>
 
       <StatusBar style="auto" />
-<<<<<<< HEAD
-      <Header_lg_reg value="Đặt lại mật khẩu" />
-{loginError && (
-  <View className="flex items-center px-2">
-    <View className="flex-row gap-2 bg-red-100 py-4 justify-center  w-full rounded-xl">
-      <FontAwesome name="warning" className="mt-0.5" size={16} color="red" />
-      <Text>{loginError}</Text>
-    </View>
-  </View>
-)}
-=======
       <HeaderAuth value="Đặt lại mật khẩu" />
 
       {loginError && (
@@ -113,7 +67,6 @@ const handleVerifyOtp = async () => {
         </View>
       )}
 
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
       <View className="px-2 mt-10">
         <Text>Nhập mã xác nhận</Text>
       </View>
@@ -130,13 +83,7 @@ const handleVerifyOtp = async () => {
           returnKeyType="done"
           onSubmitEditing={handleVerifyOtp}
         />
-<<<<<<< HEAD
-
-  <Button value="Xác nhận"  onPress={handleVerifyOtp}  loading={isLoading}/>
-       
-=======
         <Button value="Xác nhận" onPress={handleVerifyOtp} loading={isLoading} disabled={isLoading || !otp.trim()} />
->>>>>>> 643951d52935fb80b158e072f4e9d26056271064
       </View>
     </View>
   );

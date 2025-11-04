@@ -25,6 +25,10 @@ export class Report {
   @JoinColumn({ name: "reporter_id" })
   reporter: User;
 
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "reported_user_id" })
+  reported_user: User; // <-- Quan hệ với "người bị báo cáo"
+
   @Column({ type: "varchar", length: 191, nullable: true })
   reason: string;
 

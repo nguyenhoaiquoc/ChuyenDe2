@@ -1,4 +1,3 @@
-import { View, TextInput, TouchableOpacity, Image, ScrollView, Text, StatusBar, FlatList, Easing } from "react-native";
 import {
   View,
   TextInput,
@@ -21,12 +20,6 @@ import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
 import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
 import axios from "axios";
-import "../../global.css"
-import { BackHandler, ToastAndroid, Animated } from 'react-native';
-
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-}
 import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -551,21 +544,6 @@ export default function HomeScreen({ navigation }: Props) {
       </ScrollView>
       {/* Menu dưới */}
       <Menu />
-<Animated.View
-  style={{
-    position: 'absolute',
-    bottom: 40,
-    left: '15%',
-    right: '15%',
-    opacity: fadeAnim,
-    backgroundColor: '#333333',
-    padding: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  }}
->
-  <Text style={{ color: 'white' }}>Back lần nữa sẽ thoát chương trình</Text>
-</Animated.View>
     </View>
   );
 }
