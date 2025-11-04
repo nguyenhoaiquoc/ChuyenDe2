@@ -9,6 +9,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { RoleSeedService } from './seed/role.seed.service';
+<<<<<<< HEAD
 
 @Module({
   imports: [
@@ -20,5 +21,28 @@ import { RoleSeedService } from './seed/role.seed.service';
   ],
   providers: [AuthService,MailService,RoleSeedService],
   controllers: [AuthController],
+=======
+import { ConfigModule, ConfigService } from '@nestjs/config';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification]),
+
+    // ✅ JwtModule toàn cục
+    JwtModule.registerAsync({
+      global: true, // 👈 thêm dòng này!
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_ACCESS_SECRET') || 'supersecretkey',
+        signOptions: { expiresIn: '1d' },
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [AuthController],
+  providers: [AuthService, MailService, RoleSeedService],
+  exports: [AuthService],
+>>>>>>> 643951d52935fb80b158e072f4e9d26056271064
 })
 export class AuthModule {}

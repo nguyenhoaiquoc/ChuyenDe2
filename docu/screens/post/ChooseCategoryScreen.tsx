@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   SafeAreaView,
   View,
@@ -6,10 +6,42 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import { path } from "../../config";
 
-export default function ChooseCategoryScreen({ navigation }: any) {
+interface Category {
+  id: string;
+  name: string;
+  image: string;
+}
+
+export default function ChooseCategoryScreen({ navigation, route }: any) {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const { group } = route.params || {};
+
+  useEffect(() => {
+    axios.get(`${path}/categories`)
+      .then((res) => {
+        const mapped = res.data.map((item: Category) => ({
+          id: item.id.toString(),
+          name: item.name,
+          image:
+            item.image && item.image.startsWith("/uploads")
+              ? `${path}${item.image}`
+              : item.image
+                ? `${path}/uploads/categories/${item.image}`
+                : `${path}/uploads/categories/default.png`,
+        }));
+        setCategories(mapped);
+      })
+      .catch((err) => {
+        console.log("Lỗi khi lấy danh mục:", err.message);
+      });
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -17,10 +49,8 @@ export default function ChooseCategoryScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Đăng tin</Text>
-
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.navigate("Home")}>
           <Ionicons name="close" size={24} color="white" />
         </TouchableOpacity>
       </View>
@@ -30,34 +60,25 @@ export default function ChooseCategoryScreen({ navigation }: any) {
         <Text style={styles.sectionHeaderText}>Chọn danh mục</Text>
       </View>
 
-      {/* Body */}
+      {/* Danh sách danh mục */}
       <ScrollView contentContainerStyle={styles.body}>
-        <TouchableOpacity
-          style={styles.categoryItem}
-          onPress={() =>
-            navigation.navigate("ChooseSubCategoryScreen", { category: "Tài liệu" })
-          }
-        >
-          <Text style={styles.categoryText}>📚  Tài liệu</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.categoryItem}
-          onPress={() =>
-            navigation.navigate("ChooseSubCategoryScreen", { category: "Đồ điện tử" })
-          }
-        >
-          <Text style={styles.categoryText}>📱  Đồ điện tử</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.categoryItem}
-          onPress={() =>
-            navigation.navigate("ChooseSubCategoryScreen", { category: "Đồ gia dụng" })
-          }
-        >
-          <Text style={styles.categoryText}>🛋️  Đồ gia dụng</Text>
-        </TouchableOpacity>
+        {categories.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={styles.categoryItem}
+            onPress={() =>
+              navigation.navigate("ChooseSubCategoryScreen", { category: item , group: group})
+            }
+          >
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Image
+                source={{ uri: item.image }}
+                style={{ width: 34, height: 34, marginRight: 10, borderRadius: 6 }}
+              />
+              <Text style={styles.categoryText}>{item.name}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
@@ -66,7 +87,7 @@ export default function ChooseCategoryScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    height: 80,
+    height: 40,
     backgroundColor: "#9D7BFF",
     flexDirection: "row",
     justifyContent: "space-between",
@@ -74,7 +95,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   headerTitle: { fontSize: 18, fontWeight: "600", color: "#fff" },
-
   sectionHeader: {
     backgroundColor: "#F3F3F3",
     paddingVertical: 12,
@@ -83,15 +103,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "#EDEDED",
   },
   sectionHeaderText: { fontSize: 16, fontWeight: "600", color: "#111" },
-
-  body: { padding: 20 },
+  body: { paddingHorizontal: 16, paddingVertical: 12 },
   categoryItem: {
     borderWidth: 1,
     borderColor: "#E0E0E0",
     borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 8,
     backgroundColor: "#fff",
   },
-  categoryText: { fontSize: 16, fontWeight: "500" },
+  categoryText: { fontSize: 15, fontWeight: "500", color: "#333" },
 });
