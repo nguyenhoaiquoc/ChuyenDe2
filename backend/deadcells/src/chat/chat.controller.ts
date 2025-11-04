@@ -227,5 +227,23 @@ async getRoomMeta(
   }
   return { data };
 }
-
+@Get('unread')
+async getUnreadMessages(@Req() req: Request) {
+  const userId = req['user'].id;
+  try {
+    const unreadMessages = await this.chatService.getUnreadMessages(userId);
+    
+    if (!unreadMessages || unreadMessages.length === 0) {
+      // Không có tin nhắn chưa đọc, trả về mảng rỗng
+      return { data: [] };
+    }
+    
+    return { data: unreadMessages };
+  } catch (error) {
+    throw new HttpException(
+      'Lỗi khi lấy tin nhắn chưa đọc',
+      HttpStatus.INTERNAL_SERVER_ERROR,
+    );
+  }
+}
 }

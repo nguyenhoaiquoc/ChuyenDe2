@@ -1,4 +1,4 @@
-import { Text, View, TouchableOpacity } from "react-native";
+import { Text, View, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { HomeAdminScreenNavigationProp } from "../../types";
@@ -9,6 +9,38 @@ import "../../global.css";
 
 type Props = {
   navigation: HomeAdminScreenNavigationProp;
+};
+
+// Component Nút Chức Năng (để tái sử dụng)
+const AdminButton = ({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  color = "bg-indigo-600",
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  color?: string;
+}) => {
+  return (
+    <TouchableOpacity
+      className={`flex-row items-center justify-between ${color} py-4 px-5 rounded-2xl shadow-lg shadow-gray-400/30 mb-4`}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View className="flex-row items-center space-x-4">
+        <Ionicons name={icon} size={26} color="#fff" />
+        <View>
+          <Text className="text-white text-base font-semibold">{title}</Text>
+          <Text className="text-white text-xs opacity-80">{subtitle}</Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={22} color="#fff" />
+    </TouchableOpacity>
+  );
 };
 
 export default function HomeAdminScreen({ navigation }: Props) {
@@ -25,60 +57,105 @@ export default function HomeAdminScreen({ navigation }: Props) {
       console.log("⚠️ [Admin] Lỗi khi gửi sự kiện logout:", err);
     }
 
+    // ✨ ĐÃ SỬA LẠI: Thêm 'role_id' vào danh sách xóa
     await AsyncStorage.multiRemove([
       "token",
       "userId",
       "userName",
       "userAvatar",
+      "role_id",
     ]);
+
     navigation.reset({
       index: 0,
       routes: [{ name: "LoginScreen" }],
     });
   };
 
+  // Hàm placeholder cho các màn hình chưa tạo
+  const navigateToWIP = () => {
+    Alert.alert("Chưa hoàn thiện", "Màn hình này đang được phát triển.");
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white px-5">
+    <SafeAreaView className="flex-1 bg-gray-50 px-5">
       <StatusBar style="dark" />
 
       {/* Tiêu đề */}
       <View className="items-center mt-6 mb-8">
         <Text className="text-2xl font-extrabold text-indigo-700">
-          👑 Trang Quản Trị
+          Trang Quản Trị
         </Text>
         <Text className="text-gray-500 mt-1">Xin chào, Admin!</Text>
       </View>
 
-      {/* Menu chính */}
-      <View className="space-y-4">
-        <TouchableOpacity
-          className="flex-row items-center justify-between bg-indigo-600 py-4 px-5 rounded-2xl shadow"
-          onPress={() => navigation.navigate("ManageProductsScreen")}
-        >
-          <View className="flex-row items-center space-x-3">
-            <Ionicons
-              name="checkmark-done-circle-outline"
-              size={22}
-              color="#fff"
-            />
-            <Text className="text-white text-base font-semibold">
-              Duyệt tin đăng sản phẩm
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={22} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      {/* Menu chính (dùng ScrollView để tránh tràn màn hình) */}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View className="space-y-3">
+          <AdminButton
+            icon="home-outline"
+            title="Trang home"
+            subtitle="Trang user"
+            color="bg-purple-600"
+            onPress={() => navigation.navigate("Home")} // Đổi thành navigation.navigate("AdminDashboardScreen")
+          />
+          {/* 1. Dashboard */}
+          <AdminButton
+            icon="stats-chart-outline"
+            title="Dashboard Thống Kê"
+            subtitle="Số lượng người dùng, bài đăng, báo cáo"
+            color="bg-purple-600"
+            onPress={navigateToWIP} // Đổi thành navigation.navigate("AdminDashboardScreen")
+          />
 
-      {/* Nút đăng xuất */}
-      <TouchableOpacity
-        onPress={handleLogout}
-        className="mt-10 bg-red-500 py-4 rounded-2xl flex-row items-center justify-center shadow"
-      >
-        <Ionicons name="log-out-outline" size={20} color="#fff" />
-        <Text className="text-white text-base font-semibold ml-2">
-          Đăng xuất
-        </Text>
-      </TouchableOpacity>
+          {/* 2. Quản lý người dùng */}
+          <AdminButton
+            icon="people-outline"
+            title="Quản lý Người Dùng"
+            subtitle="Khóa/mở khóa tài khoản vi phạm"
+            color="bg-red-600"
+            onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageUsersScreen")
+          />
+
+          {/* 3. Quản lý báo cáo */}
+          <AdminButton
+            icon="flag-outline"
+            title="Quản lý Báo Cáo"
+            subtitle="Xem xét và xử lý các báo cáo"
+            color="bg-yellow-600"
+            onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageReportsScreen")
+          />
+
+          <Text className="text-gray-400 font-semibold uppercase pt-2 pb-1 px-1">
+            Quản lý nội dung
+          </Text>
+
+          {/* 4. Duyệt tin sản phẩm (Cũ) */}
+          <AdminButton
+            icon="checkmark-done-circle-outline"
+            title="Duyệt tin đăng Sản phẩm"
+            subtitle="Duyệt các sản phẩm đăng bán"
+            color="bg-green-600"
+            onPress={() => navigation.navigate("ManageProductsScreen")}
+          />
+
+          {/* 5. Quản lý bài viết cộng đồng */}
+        </View>
+
+        {/* Nút đăng xuất */}
+        <TouchableOpacity
+          onPress={handleLogout}
+          className="mt-10 bg-gray-700 py-4 rounded-2xl flex-row items-center justify-center shadow"
+        >
+          <Ionicons name="log-out-outline" size={20} color="#fff" />
+          <Text className="text-white text-base font-semibold ml-2">
+            Đăng xuất
+          </Text>
+        </TouchableOpacity>
+
+        {/* Đệm dưới cùng */}
+        <View className="h-10" />
+      </ScrollView>
     </SafeAreaView>
   );
 }

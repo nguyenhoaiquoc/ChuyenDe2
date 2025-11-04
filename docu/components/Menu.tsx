@@ -47,13 +47,13 @@ export default function Menu() {
       const userId = await AsyncStorage.getItem("userId");
       if (!token || !userId) return;
 
-      const socket = io(`${path}/chat_user`, {
+      const socket = io(`${path}`, {
         auth: { userId, token },
         transports: ["websocket"],
       });
 
       // socket.on("connect", () => console.log("✅ Socket connected for unread"));
-
+      
       // Nhận số tin chưa đọc realtime từ server
       socket.on("unreadCount", (data) => {
         console.log("📩 Unread count cập nhật:", data);

@@ -131,6 +131,134 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
+          if (categoryName && subCategoryName) {
+            // Trường hợp đầy đủ: Cha - Con
+            tagText = `${categoryName} - ${subCategoryName}`;
+          } else if (categoryName) {
+            // Chỉ có tên cha
+            tagText = categoryName;
+          } else if (subCategoryName) {
+            // Chỉ có tên con
+            tagText = subCategoryName;
+          }
+          const authorName = item.user?.name || "Ẩn danh";
+          console.log(
+            "Product ID:",
+            item.id,
+            "is_approved:",
+            item.is_approved,
+            typeof item.is_approved
+          );
+
+          return {
+            id: item.id.toString(),
+            image: imageUrl,
+            name: item.name || "Không có tiêu đề",
+            price: (() => {
+              if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+              if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+              return item.price
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+                : "Liên hệ";
+            })(),
+            location: locationText,
+            time: timeDisplay,
+            tag: tagText,
+            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            user_id: item.user?.id ?? item.user_id ?? 0,
+            category: item.category || null,
+            subCategory: item.subCategory
+              ? {
+                  id: item.subCategory.id,
+                  name: item.subCategory.name,
+                  parent_category_id: item.subCategory.parent_category_id,
+                  source_table: item.subCategory.source_table,
+                  source_id: item.subCategory.source_id,
+                }
+              : null,
+
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
+
+            imageCount: item.images?.length || (imageUrl ? 1 : 0),
+            isFavorite: false,
+            images: item.images || [],
+            description: item.description || "",
+
+            postType: item.postType || null,
+            condition: item.condition || null,
+            dealType: item.dealType || null,
+
+            productStatus: item.productStatus || null,
+
+            productType:
+              item.productType && item.productType.name
+                ? item.productType
+                : null,
+            origin: item.origin && item.origin.name ? item.origin : null,
+            material:
+              item.material && item.material.name ? item.material : null,
+            size: item.size && item.size.name ? item.size : null,
+            brand: item.brand && item.brand.name ? item.brand : null,
+            color: item.color && item.color.name ? item.color : null,
+            capacity:
+              item.capacity && item.capacity.name ? item.capacity : null,
+            warranty:
+              item.warranty && item.warranty.name ? item.warranty : null,
+            productModel:
+              item.productModel && item.productModel.name
+                ? item.productModel
+                : null,
+            processor:
+              item.processor && item.processor.name ? item.processor : null,
+            ramOption:
+              item.ramOption && item.ramOption.name ? item.ramOption : null,
+            storageType:
+              item.storageType && item.storageType.name
+                ? item.storageType
+                : null,
+            graphicsCard:
+              item.graphicsCard && item.graphicsCard.name
+                ? item.graphicsCard
+                : null,
+            breed: item.breed && item.breed.name ? item.breed : null,
+            ageRange:
+              item.ageRange && item.ageRange.name ? item.ageRange : null,
+            gender: item.gender && item.gender.name ? item.gender : null,
+            engineCapacity:
+              item.engineCapacity && item.engineCapacity.name
+                ? item.engineCapacity
+                : null,
+            mileage: item.mileage || null,
+
+            address_json: item.address_json || { full: locationText },
+            phone: item.user?.phone || null,
+            author: item.author || null,
+            year: item.year || null,
+
+            created_at: item.created_at || new Date().toISOString(),
+            updated_at: item.updated_at || undefined,
+
+            sub_category_id: item.sub_category_id || null,
+            status_id: item.status_id?.toString() || undefined,
+            visibility_type: item.visibility_type?.toString() || undefined,
+            group_id: item.group_id || null,
+            is_approved: item.is_approved == 1 || item.is_approved === true,
+          };
+        });
+
+        setProducts(mapped);
+      })
+      .catch((err) => {
+        if (err.response) {
+          console.log("Lỗi từ server:", err.response.data);
+        } else if (err.request) {
+          console.log("Không nhận được phản hồi từ server:", err.request);
+        } else {
+          console.log("Lỗi khi gọi API:", err.message);
+        }
+      });
+  }, []);
   const fetchFavorites = async () => {
     try {
       const userIdStr = await AsyncStorage.getItem("userId");
@@ -370,7 +498,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
+            data={filters}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}

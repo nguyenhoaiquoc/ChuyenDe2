@@ -45,7 +45,11 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const product: Product = route.params?.product || ({} as Product);
+  const { product: routeProduct, isApproved: routeIsApproved } =
+    route.params || {};
+  const product: Product = routeProduct || ({} as Product);
+  // Mặc định là 'true' nếu không được truyền (cho các màn hình khác)
+  const isApproved = routeIsApproved ?? true;
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -76,10 +80,10 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id) {
+    if (product.id && isApproved) {
       fetchFavoriteData();
     }
-  }, [product.id, currentUser]);
+  }, [product.id, currentUser, isApproved]);
 
   const handleToggleFavorite = async () => {
     if (!currentUser?.id) {
@@ -120,8 +124,8 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id) fetchComments();
-  }, [product.id]);
+    if (product.id && isApproved) fetchComments();
+  }, [product.id, isApproved]);
 
   useEffect(() => {}, [product]);
 
@@ -212,9 +216,9 @@ export default function ProductDetailScreen() {
       ))}
     </View>
   );
-  useEffect(() => {
-    console.log("Product detail:", product);
-  }, []);
+  // useEffect(() => {
+  //   console.log("Product detail:", product);
+  // }, []);
 
   const handleChatPress = async () => {
     try {
@@ -244,7 +248,8 @@ export default function ProductDetailScreen() {
       console.log("🟢 Room nhận được:", room);
 
       // ✅ Xác định người còn lại trong phòng (người bán)
-      const otherUserId = sellerId === String(currentUser.id) ? buyerId : sellerId;
+      const otherUserId =
+        sellerId === String(currentUser.id) ? buyerId : sellerId;
       const otherUserName = product.authorName || "Người bán";
       const otherUserAvatar =
         product.user?.avatar ||
@@ -333,7 +338,7 @@ export default function ProductDetailScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white mt-5">
+    <View className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Ảnh sản phẩm */}
         <View className="relative">
@@ -377,19 +382,21 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          <TouchableOpacity
-            onPress={handleToggleFavorite}
-            className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
-          >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={16}
-              color={isFavorite ? "red" : "black"}
-            />
-            <Text className="ml-1 text-xs text-black">
-              {isFavorite ? "Đã lưu" : "Lưu"}
-            </Text>
-          </TouchableOpacity>
+          {isApproved && (
+            <TouchableOpacity
+              onPress={handleToggleFavorite}
+              className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
+            >
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={16}
+                color={isFavorite ? "red" : "black"}
+              />
+              <Text className="ml-1 text-xs text-black">
+                {isFavorite ? "Đã lưu" : "Lưu"}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
         {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
         {currentUser &&
@@ -429,17 +436,19 @@ export default function ProductDetailScreen() {
             </Text>
 
             {/* Tim */}
-            <TouchableOpacity
-              className="flex-row items-center"
-              onPress={handleToggleFavorite}
-            >
-              <Text className="mr-1 text-gray-700">{favoriteCount}</Text>
-              <Ionicons
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={20}
-                color={isFavorite ? "red" : "#666"}
-              />
-            </TouchableOpacity>
+            {isApproved && (
+              <TouchableOpacity
+                className="flex-row items-center"
+                onPress={handleToggleFavorite}
+              >
+                <Text className="mr-1 text-gray-700">{favoriteCount}</Text>
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={20}
+                  color={isFavorite ? "red" : "#666"}
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Địa chỉ */}
@@ -842,7 +851,7 @@ export default function ProductDetailScreen() {
                 )}
 
               {/* Số km đã đi (Xe cộ) */}
-              {product.mileage != null && 
+              {product.mileage != null &&
                 [60, 61, 62].includes(Number(product.subCategory?.id)) && (
                   <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
                     <Text className="text-gray-600 text-sm">Số km đã đi</Text>
@@ -914,77 +923,81 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Bình luận */}
-          <View className="mb-6">
-            <Text className="text-lg font-bold mb-3">Bình luận</Text>
+          {isApproved && (
+            <View className="mb-6">
+              <Text className="text-lg font-bold mb-3">Bình luận</Text>
 
-            {loadingComments ? (
-              <Text>Đang tải bình luận...</Text>
-            ) : comments.length > 0 ? (
-              comments.map((c) => (
-                <View key={c.id} className="flex-row items-start mb-4">
-                  <Image
-                    source={{
-                      uri: c.user?.image
-                        ? `${path}${c.user.image}`
-                        : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                    }}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
-                    <Text className="font-semibold text-sm">
-                      {c.user?.fullName || "Người dùng"}
-                    </Text>
-                    <Text className="text-gray-600 text-sm mt-1">
-                      {c.content}
-                    </Text>
-                    <Text className="text-gray-400 text-xs mt-1">
-                      {new Date(
-                        new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
-                      ).toLocaleString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                      })}
-                    </Text>
+              {loadingComments ? (
+                <Text>Đang tải bình luận...</Text>
+              ) : comments.length > 0 ? (
+                comments.map((c) => (
+                  <View key={c.id} className="flex-row items-start mb-4">
+                    <Image
+                      source={{
+                        uri: c.user?.image
+                          ? `${path}${c.user.image}`
+                          : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                      }}
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
+                      <Text className="font-semibold text-sm">
+                        {c.user?.fullName || "Người dùng"}
+                      </Text>
+                      <Text className="text-gray-600 text-sm mt-1">
+                        {c.content}
+                      </Text>
+                      <Text className="text-gray-400 text-xs mt-1">
+                        {new Date(
+                          new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
+                        ).toLocaleString("vi-VN", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              ))
-            ) : (
-              <Text className="text-gray-500 text-sm mb-4">
-                Chưa có bình luận nào. Hãy là người đầu tiên!
-              </Text>
-            )}
+                ))
+              ) : (
+                <Text className="text-gray-500 text-sm mb-4">
+                  Chưa có bình luận nào. Hãy là người đầu tiên!
+                </Text>
+              )}
 
-            {/* Ô nhập + nút gửi */}
-            <View className="flex-row items-center border border-gray-300 rounded-full px-3 py-2 bg-white">
-              <TextInput
-                value={comment}
-                onChangeText={setComment}
-                placeholder="Bình luận..."
-                editable={!isSending}
-                className="flex-1 px-2 text-sm"
-              />
+              {/* Ô nhập + nút gửi */}
+              <View className="flex-row items-center border border-gray-300 rounded-full px-3 py-2 bg-white">
+                <TextInput
+                  value={comment}
+                  onChangeText={setComment}
+                  placeholder="Bình luận..."
+                  editable={!isSending}
+                  className="flex-1 px-2 text-sm"
+                />
 
-              <TouchableOpacity
-                onPress={handleSend}
-                disabled={isSending}
-                className={`ml-2 px-4 py-2 rounded-full ${
-                  isSending ? "bg-gray-400" : "bg-blue-500"
-                }`}
-              >
-                {isSending ? (
-                  <Text className="text-white font-semibold text-sm">
-                    Đang gửi...
-                  </Text>
-                ) : (
-                  <Text className="text-white font-semibold text-sm">Gửi</Text>
-                )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSend}
+                  disabled={isSending}
+                  className={`ml-2 px-4 py-2 rounded-full ${
+                    isSending ? "bg-gray-400" : "bg-blue-500"
+                  }`}
+                >
+                  {isSending ? (
+                    <Text className="text-white font-semibold text-sm">
+                      Đang gửi...
+                    </Text>
+                  ) : (
+                    <Text className="text-white font-semibold text-sm">
+                      Gửi
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
         </View>
       </ScrollView>
     </View>

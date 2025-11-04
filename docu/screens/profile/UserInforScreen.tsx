@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View, Image, useWindowDimensions, TouchableOpacity } from "react-native";
+import { ScrollView, Text, View, Image, useWindowDimensions, TouchableOpacity, Alert } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import { StatusBar } from "expo-status-bar";
@@ -12,6 +12,7 @@ import { path } from "../../config";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "UserInforScreen">;
+  route: any; // nếu bạn đã khai báo param trong RootStackParamList thì thay any bằng RouteProp<...>
 };
 
 const DisplayingRoute = () => (
@@ -28,7 +29,7 @@ const SoldRoute = () => (
   </View>
 );
 
-export default function UserInforScreen({ navigation }: Props) {
+export default function UserInforScreen({ navigation, route }: Props) {
   const layout = useWindowDimensions();
   const [index, setIndex] = React.useState(0);
   const [routes] = React.useState([
@@ -40,75 +41,89 @@ export default function UserInforScreen({ navigation }: Props) {
     displaying: DisplayingRoute,
     sold: SoldRoute,
   });
-   const [name, setName] = useState('');
+
+  const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isMe, setIsMe] = useState<boolean>(true);
+  const [viewUserId, setViewUserId] = useState<string | null>(null);
 
- useEffect(() => {
-  const fetchUser = async () => {
-    const userId = await AsyncStorage.getItem("userId");
+  useEffect(() => {
+    (async () => {
+      const routeUserId = route?.params?.userId ? String(route.params.userId) : null;
+      const currentUserId = (await AsyncStorage.getItem("userId")) || "";
+      const token = await AsyncStorage.getItem("token");
+
+      const finalUserId = routeUserId || currentUserId; // nếu không truyền userId -> xem profile của mình
+      setViewUserId(finalUserId);
+      setIsMe(String(finalUserId) === String(currentUserId));
+
+      if (!finalUserId) return;
+
+      try {
+        const res = await axios.get(`${path}/users/${finalUserId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.data) {
+          setName(res.data.name || res.data.fullName || "");
+          setAvatar(res.data.image || null);
+          setCoverImage(res.data.coverImage || null);
+
+          // chỉ lưu name local nếu là profile của mình
+          if (String(finalUserId) === String(currentUserId)) {
+            await AsyncStorage.setItem("userName", res.data.name || res.data.fullName || "");
+          }
+        }
+      } catch (err) {
+        console.log("Lấy user error:", err);
+        // fallback: nếu xem profile mình mà request lỗi thì lấy tên local
+        if (String(finalUserId) === String(currentUserId)) {
+          const localName = await AsyncStorage.getItem("userName");
+          if (localName) setName(localName);
+        }
+      }
+    })();
+  }, [route?.params?.userId]);
+
+  const handlePickImage = async () => {
+    if (!isMe) return Alert.alert("Thông báo", "Bạn không thể đổi ảnh trên trang người khác.");
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return alert("Cần quyền truy cập ảnh");
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      quality: 0.7,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    });
+    if (result.canceled) return;
+
+    const currentUserId = await AsyncStorage.getItem("userId");
     const token = await AsyncStorage.getItem("token");
+    if (!currentUserId) return alert("Vui lòng đăng nhập trước khi đổi ảnh");
 
-    if (!userId) return;
+    const formData = new FormData();
+    formData.append("image", { uri: result.assets[0].uri, name: "avatar.jpg", type: "image/jpeg" } as any);
 
     try {
-      const res = await axios.get(`${path}/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const url = `${path}/users/${currentUserId}`;
+      const response = await axios.patch(url, formData, {
+        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
       });
-
-      if (res.data) {
-        setName(res.data.name || res.data.fullName || "");
-        setAvatar(res.data.image || null);
-        setCoverImage(res.data.coverImage || null);
-
-        await AsyncStorage.setItem("userName", res.data.name || res.data.fullName || "");
-      }
-    } catch (err) {
-      console.log("Lấy user error:", err);
-      
-      // fallback nếu request fail
-      const localName = await AsyncStorage.getItem("userName");
-      if (localName) setName(localName);
+      setAvatar(response.data.image);
+      alert("Cập nhật ảnh thành công!");
+    } catch (err: any) {
+      console.log("Upload error:", err.response?.status, err.response?.data || err);
+      alert("Upload thất bại");
     }
   };
-
-  fetchUser();
-}, []);
-
-
-const handlePickImage = async () => {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) return alert("Cần quyền truy cập ảnh");
-
-  const result = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.7, mediaTypes: ImagePicker.MediaTypeOptions.Images });
-  if (result.canceled) return;
-
-  const userId = await AsyncStorage.getItem("userId");
-  const token = await AsyncStorage.getItem("token");
-  if (!userId) return alert("Vui lòng đăng nhập trước khi đổi ảnh");
-
-  const formData = new FormData();
-  formData.append("image", { uri: result.assets[0].uri, name: "avatar.jpg", type: "image/jpeg" } as any);
-
-  try {
-    const url = `${path}/users/${userId}`;
-    console.log("📌 Upload URL:", url);
-    const response = await axios.patch(url, formData, {
-      headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
-    });
-        setAvatar(response.data.image);
-    alert("Cập nhật ảnh thành công!");
-  } catch (err: any) {
-    console.log("Upload error:", err.response?.status, err.response?.data || err);
-    alert("Upload thất bại");
-  }
-};
-
 
   return (
     <ScrollView className="flex-1">
       <View className="mt-10">
         <StatusBar style="auto" />
+
         {/* Header */}
         <View className="flex flex-row gap-6 pl-6 items-center">
           <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
@@ -118,34 +133,59 @@ const handlePickImage = async () => {
         {/* Ảnh bìa + avatar */}
         <View className="w-full h-[100px] relative mt-2">
           <Image
-  className="w-full h-full object-contain"
-  source={
-    coverImage
-      ? { uri: coverImage.startsWith("http") ? coverImage : `${path}${coverImage}` }
-      : require("../../assets/anhbia.jpg") // fallback nếu chưa có cover
-  }
-/>
+            className="w-full h-full object-contain"
+            source={
+              coverImage
+                ? { uri: coverImage.startsWith("http") ? coverImage : `${path}${coverImage}` }
+                : require("../../assets/anhbia.jpg")
+            }
+          />
 
-          <MaterialIcons onPress={handlePickImage}  className="absolute right-5 top-1/4 bg-white rounded-full p-1" name="camera-alt" size={16} color="black" />
+          {/* Chỉ mình mới hiện icon camera */}
+          {isMe && (
+            <MaterialIcons
+              onPress={handlePickImage}
+              className="absolute right-5 top-1/4 bg-white rounded-full p-1"
+              name="camera-alt"
+              size={16}
+              color="black"
+            />
+          )}
 
-          <TouchableOpacity  className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
-              <Image
-    className="w-full h-full object-contain rounded-full"
-    source={
-      avatar
-        ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
-        : require("../../assets/meo.jpg")
-    }
-  />
-            <MaterialIcons  onPress={handlePickImage} className="absolute right-0 bottom-0 bg-white rounded-full p-1" name="camera-alt" size={10} color="black" />
+          <TouchableOpacity className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
+            <Image
+              className="w-full h-full object-contain rounded-full"
+              source={
+                avatar
+                  ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
+                  : require("../../assets/meo.jpg")
+              }
+            />
+            {/* Chỉ mình mới hiện icon camera nhỏ */}
+            {isMe && (
+              <MaterialIcons
+                onPress={handlePickImage}
+                className="absolute right-0 bottom-0 bg-white rounded-full p-1"
+                name="camera-alt"
+                size={10}
+                color="black"
+              />
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Nút chỉnh sửa */}
+        {/* Nút góc phải: nếu là mình -> "Chỉnh sửa thông tin"; nếu là người khác -> nút ba chấm */}
         <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
-          <TouchableOpacity onPress={() => navigation.navigate("EditProfileScreen")}>
-          <Text  className="text-xs border p-1 rounded-md border-gray-400">Chỉnh sửa thông tin</Text>
-          </TouchableOpacity>
+          {isMe ? (
+            <TouchableOpacity onPress={() => navigation.navigate("EditProfileScreen")}>
+              <Text className="text-xs border p-1 rounded-md border-gray-400">Chỉnh sửa thông tin</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => Alert.alert("Tùy chọn", "Mở menu hành động ở đây…")}>
+              <MaterialIcons name="more-horiz" size={22} color="#000" />
+            </TouchableOpacity>
+          )}
+
           <Text className="text-xs p-1 bg-yellow-400 rounded-md px-2">Chia sẻ</Text>
         </View>
 
