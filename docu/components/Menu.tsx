@@ -47,7 +47,7 @@ export default function Menu() {
       const userId = await AsyncStorage.getItem("userId");
       if (!token || !userId) return;
 
-      const socket = io(`${path}/chat_user`, {
+      const socket = io(`${path}`, {
         auth: { userId, token },
         transports: ["websocket"],
       });
