@@ -53,7 +53,7 @@ export default function Menu() {
       });
 
       // socket.on("connect", () => console.log("✅ Socket connected for unread"));
-
+      
       // Nhận số tin chưa đọc realtime từ server
       socket.on("unreadCount", (data) => {
         console.log("📩 Unread count cập nhật:", data);
