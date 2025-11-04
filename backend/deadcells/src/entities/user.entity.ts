@@ -35,8 +35,9 @@ export class User {
   statusId: number;
 
   /** --------- Hồ sơ cơ bản --------- */
-  @Column({ type: 'varchar', length: 191 })
+  @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;
+
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
 
