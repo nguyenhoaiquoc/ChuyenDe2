@@ -281,4 +281,9 @@ export class Product {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+  @Column({ default: false })
+  is_deleted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date | null;
 }
