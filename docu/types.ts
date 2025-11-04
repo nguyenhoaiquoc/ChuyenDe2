@@ -11,7 +11,7 @@ export type RootStackParamList = {
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product?: Product } | undefined;
+  ProductDetail: { product?: Product; isApproved?: boolean } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
     | {
@@ -75,7 +75,7 @@ export type RootStackParamList = {
     productId: string;
     product: Product;
   };
-
+  TrashScreen: undefined;
   // TestApi: undefined;
 };
 

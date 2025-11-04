@@ -178,7 +178,7 @@ export default function HomeScreen({ navigation }: Props) {
             dealType: item.dealType || null,
 
             productStatus: item.productStatus || null,
-            
+
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -449,7 +449,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
+            data={filters}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}

@@ -27,6 +27,9 @@ export class Group {
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
+  @Column({ default: false })
+  mustApprovePosts: boolean;
+
   @Column({ type: 'text', nullable: true })
   description: string;
 
