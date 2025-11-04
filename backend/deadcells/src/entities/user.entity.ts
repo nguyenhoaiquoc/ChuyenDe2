@@ -68,6 +68,18 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
+  @Column({ type: 'text', nullable: true })
+  bio: string; // Giới thiệu
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  nickname: string; // Tên gợi nhớ
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  citizenId: string; // CCCD / CMND
+
+  @Column({ type: 'date', nullable: true })
+  dob: Date; // Ngày sinh
+  
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
