@@ -36,35 +36,29 @@ export default function GroupDetailScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isMenuVisible, setMenuVisible] = useState(false);
-
   const [isApprovalEnabled, setIsApprovalEnabled] = useState(
     group.mustApprovePosts || false
   );
-
   const [role, setRole] = useState<"leader" | "member" | "none" | null>(null);
 
   const isMember = role === "leader" || role === "member";
   const isLeader = role === "leader";
   const isGroupPublic = group.isPublic || true;
 
-  // 🔹 Fetch dữ liệu nhóm + role
   const fetchData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      // 1️⃣ Lấy danh sách sản phẩm trong nhóm
       const res = await axios.get(`${path}/groups/${group.id}/products`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setProducts(res.data);
 
-      // 2️⃣ Kiểm tra role của user trong nhóm
       const roleRes = await axios.get(`${path}/groups/${group.id}/role`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const r = roleRes.data.role;
-      // console.log("User role:", r);
       if (r === "leader" || r === "member" || r === "none") {
         setRole(r);
       } else {
@@ -85,34 +79,28 @@ export default function GroupDetailScreen({
     loadData();
   }, [fetchData]);
 
-  // 🔹 Pull to refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
   }, [fetchData]);
 
-  // ✅ Hàm đăng bài với callback
   const handleCreatePost = () => {
     navigation.navigate("PostGroupFormScreen", {
       group,
       onPostSuccess: async () => {
-        console.log("✅ Đăng bài thành công! Đang reload...");
-        await fetchData(); // Reload lại danh sách sản phẩm
+        await fetchData();
       },
     });
   };
 
-  // 🔹 Tham gia nhóm
   const handleJoinGroup = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       await axios.post(
         `${path}/groups/${group.id}/join`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       Alert.alert("Thành công", "Bạn đã tham gia nhóm");
       setRole("member");
@@ -120,13 +108,11 @@ export default function GroupDetailScreen({
     } catch (error: any) {
       console.log("Lỗi tham gia nhóm:", error);
       const errorMsg =
-        error.response?.data?.message ||
-        "Không thể tham gia nhóm, vui lòng thử lại.";
+        error.response?.data?.message || "Không thể tham gia nhóm";
       Alert.alert("Lỗi", errorMsg);
     }
   };
 
-  // 🔹 Rời nhóm
   const handleLeaveGroup = async () => {
     if (isLeader) {
       Alert.alert(
@@ -156,12 +142,9 @@ export default function GroupDetailScreen({
               setRole("none");
               setMenuVisible(false);
               navigation.goBack();
-              await fetchData();
             } catch (error: any) {
-              console.log("Lỗi rời nhóm:", error);
               const errorMsg =
-                error.response?.data?.message ||
-                "Không thể rời nhóm, vui lòng thử lại.";
+                error.response?.data?.message || "Không thể rời nhóm";
               Alert.alert("Lỗi", errorMsg);
             }
           },
@@ -170,14 +153,13 @@ export default function GroupDetailScreen({
     );
   };
 
-  // 🔹 Menu cơ bản cho member
   const userMenuItems = [
     {
       name: "Quản lí nội dung của bạn",
       icon: "file-text",
       action: () => {
         setMenuVisible(false);
-        console.log("Xem bài viết của tôi");
+        navigation.navigate("MyGroupPostsScreen", { groupId: group.id });
       },
     },
     {
@@ -188,14 +170,13 @@ export default function GroupDetailScreen({
     },
   ];
 
-  // 🔹 Menu riêng cho leader
   const leaderMenuItems = [
     {
       name: "Sửa thông tin nhóm",
       icon: "edit",
       action: () => {
         setMenuVisible(false);
-        console.log("Sửa nhóm");
+        navigation.navigate("EditGroupScreen", { group });
       },
     },
     {
@@ -203,15 +184,7 @@ export default function GroupDetailScreen({
       icon: "check-square",
       action: () => {
         setMenuVisible(false);
-        console.log("Duyệt bài viết");
-      },
-    },
-    {
-      name: "Duyệt thành viên",
-      icon: "user-check",
-      action: () => {
-        setMenuVisible(false);
-        console.log("Duyệt thành viên");
+        navigation.navigate("ApprovePostsScreen", { groupId: group.id });
       },
     },
     {
@@ -219,15 +192,10 @@ export default function GroupDetailScreen({
       icon: "users",
       action: () => {
         setMenuVisible(false);
-        console.log("Xem thành viên");
-      },
-    },
-    {
-      name: "Chuyển quyền trưởng nhóm",
-      icon: "shield",
-      action: () => {
-        setMenuVisible(false);
-        console.log("Chuyển quyền trưởng nhóm");
+        navigation.navigate("GroupMembersScreen", {
+          groupId: group.id,
+          isLeader: true,
+        });
       },
     },
     {
@@ -249,10 +217,10 @@ export default function GroupDetailScreen({
                   await axios.delete(`${path}/groups/${group.id}`, {
                     headers: { Authorization: `Bearer ${token}` },
                   });
-                  Alert.alert("✅ Đã xóa nhóm");
+                  Alert.alert("Thành công", "Đã xóa nhóm");
                   navigation.goBack();
                 } catch (err) {
-                  console.log("❌ Lỗi xóa nhóm:", err);
+                  console.log("Lỗi xóa nhóm:", err);
                   Alert.alert("Lỗi", "Không thể xóa nhóm");
                 }
               },
@@ -268,7 +236,6 @@ export default function GroupDetailScreen({
     ? [...leaderMenuItems, ...userMenuItems]
     : userMenuItems;
 
-  // 🔹 Header hiển thị ảnh & nút menu
   const renderHeader = () => (
     <ImageBackground
       source={
@@ -277,7 +244,6 @@ export default function GroupDetailScreen({
       className="h-52 w-full mb-4"
     >
       <View className="flex-1 justify-between p-4 bg-black/40">
-        {/* Thanh top */}
         <View className="flex-row justify-between items-center mt-2">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -286,10 +252,8 @@ export default function GroupDetailScreen({
             <Feather name="arrow-left" size={20} color="#000" />
           </TouchableOpacity>
 
-          {/* Nếu là thành viên → có nút đăng bài + menu, nếu chưa → nút tham gia */}
           {isMember ? (
             <View className="flex-row items-center space-x-3">
-              {/* ✅ NÚT ĐĂNG BÀI - LUÔN HIỂN THỊ */}
               <TouchableOpacity
                 onPress={handleCreatePost}
                 className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center mr-2"
@@ -314,7 +278,6 @@ export default function GroupDetailScreen({
           )}
         </View>
 
-        {/* Thông tin nhóm */}
         <View>
           <Text className="text-white text-2xl font-bold">{group.name}</Text>
           <View className="flex-row items-center mt-1">
@@ -366,7 +329,7 @@ export default function GroupDetailScreen({
       <FlatList
         data={products}
         keyExtractor={(item: any) => String(item.id)}
-        numColumns={1} // ✅ chỉ 1 sản phẩm mỗi hàng
+        numColumns={1}
         ListHeaderComponent={
           <>
             {renderHeader()}
@@ -387,23 +350,19 @@ export default function GroupDetailScreen({
           />
         }
         renderItem={({ item }) => {
-          // ✅ Lấy ảnh sản phẩm
           const imageUrl =
             item.thumbnail_url ||
-            (item.images?.length > 0 ? item.images[0].image_url : null) ||
-            "Không có hình";
-          console.log(item);
+            (item.images?.length > 0 ? item.images[0].image_url : null);
 
           const priceFormat =
             item.price === 0
               ? "Miễn phí"
               : item.price == null
                 ? "Trao đổi"
-                : item.price;
+                : `${item.price.toLocaleString()} đ`;
 
           return (
             <View className="mb-8 p-3 bg-white rounded-xl shadow-md">
-              {/* 🧑‍💼 Thông tin người đăng */}
               <View className="flex-row items-center mb-3">
                 <Image
                   source={
@@ -417,7 +376,6 @@ export default function GroupDetailScreen({
                   <Text className="text-gray-800 font-semibold">
                     {item.user?.name || "Người dùng"}
                   </Text>
-
                   <TouchableOpacity
                     className={`mb-1.5 px-2 py-1 rounded-full self-start ${
                       item?.postType?.name === "Đăng bán"
@@ -430,19 +388,15 @@ export default function GroupDetailScreen({
                     </Text>
                   </TouchableOpacity>
                 </View>
-
-                {/* 💰 Giá sản phẩm */}
                 <Text className="text-red-400 font-semibold text-lg mt-2 pr-5">
                   {priceFormat}
                 </Text>
               </View>
 
-              {/* 🏷️ Tên sản phẩm */}
               <Text className="font-bold text-base text-gray-900 mb-2">
                 {item.name}
               </Text>
 
-              {/* 📍 Địa chỉ */}
               {item.location && (
                 <View className="flex-row items-center my-2">
                   <Feather name="map-pin" size={14} color="#6b7280" />
@@ -452,7 +406,6 @@ export default function GroupDetailScreen({
                 </View>
               )}
 
-              {/* 🖼️ Hình ảnh sản phẩm */}
               <TouchableOpacity
                 onPress={() => {
                   if (!isMember && group.isPublic) {
@@ -462,15 +415,16 @@ export default function GroupDetailScreen({
                     );
                     return;
                   }
-
                   navigation.navigate("ProductDetail", { product: item });
                 }}
               >
-                <Image
-                  source={{ uri: imageUrl }}
-                  className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
-                  resizeMode="cover"
-                />
+                {imageUrl && (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
+                    resizeMode="cover"
+                  />
+                )}
               </TouchableOpacity>
             </View>
           );
@@ -495,7 +449,6 @@ export default function GroupDetailScreen({
         }
       />
 
-      {/* Menu (giữ nguyên phần này) */}
       {isMember && (
         <Modal
           visible={isMenuVisible}
@@ -515,9 +468,7 @@ export default function GroupDetailScreen({
                 {menuItems.map((item, index) => (
                   <TouchableOpacity
                     key={item.name}
-                    onPress={() => {
-                      item.action();
-                    }}
+                    onPress={item.action}
                     className={`flex-row items-center p-3 ${
                       item.isDestructive ? "border-t border-gray-100" : ""
                     } ${index > 0 ? "border-t border-gray-50" : ""}`}
@@ -552,15 +503,22 @@ export default function GroupDetailScreen({
                         if (!v) {
                           Alert.alert(
                             "Cảnh báo",
-                            "Nếu có những bài viết vi phạm, sẽ bị xóa!",
+                            "Nếu tắt chế độ duyệt bài, các bài viết sẽ được đăng tự động mà không cần phê duyệt",
                             [{ text: "Đã hiểu" }]
                           );
                         }
                         setIsApprovalEnabled(v);
-                        // Gọi API update group.mustApprovePosts
-                        await axios.patch(`${path}/groups/${group.id}`, {
-                          mustApprovePosts: v,
-                        });
+                        try {
+                          const token = await AsyncStorage.getItem("token");
+                          await axios.patch(
+                            `${path}/groups/${group.id}`,
+                            { mustApprovePosts: v },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                        } catch (err) {
+                          console.error("Lỗi cập nhật:", err);
+                          setIsApprovalEnabled(!v);
+                        }
                       }}
                       value={isApprovalEnabled}
                     />

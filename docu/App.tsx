@@ -42,6 +42,10 @@ import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import { StatusBar } from 'expo-status-bar';
 import ManageProductsScreen from './screens/admin/ManageProductsScreen';
 import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
+import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
+import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
+import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
+import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -89,6 +93,11 @@ export default function App() {
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
            <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
+        <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
+        <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
+        <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
+        <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

@@ -10,6 +10,7 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Repository, FindManyOptions, In } from 'typeorm';
 import { ProductStatus } from 'src/entities/product-status.entity';
+import { User } from 'src/entities/user.entity';
 
 @Injectable()
 export class GroupService {
@@ -27,30 +28,61 @@ export class GroupService {
     private readonly productStatusRepo: Repository<ProductStatus>,
   ) {}
 
-  // CRUD Groups
+  // ==================== CRUD Groups ====================
 
   /** Tạo nhóm mới */
   async create(data: Partial<Group>, userId: number): Promise<Group> {
     const group = this.groupRepo.create({
       name: data.name,
+      description: data.description,
       isPublic: data.isPublic ?? true,
       mustApprovePosts: data.isPublic ? true : false,
       thumbnail_url: data.thumbnail_url || undefined,
       owner_id: userId,
       count_member: 1,
-      status_id: 1, // Hoạt động
+      status_id: 1,
     });
     const savedGroup = await this.groupRepo.save(group);
 
-    // Tạo bản ghi leader trong group_members
     const member = this.groupMemberRepo.create({
       group_id: savedGroup.id,
       user_id: userId,
-      group_role_id: 2, // 2 = leader
+      group_role_id: 2, // leader
     });
     await this.groupMemberRepo.save(member);
 
     return savedGroup;
+  }
+
+  /** Cập nhật thông tin nhóm */
+  async updateGroup(
+    groupId: number,
+    userId: number,
+    data: {
+      name?: string;
+      description?: string;
+      thumbnail_url?: string;
+      mustApprovePosts?: boolean;
+    },
+  ): Promise<Group> {
+    const role = await this.getUserRole(groupId, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException(
+        'Chỉ trưởng nhóm mới có quyền sửa thông tin',
+      );
+    }
+
+    const group = await this.groupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+    if (data.name !== undefined) group.name = data.name;
+    if (data.description !== undefined) group.description = data.description;
+    if (data.thumbnail_url !== undefined)
+      group.thumbnail_url = data.thumbnail_url;
+    if (data.mustApprovePosts !== undefined)
+      group.mustApprovePosts = data.mustApprovePosts;
+
+    return this.groupRepo.save(group);
   }
 
   /** Xóa nhóm */
@@ -60,7 +92,6 @@ export class GroupService {
       throw new ForbiddenException('Bạn không có quyền xóa nhóm này');
     }
 
-    // Xóa các liên quan: members, products
     await this.groupMemberRepo.delete({ group_id: groupId });
     await this.productRepo.delete({ group_id: groupId });
 
@@ -70,19 +101,27 @@ export class GroupService {
     await this.groupRepo.remove(group);
   }
 
+  // ==================== Duyệt Bài Viết ====================
+
+  /** Lấy danh sách bài viết chờ duyệt */
   async getPendingPosts(groupId: number, userId: number) {
     const role = await this.getUserRole(groupId, userId);
     if (role !== 'leader') {
-      throw new ForbiddenException('Chỉ leader mới được duyệt bài viết');
+      throw new ForbiddenException(
+        'Chỉ trưởng nhóm mới được xem bài chờ duyệt',
+      );
     }
 
-    return this.productRepo.find({
-      where: { group_id: groupId, productStatus: { id: 1 } }, // 1 = chờ duyệt
-      relations: ['user', 'images', 'postType'],
+    const posts = await this.productRepo.find({
+      where: { group_id: groupId, productStatus: { id: 1 } },
+      relations: ['user', 'images', 'postType', 'productStatus'],
       order: { created_at: 'DESC' },
     });
+
+    return posts.map((p) => this.formatPost(p));
   }
 
+  /** Duyệt hoặc từ chối bài viết */
   async approvePost(postId: number, approve: boolean, userId: number) {
     const post = await this.productRepo.findOne({
       where: { id: postId },
@@ -92,36 +131,192 @@ export class GroupService {
 
     const role = await this.getUserRole(post.group_id, userId);
     if (role !== 'leader') {
-      throw new ForbiddenException('Chỉ leader mới được duyệt bài viết');
+      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt bài viết');
     }
 
     if (approve) {
       const status = await this.productStatusRepo.findOne({ where: { id: 2 } });
       post.productStatus = status;
+      post.is_approved = true;
       await this.productRepo.save(post);
-      return { message: 'Đã duyệt bài viết' };
+      return { success: true, message: 'Đã duyệt bài viết' };
     } else {
       await this.productRepo.delete(postId);
-      return { message: 'Đã từ chối và xóa bài viết' };
+      return { success: true, message: 'Đã từ chối và xóa bài viết' };
     }
   }
 
-  /** Lấy tất cả nhóm (tùy chọn filter/take) */
-  async findAll(options?: FindManyOptions<Group>): Promise<Group[]> {
-    return this.groupRepo.find({
-      relations: ['owner', 'status', 'members'],
-      order: { created_at: 'DESC' },
-      ...options,
+  // ==================== Quản Lý Thành Viên ====================
+
+  /** Lấy danh sách thành viên trong nhóm */
+  async getMembers(groupId: number, userId: number) {
+    const isMember = await this.isMember(groupId, userId);
+    if (!isMember) {
+      throw new ForbiddenException('Bạn phải là thành viên để xem danh sách');
+    }
+
+    const members = await this.groupMemberRepo.find({
+      where: { group_id: groupId },
+      relations: ['user', 'role'],
+      order: { created_at: 'ASC' },
     });
+
+    return members.map((m) => ({
+      id: m.user_id,
+      name: m.user.fullName,
+      email: m.user.email,
+      avatar: m.user.image,
+      role: Number(m.group_role_id) === 2 ? 'leader' : 'member',
+      roleName: Number(m.group_role_id) === 2 ? 'Trưởng nhóm' : 'Thành viên',
+      joinedAt: m.created_at,
+    }));
   }
 
-  async findOneById(id: number) {
-    return this.groupRepo.findOne({ where: { id } });
+  /** Lấy danh sách yêu cầu tham gia chờ duyệt (cho nhóm private) */
+  async getPendingMembers(groupId: number, userId: number) {
+    const role = await this.getUserRole(groupId, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt thành viên');
+    }
+
+    const group = await this.groupRepo.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+    // Giả sử bạn có bảng group_join_requests hoặc dùng cột pending trong group_members
+    // Ở đây tôi giả định bạn thêm cột is_approved vào GroupMember
+    // Nếu chưa có, bạn cần tạo bảng riêng: group_join_requests
+
+    // Tạm thời return empty array, bạn cần tạo entity GroupJoinRequest
+    return [];
   }
 
-  // Join/Leave Group
+  /** Duyệt thành viên vào nhóm (cho nhóm private) */
+  async approveMember(
+    groupId: number,
+    targetUserId: number,
+    approve: boolean,
+    userId: number,
+  ) {
+    const role = await this.getUserRole(groupId, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt thành viên');
+    }
 
-  /** User tham gia nhóm */
+    // Logic duyệt thành viên
+    // Giả sử bạn có bảng group_join_requests
+    // Xóa request và thêm vào group_members nếu approve = true
+
+    if (approve) {
+      const exists = await this.groupMemberRepo.findOne({
+        where: { group_id: groupId, user_id: targetUserId },
+      });
+      if (exists)
+        throw new BadRequestException('Người này đã là thành viên rồi');
+
+      const member = this.groupMemberRepo.create({
+        group_id: groupId,
+        user_id: targetUserId,
+        group_role_id: 1,
+      });
+      await this.groupMemberRepo.save(member);
+      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
+
+      return { success: true, message: 'Đã duyệt thành viên' };
+    } else {
+      // Xóa request nếu từ chối
+      return { success: true, message: 'Đã từ chối yêu cầu tham gia' };
+    }
+  }
+
+  /** Xóa thành viên khỏi nhóm (chỉ leader) */
+  async removeMember(
+    groupId: number,
+    targetUserId: number,
+    userId: number,
+  ): Promise<void> {
+    const role = await this.getUserRole(groupId, userId);
+    if (role !== 'leader') {
+      throw new ForbiddenException(
+        'Chỉ trưởng nhóm mới có quyền xóa thành viên',
+      );
+    }
+
+    const member = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: targetUserId },
+    });
+
+    if (!member) throw new NotFoundException('Người này không phải thành viên');
+    if (member.group_role_id === 2) {
+      throw new BadRequestException('Không thể xóa trưởng nhóm');
+    }
+
+    await this.groupMemberRepo.delete({
+      group_id: groupId,
+      user_id: targetUserId,
+    });
+    await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
+  }
+
+  /** Chuyển quyền trưởng nhóm */
+  async transferLeadership(
+    groupId: number,
+    newLeaderId: number,
+    currentUserId: number,
+  ): Promise<void> {
+    const role = await this.getUserRole(groupId, currentUserId);
+    if (role !== 'leader') {
+      throw new ForbiddenException('Chỉ trưởng nhóm mới có quyền chuyển quyền');
+    }
+
+    const newLeaderMember = await this.groupMemberRepo.findOne({
+      where: { group_id: groupId, user_id: newLeaderId },
+    });
+
+    if (!newLeaderMember) {
+      throw new NotFoundException('Người được chọn không phải thành viên');
+    }
+
+    // Chuyển current leader về member
+    await this.groupMemberRepo.update(
+      { group_id: groupId, user_id: currentUserId },
+      { group_role_id: 1 },
+    );
+
+    // Chuyển new leader lên
+    await this.groupMemberRepo.update(
+      { group_id: groupId, user_id: newLeaderId },
+      { group_role_id: 2 },
+    );
+
+    // Cập nhật owner_id trong bảng groups
+    await this.groupRepo.update({ id: groupId }, { owner_id: newLeaderId });
+  }
+
+  // ==================== Quản Lý Nội Dung ====================
+
+  /** Thống kê bài viết của user trong nhóm */
+  async getMyPostsInGroup(groupId: number, userId: number) {
+    const isMember = await this.isMember(groupId, userId);
+    if (!isMember) {
+      throw new ForbiddenException('Bạn phải là thành viên để xem nội dung');
+    }
+
+    const posts = await this.productRepo.find({
+      where: { group_id: groupId, user_id: userId },
+      relations: ['images', 'postType', 'productStatus'],
+      order: { created_at: 'DESC' },
+    });
+
+    return {
+      total: posts.length,
+      approved: posts.filter((p) => p.productStatus?.id === 2).length,
+      pending: posts.filter((p) => p.productStatus?.id === 1).length,
+      posts: posts.map((p) => this.formatPost(p)),
+    };
+  }
+
+  // ==================== Join/Leave Group ====================
+
   async joinGroup(groupId: number, userId: number): Promise<GroupMember> {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
@@ -131,19 +326,25 @@ export class GroupService {
     });
     if (exists) throw new BadRequestException('Bạn đã là thành viên');
 
+    // Nếu là nhóm private, cần tạo request thay vì join trực tiếp
+    if (!group.isPublic) {
+      // TODO: Tạo group_join_request
+      throw new BadRequestException(
+        'Nhóm riêng tư, vui lòng chờ trưởng nhóm duyệt',
+      );
+    }
+
     const member = this.groupMemberRepo.create({
       group_id: groupId,
       user_id: userId,
-      group_role_id: 1, // 1 = member
+      group_role_id: 1,
     });
     const saved = await this.groupMemberRepo.save(member);
 
-    // Tăng số lượng thành viên
     await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
     return saved;
   }
 
-  /** User rời nhóm */
   async leaveGroup(groupId: number, userId: number): Promise<void> {
     const member = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
@@ -166,9 +367,20 @@ export class GroupService {
     }
   }
 
-  // Get/List Groups
+  // ==================== Get/List Groups ====================
 
-  /** Lấy nhóm nổi bật (top theo số member) */
+  async findAll(options?: FindManyOptions<Group>): Promise<Group[]> {
+    return this.groupRepo.find({
+      relations: ['owner', 'status', 'members'],
+      order: { created_at: 'DESC' },
+      ...options,
+    });
+  }
+
+  async findOneById(id: number) {
+    return this.groupRepo.findOne({ where: { id } });
+  }
+
   async getFeaturedGroups(limit = 5) {
     const groups = await this.groupRepo.find({
       order: { count_member: 'DESC' },
@@ -190,7 +402,6 @@ export class GroupService {
     );
   }
 
-  /** Lấy nhóm mới tham gia của user */
   async getLatestGroups(userId: number, limit = 5) {
     const memberships = await this.groupMemberRepo.find({
       where: { user_id: userId },
@@ -218,7 +429,6 @@ export class GroupService {
     );
   }
 
-  /** Lấy tất cả nhóm user đã tham gia */
   async findGroupsOfUser(userId: number) {
     const memberships = await this.groupMemberRepo.find({
       where: { user_id: userId },
@@ -239,7 +449,6 @@ export class GroupService {
     );
   }
 
-  /** Lấy các nhóm user chưa tham gia */
   async findGroupsUserNotJoined(userId?: number) {
     let allGroups = await this.groupRepo.find({
       relations: ['owner', 'members'],
@@ -264,9 +473,8 @@ export class GroupService {
     }));
   }
 
-  // Role & Membership Utilities
+  // ==================== Utilities ====================
 
-  /** Kiểm tra role user trong nhóm */
   async getUserRole(
     groupId: number,
     userId: number,
@@ -278,7 +486,6 @@ export class GroupService {
     return Number(member.group_role_id) === 2 ? 'leader' : 'member';
   }
 
-  /** Kiểm tra user có phải thành viên nhóm */
   async isMember(groupId: number, userId: number): Promise<boolean> {
     const count = await this.groupMemberRepo.count({
       where: { group_id: groupId, user_id: userId },
@@ -286,26 +493,22 @@ export class GroupService {
     return count > 0;
   }
 
-  /** Đếm số bài viết trong nhóm */
   private async countPostsByGroup(groupId: number): Promise<number> {
     return this.productRepo.count({ where: { group_id: groupId } });
   }
 
-  // Group Products
+  // ==================== Group Products ====================
 
-  /** Lấy danh sách sản phẩm của nhóm (kiểm tra quyền) */
   async getGroupProducts(groupId: number, userId: number) {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
     const isMember = await this.isMember(groupId, userId);
 
-    //  Nếu nhóm PRIVATE và user chưa tham gia → chặn luôn
     if (!group.isPublic && !isMember) {
       throw new ForbiddenException('Bạn cần tham gia nhóm để xem bài viết');
     }
 
-    // Nếu nhóm PUBLIC thì user vẫn xem được danh sách
     const products = await this.productRepo.find({
       where: { group_id: groupId, productStatus: { id: 2 } },
       relations: [
@@ -323,9 +526,7 @@ export class GroupService {
     return products.map((p) => this.formatPost(p));
   }
 
-  /** Lấy bài viết từ các nhóm user tham gia (chỉ bài đã duyệt) */
   async findPostsFromUserGroups(userId: number, limit?: number) {
-    // Lấy danh sách group user tham gia
     const memberships = await this.groupMemberRepo.find({
       where: { user_id: userId },
       select: ['group_id'],
@@ -334,11 +535,10 @@ export class GroupService {
     const groupIds = memberships.map((m) => m.group_id);
     if (!groupIds.length) return [];
 
-    // Lấy bài viết từ các group, chỉ các bài đã duyệt
     const products = await this.productRepo.find({
       where: {
         group_id: In(groupIds),
-        productStatus: { id: 2 }, // ✅ chỉ lấy bài đã duyệt
+        productStatus: { id: 2 },
       },
       relations: ['images', 'user', 'category', 'subCategory', 'group'],
       order: { created_at: 'DESC' },
@@ -354,10 +554,7 @@ export class GroupService {
     const tag =
       categoryName && subCategoryName
         ? `${categoryName} - ${subCategoryName}`
-        : categoryName ||
-          subCategoryName ||
-          p.dealType?.name ||
-          'Không có danh mục';
+        : categoryName || subCategoryName || 'Không có danh mục';
 
     const address =
       typeof p.address_json === 'string'
@@ -402,99 +599,12 @@ export class GroupService {
             phone: p.user.phone,
           }
         : null,
-      author_name: p.user?.fullName || 'Người bán',
-      author: p.author || null,
-      year: p.year || null,
-      mileage: p.mileage ?? null,
-
       postType: p.postType
         ? { id: p.postType.id, name: p.postType.name }
-        : null,
-      productType: p.productType
-        ? { id: p.productType.id, name: p.productType.name }
-        : null,
-      origin: p.origin ? { id: p.origin.id, name: p.origin.name } : null,
-      material: p.material
-        ? { id: p.material.id, name: p.material.name }
-        : null,
-      size: p.size ? { id: p.size.id, name: p.size.name } : null,
-      brand: p.brand ? { id: p.brand.id, name: p.brand.name } : null,
-      color: p.color ? { id: p.color.id, name: p.color.name } : null,
-      capacity: p.capacity
-        ? { id: p.capacity.id, name: p.capacity.name }
-        : null,
-      warranty: p.warranty
-        ? { id: p.warranty.id, name: p.warranty.name }
-        : null,
-      productModel: p.productModel
-        ? { id: p.productModel.id, name: p.productModel.name }
-        : null,
-      processor: p.processor
-        ? { id: p.processor.id, name: p.processor.name }
-        : null,
-      ramOption: p.ramOption
-        ? { id: p.ramOption.id, name: p.ramOption.name }
-        : null,
-      storageType: p.storageType
-        ? { id: p.storageType.id, name: p.storageType.name }
-        : null,
-      graphicsCard: p.graphicsCard
-        ? { id: p.graphicsCard.id, name: p.graphicsCard.name }
-        : null,
-      breed: p.breed ? { id: p.breed.id, name: p.breed.name } : null,
-      ageRange: p.ageRange
-        ? { id: p.ageRange.id, name: p.ageRange.name }
-        : null,
-      gender: p.gender ? { id: p.gender.id, name: p.gender.name } : null,
-      engineCapacity: p.engineCapacity
-        ? { id: p.engineCapacity.id, name: p.engineCapacity.name }
         : null,
       productStatus: p.productStatus
         ? { id: p.productStatus.id, name: p.productStatus.name }
         : null,
-
-      dealType: p.dealType
-        ? { id: p.dealType.id, name: p.dealType.name }
-        : null,
-      condition: p.condition
-        ? { id: p.condition.id, name: p.condition.name }
-        : null,
-
-      category: p.category
-        ? {
-            id: p.category.id,
-            name: p.category.name,
-            image: p.category.image,
-            hot: p.category.hot,
-          }
-        : null,
-      subCategory: p.subCategory
-        ? {
-            id: p.subCategory.id,
-            name: p.subCategory.name,
-            parent_category_id: p.subCategory.parent_category_id,
-            source_table: p.subCategory.source_table,
-            source_id: p.subCategory.source_id,
-          }
-        : null,
-
-      category_change: p.category_change
-        ? {
-            id: p.category_change.id,
-            name: p.category_change.name,
-            image: p.category_change.image,
-          }
-        : null,
-      sub_category_change: p.sub_category_change
-        ? {
-            id: p.sub_category_change.id,
-            name: p.sub_category_change.name,
-            parent_category_id: p.sub_category_change.parent_category_id,
-            source_table: p.sub_category_change.source_table,
-            source_id: p.sub_category_change.source_id,
-          }
-        : null,
-
       group: p.group
         ? {
             id: p.group_id,
@@ -502,20 +612,8 @@ export class GroupService {
             image: p.group.thumbnail_url,
           }
         : null,
-
       images,
       imageCount: images.length,
-
-      deal_type_id: p.deal_type_id,
-      category_id: p.category_id,
-      sub_category_id: p.sub_category_id,
-      category_change_id: p.category_change_id,
-      sub_category_change_id: p.sub_category_change_id,
-      status_id: p.status_id,
-      visibility_type: p.visibility_type,
-      is_approved: p.is_approved,
-
-      address_json: p.address_json,
       location,
       tag,
       created_at: p.created_at,

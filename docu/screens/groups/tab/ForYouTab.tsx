@@ -183,14 +183,14 @@ export default function ForYouTab({
           }}
         />
         <View className="items-center my-4">
-          <TouchableOpacity
+          {/* <TouchableOpacity
             onPress={() => navigation.navigate("PostsTab")}
             className="bg-blue-600 px-6 py-3 rounded-full"
           >
             <Text className="text-white font-semibold text-base">
               Xem bài viết khac
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
     </ScrollView>

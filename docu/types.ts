@@ -54,6 +54,10 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   ManageProductsScreen: undefined;
   PostsTab: undefined;
+  MyGroupPostsScreen: { groupId: number };
+  GroupMembersScreen: { groupId: number; isLeader: boolean };
+  ApprovePostsScreen: { groupId: number };
+  EditGroupScreen: { group: any };
 
   GroupDetailScreen: { group: GroupType };
   PostGroupFormScreen: {

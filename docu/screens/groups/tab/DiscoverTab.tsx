@@ -113,10 +113,10 @@ export default function DiscoverTab() {
       await axios.post(`${path}/groups/${groupId}/join`, null, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      Alert.alert("✅ Đã tham gia nhóm!");
+      Alert.alert("Bạn đã tham gia nhóm!");
     } catch (err) {
-      console.error("❌ Lỗi khi tham gia nhóm:", err);
-      Alert.alert("❌ Không thể tham gia nhóm");
+      console.error("Lỗi khi tham gia nhóm:", err);
+      Alert.alert("Không thể tham gia nhóm");
     }
   };
 
