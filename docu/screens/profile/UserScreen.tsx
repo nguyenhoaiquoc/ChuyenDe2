@@ -23,40 +23,75 @@ export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [name, setName] = useState("");
-
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [roleId, setRoleId] = useState<string | null>(null); 
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
-        if (!userId) return;
 
+        // Nếu không có userId (ví dụ: người dùng chưa đăng nhập),
+        // thử tải dữ liệu local (nếu có) rồi thoát
+        if (!userId || !token) {
+          const localName = await AsyncStorage.getItem("userName");
+          const localAvatar = await AsyncStorage.getItem("userAvatar");
+          const localRoleId = await AsyncStorage.getItem("role_id");
+          if (localName) setName(localName);
+          if (localAvatar) setAvatar(localAvatar);
+          if (localRoleId) setRoleId(localRoleId);
+          return;
+        }
+
+        // Nếu có userId, gọi API để lấy dữ liệu MỚI NHẤT
         const res = await axios.get(`${path}/users/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        // Lấy dữ liệu từ API response
         const fullName = res.data.fullName || res.data.name || "";
         const image = res.data.image || null;
+
+        // ✨ LẤY ROLE_ID TỪ API ✨
+        const apiRoleId =
+          res.data.roleId != null ? String(res.data.roleId) : null;
+        // Cập nhật State
         setName(fullName);
         setAvatar(image);
+        if (apiRoleId) {
+          setRoleId(apiRoleId); // Set state bằng dữ liệu mới từ API
+        }
+
+        // Cập nhật lại AsyncStorage bằng dữ liệu mới nhất
         await AsyncStorage.setItem("userName", fullName);
-        if (image) await AsyncStorage.setItem("userAvatar", image);
-      } catch {
+        if (image) {
+          await AsyncStorage.setItem("userAvatar", image);
+        } else {
+          await AsyncStorage.removeItem("userAvatar"); // Xóa nếu avatar bị gỡ
+        }
+        if (apiRoleId) {
+          await AsyncStorage.setItem("role_id", apiRoleId); // Cập nhật role_id
+        }
+      } catch (err) {
+        // Nếu API lỗi, TẠM DÙNG dữ liệu cũ trong Storage
+        console.log("Lỗi fetchUser, dùng fallback data:", err);
         const localName = await AsyncStorage.getItem("userName");
         const localAvatar = await AsyncStorage.getItem("userAvatar");
+        const localRoleId = await AsyncStorage.getItem("role_id");
         if (localName) setName(localName);
         if (localAvatar) setAvatar(localAvatar);
+        if (localRoleId) setRoleId(localRoleId);
       }
     };
+
     fetchUser();
-  }, []);
+  }, []); 
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {/* --- Phần thông tin cá nhân --- */}
         <View
           style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}
         >
@@ -95,7 +130,7 @@ export default function UserScreen() {
               />
             </View>
           </TouchableOpacity>
-          {/* Tên và thông tin theo dõi */}
+          {/* Tên và thông tin*/}
           <Text
             style={{
               fontSize: 20,
@@ -141,17 +176,27 @@ export default function UserScreen() {
           >
             <UtilityItem
               icon="person-outline"
-              title="Tài khoản của tôi  "
+              title="Tài khoản của tôi"
               onPress={() => navigation.navigate("UserInforScreen")}
             />
+
+            {roleId === "1" && (
+              <UtilityItem
+                icon="shield-checkmark-outline"
+                title="Quản lý Admin"
+                color="#3b82f6" // Màu xanh cho nổi bật
+                onPress={() => navigation.navigate("HomeAdminScreen")}
+              />
+            )}
+
             <UtilityItem
               icon="newspaper-outline"
-              title="Quản lý tin "
+              title="Quản lý tin"
               onPress={() => navigation.navigate("ManagePostsScreen")}
             />
             <UtilityItem
               icon="heart-outline"
-              title="Tin đăng đã thích "
+              title="Tin đăng đã thích"
               onPress={() => navigation.navigate("SavedPostsScreen")}
             />
             <UtilityItem
@@ -187,12 +232,13 @@ export default function UserScreen() {
                   console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
                 }
 
-                // Xoá thông tin người dùng và chuyển hướng
+                // ✨ 3. CẬP NHẬT LOGIC ĐĂNG XUẤT (THÊM "role_id") ✨
                 await AsyncStorage.multiRemove([
                   "token",
                   "userId",
                   "userName",
                   "userAvatar",
+                  "role_id", // 👈 PHẢI THÊM CÁI NÀY
                 ]);
                 navigation.reset({
                   index: 0,
@@ -207,24 +253,24 @@ export default function UserScreen() {
     </SafeAreaView>
   );
 }
-// Component UtilityItem - Đảm bảo không có raw strings
 function UtilityItem({
   icon,
   title,
   isLast = false,
   onPress,
-  textStyle, // thêm prop
+  textStyle,
   color,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   isLast?: boolean;
   onPress?: () => void;
-  textStyle?: object; // kiểu style cho text
-  color?: string; // màu tùy chọn
+  textStyle?: object;
+  color?: string;
 }) {
-  const textColor = color || "#1f2937"; // default text
-  const iconColor = color || "#6b7280"; // default icon
+  const textColor = color || "#1f2937";
+  const iconColor = color || "#6b7280";
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -242,7 +288,7 @@ function UtilityItem({
         <Ionicons name={icon} size={24} color={iconColor} />
         <Text
           style={[
-            { marginLeft: 16, fontSize: 16, color: "#1f2937" },
+            { marginLeft: 16, fontSize: 16, color: textColor }, 
             textStyle,
           ]}
         >

@@ -1,6 +1,18 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query, Req,
-  UploadedFiles, UseGuards, UseInterceptors, ParseIntPipe,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Query,
+  Req,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+  ParseIntPipe,
+  Delete,
+  Request,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -41,12 +53,6 @@ export class ProductController {
     return this.productService.findByUserId(userId);
   }
 
-  // 🟢 Lấy chi tiết 1 bài
-  @Get(':id')
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productService.findById(id);
-  }
-
   // 🟣 Admin xem tất cả bài (bỏ lọc duyệt)
   @Get('admin/all')
   async findAllForAdmin() {
@@ -60,5 +66,39 @@ export class ProductController {
     @Body() dto: UpdateProductStatusDto,
   ) {
     return this.productService.updateProductStatus(id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard) 
+  @Post(':id/soft-delete')
+  softDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    const userId = req.user.id; 
+    return this.productService.softDeleteProduct(id, userId);
+  }
+
+  @UseGuards(JwtAuthGuard) 
+  @Post(':id/restore')
+  restore(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    const userId = req.user.id; 
+    return this.productService.restoreProduct(id, userId);
+  }
+
+  @UseGuards(JwtAuthGuard) 
+  @Delete(':id/hard-delete')
+  hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    const userId = req.user.id; 
+    return this.productService.hardDeleteProduct(id, userId);
+  }
+
+@UseGuards(JwtAuthGuard) 
+  @Get('trash') 
+  getDeleted(@Request() req) {
+    const userId = req.user.id; 
+    return this.productService.findDeletedProducts(userId);
+  }
+
+  // 🟢 Lấy chi tiết 1 bài
+  @Get(':id')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.productService.findById(id);
   }
 }

@@ -1,5 +1,6 @@
 import { GroupService } from './../groups/group.service';
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
@@ -45,6 +46,7 @@ import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { ProductStatusService } from 'src/product-statuses/product-status.service';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
+import { Favorite } from 'src/entities/favorite.entity';
 
 @Injectable()
 export class ProductService {
@@ -54,6 +56,9 @@ export class ProductService {
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImage)
     private readonly imageRepo: Repository<ProductImage>,
+
+    @InjectRepository(Favorite) // 👈 THÊM DÒNG NÀY
+    private readonly favoriteRepo: Repository<Favorite>,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -790,7 +795,7 @@ export class ProductService {
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId } }, // không lọc is_approved
+      where: { user: { id: userId }, is_deleted: false, }, // không lọc is_approved
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -881,5 +886,95 @@ export class ProductService {
     // this.notificationService.notifyUserOfApproval(updatedProduct);
 
     return updatedProduct;
+  }
+
+  // xóa tạm thời (đưa vào thùng rác)
+  async softDeleteProduct(productId: number, userId: number): Promise<string> {
+
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['user'],
+    });
+    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+
+    if (product.user!.id !== userId)
+      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
+
+    product.is_deleted = true;
+    product.deleted_at = new Date();
+
+    await this.productRepo.save(product);
+    console.log(`✅ Sản phẩm ${product.id} đã được chuyển vào thùng rác.`);
+
+    return `Sản phẩm ID=${productId} đã được chuyển vào thùng rác`;
+  }
+
+  //khôi phục sản phẩm đã xóa tạm thời
+  async restoreProduct(productId: number, userId: number): Promise<string> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['user'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
+    }
+
+    if (!product.user || product.user.id !== userId) {
+      throw new UnauthorizedException(
+        'Bạn không có quyền khôi phục sản phẩm này.',
+      );
+    }
+
+    if (!product.is_deleted) {
+      throw new Error('Sản phẩm chưa bị xóa, không thể khôi phục.');
+    }
+
+    product.is_deleted = false;
+    product.deleted_at = null;
+    await this.productRepo.save(product);
+
+    this.logger.log(`♻️ Đã khôi phục sản phẩm ID=${productId}`);
+    return `Đã khôi phục sản phẩm ID=${productId}`;
+  }
+
+  //lấy danh sách “Thùng rác” (đã xóa tạm thời)
+  async findDeletedProducts(userId: number): Promise<any[]> {
+    const products = await this.productRepo.find({
+      where: { user: { id: userId }, is_deleted: true },
+      relations: ['images', 'category', 'subCategory', 'dealType'],
+      order: { deleted_at: 'DESC' },
+    });
+
+    return this.formatProducts(products);
+  }
+
+  //xóa vĩnh viễn
+  async hardDeleteProduct(productId: number, userId: number): Promise<string> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['user', 'images'],
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
+    }
+
+    if (!product.user || product.user.id !== userId) {
+      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
+    }
+
+    await this.favoriteRepo.delete({ product: { id: productId } });
+    
+    // Xóa ảnh liên quan trước
+    if (product.images && product.images.length > 0) {
+      await this.imageRepo.remove(product.images);
+    }
+
+    // Xóa sản phẩm vĩnh viễn
+    await this.productRepo.remove(product);
+
+    this.logger.log(`🧨 Đã xóa vĩnh viễn sản phẩm ID=${productId}`);
+    return `Đã xóa vĩnh viễn sản phẩm ID=${productId}`;
   }
 }
