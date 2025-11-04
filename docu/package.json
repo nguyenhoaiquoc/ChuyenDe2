@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
+    "@google-cloud/vision": "^5.3.4",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-picker/picker": "2.11.1",
@@ -23,6 +24,8 @@
     "class-validator": "^0.14.2",
     "engine.io-client": "^6.5.1",
     "expo": "~54.0.9",
+    "expo-barcode-scanner": "^13.0.1",
+    "expo-camera": "~17.0.9",
     "expo-clipboard": "~8.0.7",
     "expo-document-picker": "^14.0.7",
     "expo-image-manipulator": "~14.0.7",

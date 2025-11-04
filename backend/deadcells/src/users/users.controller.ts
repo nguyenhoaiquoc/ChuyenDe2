@@ -1,14 +1,20 @@
 import {
   Controller,
+  ParseIntPipe ,
   Get,
   Patch,
+  Post,
+  Req,
+  
+  UploadedFile,
   Param,
   UploadedFiles,
   UseInterceptors,
   Body,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor,FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
@@ -72,3 +78,5 @@ export class UsersController {
     return this.usersService.updateUser(+id, updateData);
   }
 }
+    // Update thông tin sinh viên từ QR hoặc FormData
+ 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException,BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
@@ -20,6 +20,8 @@ export class UsersService {
     }
     return user;
   }
+// user.service.ts
+  
 
   /**
    * ✅ HÀM CẬP NHẬT ĐÃ SỬA LỖI
@@ -30,11 +32,6 @@ export class UsersService {
     
     // 1. Lấy user từ DB
     const user = await this.findOne(id); // Dùng hàm findOne đã có sẵn
-
-    // 2. Gán thủ công (Sửa lỗi 500)
-    // ❌ Bỏ: Object.assign(user, data);
-
-    // === CÁC TRƯỜNG TỪ EditProfileScreen ===
     if (data.fullName !== undefined) user.fullName = data.fullName;
     if (data.phone !== undefined) user.phone = data.phone;
     if (data.address_json !== undefined) user.address_json = data.address_json;
@@ -80,4 +77,5 @@ export class UsersService {
   async findAll(): Promise<User[]> {
     return this.userRepo.find();
   }
+
 }

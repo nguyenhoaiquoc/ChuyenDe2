@@ -774,103 +774,6 @@ export class ProductService {
 
     return await this.formatProduct(product);
   }
-   // Tìm kiếm + lọc + sắp xếp
-  async searchProducts(search: string): Promise<Product[]> {
-    return this.productRepo
-      .createQueryBuilder('product')
-      .where(
-        '(product.title LIKE :search OR product.description LIKE :search OR product.condition LIKE :search)',
-        { search: `%${search}%` },
-      )
-      .getMany();
-  }
-
-async searchAndFilterFormatted(filters: any, userId?: number): Promise<any[]> {
-  try {
-    const {
-      q,
-      category_id,
-      sub_category_id,
-      brand_id,
-      condition_id,
-      minPrice,
-      maxPrice,
-      product_type_id,
-      deal_type_id,
-      post_type_id,
-      sortBy,
-      page = 1,
-      limit = 20,
-    } = filters;
-
-    const query = this.productRepo.createQueryBuilder('product')
-      .leftJoinAndSelect('product.images', 'images')
-      .leftJoinAndSelect('product.user', 'user')
-      .leftJoinAndSelect('product.condition', 'condition')
-      .leftJoinAndSelect('product.brand', 'brand')
-      .leftJoinAndSelect('product.subCategory', 'subCategory')
-      .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.postType', 'postType')
-      .leftJoinAndSelect('product.dealType', 'dealType')
-      .leftJoinAndSelect('product.productType', 'productType');
-
-    // 🔍 Tìm kiếm theo tên, mô tả, brand
-    if (q) {
-      query.andWhere(
-        '(product.name LIKE :q OR product.description LIKE :q OR brand.name LIKE :q)',
-        { q: `%${q}%` },
-      );
-    }
-
-    // ⚙️ Filter
-    if (category_id) query.andWhere('product.category_id = :category_id', { category_id });
-    if (sub_category_id) query.andWhere('product.sub_category_id = :sub_category_id', { sub_category_id });
-    if (brand_id) query.andWhere('product.brand_id = :brand_id', { brand_id });
-    if (condition_id) query.andWhere('product.condition_id = :condition_id', { condition_id });
-    if (product_type_id) query.andWhere('product.product_type_id = :product_type_id', { product_type_id });
-    if (deal_type_id) query.andWhere('product.deal_type_id = :deal_type_id', { deal_type_id });
-    if (post_type_id) query.andWhere('product.post_type_id = :post_type_id', { post_type_id });
-    if (minPrice != null) query.andWhere('product.price >= :minPrice', { minPrice });
-    if (maxPrice != null) query.andWhere('product.price <= :maxPrice', { maxPrice });
-
-    // 📊 Sắp xếp
-    const sortOptions: Record<string, { field: string; order: 'ASC' | 'DESC' }> = {
-      newest: { field: 'product.created_at', order: 'DESC' },
-      price_asc: { field: 'product.price', order: 'ASC' },
-      price_desc: { field: 'product.price', order: 'DESC' },
-      popular: { field: 'product.popularity', order: 'DESC' }, // nhớ thêm trường popularity nếu muốn dùng
-    };
-    const sort = sortOptions[sortBy] || { field: 'product.created_at', order: 'DESC' };
-    query.orderBy(sort.field, sort.order);
-
-    // ⏩ Pagination
-    query.skip((page - 1) * limit).take(limit);
-
-    // ✅ Lấy dữ liệu
-    const products: Product[] = await query.getMany();
-
-    // 🔒 Kiểm tra quyền xem sản phẩm (visibility_type)
-    const visibleProducts: Product[] = [];
-    for (const p of products) {
-      const vis = Number(p.visibility_type);
-      if (vis === 0 || p.visibility_type == null) {
-        visibleProducts.push(p);
-      } else if (vis === 1 && userId) {
-        const isMember = await this.groupService.isMember(p.group_id, userId);
-        if (isMember) visibleProducts.push(p);
-      }
-    }
-
-    // 🔧 Format dữ liệu trước khi trả về
-    return this.formatProducts(visibleProducts);
-  } catch (error) {
-    console.error('Lỗi khi tìm kiếm và lọc sản phẩm:', error);
-    throw new InternalServerErrorException('Không thể xử lý yêu cầu tìm kiếm.');
-  }
-}
-
-
-
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
@@ -966,4 +869,74 @@ async searchAndFilterFormatted(filters: any, userId?: number): Promise<any[]> {
 
     return updatedProduct;
   }
+
+  // hàm tìm kiếm
+   async searchProducts(params: {
+  name?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  category?: string;
+  sort?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}) {
+  const {
+    name,
+    minPrice,
+    maxPrice,
+    category,
+    sort,
+    page = 1,
+    limit = 10,
+  } = params;
+
+  const query = this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.category', 'category')
+    .leftJoinAndSelect('product.images', 'images')
+    .select([
+      'product.id',
+      'product.name',
+      'product.price',
+       'product.created_at',
+      'product.thumbnail_url',
+      'category.name',
+      'images.image_url', // sửa lại đúng tên cột thật
+    ]);
+
+  if (name) {
+    query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
+  }
+
+  if (minPrice !== undefined) {
+    query.andWhere('product.price >= :minPrice', { minPrice });
+  }
+
+  if (maxPrice !== undefined) {
+    query.andWhere('product.price <= :maxPrice', { maxPrice });
+  }
+
+  if (category) {
+    query.andWhere('category.name ILIKE :category', { category: `%${category}%` });
+  }
+
+  query.orderBy(
+    sort ? 'product.price' : 'product.created_at',
+    (sort ? sort : 'DESC').toUpperCase() as 'ASC' | 'DESC'
+  );
+
+  query.skip((page - 1) * limit).take(limit);
+
+  const [data, total] = await query.getManyAndCount();
+
+  return {
+    data,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+    
+  };
+}
+
 }

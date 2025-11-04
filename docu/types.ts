@@ -37,6 +37,8 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  VerifyStudentScreen: undefined;
+  
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };

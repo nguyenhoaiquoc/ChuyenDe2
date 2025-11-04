@@ -344,19 +344,19 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
                         <View className="flex flex-row gap-2 items-center">
                               <MaterialIcons name="verified-user" size={16} color="gray" />
                               <Text className="text-xs text-gray-600">Đã xác thực:</Text>
-                              {user?.isFacebookVerified || user?.isAppleVerified ? (
+
+                              {user?.isVerifiedStudent ? (
                                     <View className="flex flex-row gap-2 items-center ml-1">
-                                          {user?.isFacebookVerified && (
-                                                <FontAwesome name="facebook-square" size={16} color="#1877F2" />
-                                          )}
-                                          {user?.isAppleVerified && (
-                                                <Ionicons name="logo-apple" size={16} color="#000" />
-                                          )}
+                                          <MaterialIcons name="school" size={16} color="#34a853" />
+                                          <Text className="text-xs text-green-600 ml-1">Đã xác thực sinh viên</Text>
                                     </View>
                               ) : (
-                                    <Text className="text-xs text-gray-500 ml-1">Chưa xác thực</Text>
+                                    <TouchableOpacity onPress={() => navigation.navigate("VerifyStudentScreen")}>
+                                          <Text className="text-xs text-blue-500 ml-2 underline">Xác thực sinh viên</Text>
+                                    </TouchableOpacity>
                               )}
                         </View>
+
                         <View className="flex flex-row gap-2 items-center">
                               <MaterialIcons name="near-me" size={16} color="gray" />
                               <Text className="text-xs text-gray-600">

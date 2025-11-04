@@ -141,16 +141,16 @@ export default function ProductDetailScreen() {
   // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
-      ? product.images.map((img) => ({
+      ? product.images.map((img,index) => ({
           ...img,
-          id: img.id.toString(),
-          product_id: img.product_id.toString(),
+            id: img.id ? String(img.id) : `fallback-${index}`,
+         product_id: img.product_id ? String(img.product_id) : String(product.id ?? "1"),
           // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-          image_url:
-            img.image_url.startsWith("file://") ||
-            img.image_url.startsWith("http")
-              ? img.image_url
-              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
+         image_url:
+          img.image_url?.startsWith("http") || img.image_url?.startsWith("file://")
+            ? img.image_url
+            : `${path}${img.image_url ?? ""}`,
+              created_at: img.created_at ?? new Date().toISOString(),
         })) // Cast string nếu cần
       : [
           {
