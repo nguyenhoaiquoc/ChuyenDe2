@@ -85,6 +85,9 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
+
+  @Column({ nullable: true })
+hometown: string;
   // ---- Thêm các trường xác thực sinh viên ----
   // @Column({ nullable: true })
   // studentId: string;
