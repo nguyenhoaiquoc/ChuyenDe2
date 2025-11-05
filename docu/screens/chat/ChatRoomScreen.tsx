@@ -375,6 +375,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           receiver_id: String(otherUserId || ""),
           content: content.trim(),
           reply_to_id: Number(replyTarget.id),
+              product_id: productFromParams?.id, // thêm dòng này
+
         });
       } else {
         socketRef.current?.emit("sendMessage", {
@@ -383,6 +385,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           receiver_id: String(otherUserId || ""),
           content: content.trim(),
           media_url: imageUrl ?? undefined,
+            product_id: productFromParams?.id, // thêm dòng này
         });
       }
 
