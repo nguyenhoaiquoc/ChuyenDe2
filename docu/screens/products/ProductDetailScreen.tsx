@@ -251,12 +251,14 @@ export default function ProductDetailScreen() {
       const otherUserId =
         sellerId === String(currentUser.id) ? buyerId : sellerId;
       const otherUserName = product.authorName || "Người bán";
-      const otherUserAvatar =
-        product.user?.avatar ||
-        product.seller?.avatar ||
-        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+      const otherUserAvatar = sellerAvatar
+        ? sellerAvatar.startsWith("http")
+          ? sellerAvatar
+          : `${path}${sellerAvatar}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      console.log("dewdew", otherUserAvatar);
 
-      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
+      // console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
       navigation.navigate("ChatRoomScreen", {
         roomId: room.id,
         product,
@@ -302,8 +304,8 @@ export default function ProductDetailScreen() {
       product_id?: string;
     }
   ) {
-    console.log("🪙 Token gửi đi:", token);
-    console.log("📤 Payload gửi:", payload);
+    // console.log("🪙 Token gửi đi:", token);
+    // console.log("📤 Payload gửi:", payload);
 
     try {
       const authHeader = token?.startsWith("Bearer ")
