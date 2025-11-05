@@ -101,6 +101,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
  },
     @ConnectedSocket() client: Socket,
   ) {
+    console.log("📩 Data nhận:", data);
+
     const senderId = client.data.userId;
     const msg = await this.chatService.sendMessage(
       Number(data.room_id),

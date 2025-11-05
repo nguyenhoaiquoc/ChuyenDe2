@@ -29,6 +29,9 @@ export class GroupMember {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @Column({ type: 'smallint', default: 3 })
+  pending: number;
+
   @ManyToOne(() => GroupRole)
   @JoinColumn({ name: 'group_role_id' })
   role: GroupRole;

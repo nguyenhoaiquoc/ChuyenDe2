@@ -20,10 +20,11 @@ interface Category {
 
 export default function ChooseCategoryScreen({ navigation, route }: any) {
   const [categories, setCategories] = useState<Category[]>([]);
-  const { group } = route.params || {};
+  const { group, onPostSuccess } = route.params || {};
 
   useEffect(() => {
-    axios.get(`${path}/categories`)
+    axios
+      .get(`${path}/categories`)
       .then((res) => {
         const mapped = res.data.map((item: Category) => ({
           id: item.id.toString(),
@@ -67,13 +68,22 @@ export default function ChooseCategoryScreen({ navigation, route }: any) {
             key={item.id}
             style={styles.categoryItem}
             onPress={() =>
-              navigation.navigate("ChooseSubCategoryScreen", { category: item , group: group})
+              navigation.navigate("ChooseSubCategoryScreen", {
+                category: item,
+                group: group,
+                onPostSuccess: onPostSuccess, 
+              })
             }
           >
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Image
                 source={{ uri: item.image }}
-                style={{ width: 34, height: 34, marginRight: 10, borderRadius: 6 }}
+                style={{
+                  width: 34,
+                  height: 34,
+                  marginRight: 10,
+                  borderRadius: 6,
+                }}
               />
               <Text style={styles.categoryText}>{item.name}</Text>
             </View>

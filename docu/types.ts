@@ -16,12 +16,14 @@ export type RootStackParamList = {
   ChooseCategoryScreen:
     | {
         group?: GroupType;
+        onPostSuccess?: () => void;
       }
     | undefined;
   ChooseSubCategoryScreen:
     | {
         category: Category;
         group?: GroupType;
+        onPostSuccess?: () => void;
       }
     | undefined;
   PostFormScreen:
@@ -51,12 +53,18 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsScreen: undefined;
+  PostsTab: undefined;
+  MyGroupPostsScreen: { groupId: number };
+  GroupMembersScreen: { groupId: number; isLeader: boolean };
+  ApprovePostsScreen: { groupId: number };
+  EditGroupScreen: { group: any };
 
   GroupDetailScreen: { group: GroupType };
   PostGroupFormScreen: {
     group: GroupType;
     category?: Category;
     subCategory?: SubCategory;
+    onPostSuccess?: () => void;
   };
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
@@ -350,4 +358,5 @@ export type GroupType = {
   memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
+  
 };

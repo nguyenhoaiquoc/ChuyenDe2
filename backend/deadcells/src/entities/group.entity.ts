@@ -27,9 +27,6 @@ export class Group {
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 
-  @Column({ default: false })
-  mustApprovePosts: boolean;
-
   @Column({ type: 'text', nullable: true })
   description: string;
 
@@ -48,6 +45,9 @@ export class Group {
 
   @Column({ type: 'boolean', default: true })
   isPublic: boolean;
+
+  @Column({ default: false })
+  mustApprovePosts: boolean;
 
   @OneToMany(() => GroupMember, (member) => member.group)
   members: GroupMember[];
