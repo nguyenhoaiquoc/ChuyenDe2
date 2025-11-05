@@ -103,30 +103,25 @@ export default function GroupDetailScreen({
   }, [fetchData]);
 
   const handleJoinGroup = async () => {
-    const token = await AsyncStorage.getItem("token");
     try {
-      const res = await axios.post(
+      const token = await AsyncStorage.getItem("token");
+      const response = await axios.post(
         `${path}/groups/${group.id}/join`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      Alert.alert("Thành công", res.data.message);
+      console.log("JOIN RESPONSE:", response.data);
 
-      // Cập nhật trạng thái dựa trên response
-      if (res.data.joinStatus === "joined") {
-        setJoinStatus("joined");
-        setRole("member");
-      } else if (res.data.joinStatus === "pending") {
-        setJoinStatus("pending");
+      // ✅ Cập nhật joinStatus tại đây
+      if (response.data.joinStatus) {
+        setJoinStatus(response.data.joinStatus);
       }
 
-      await fetchData();
-    } catch (error: any) {
-      Alert.alert(
-        "Lỗi",
-        error.response?.data?.message || "Không thể tham gia nhóm"
-      );
+      Alert.alert("Thành công", response.data.message);
+    } catch (error) {
+      console.log("Lỗi khi tham gia nhóm:", error);
+      Alert.alert("Lỗi", "Không thể tham gia nhóm");
     }
   };
 

@@ -358,4 +358,5 @@ export type GroupType = {
   memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
+  
 };
