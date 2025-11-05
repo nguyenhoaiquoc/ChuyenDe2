@@ -279,6 +279,12 @@ export class Product {
   @Column({ type: 'int', nullable: true })
   year: number | null;
 
+  @Column({ default: false })
+  is_deleted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date | null;
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

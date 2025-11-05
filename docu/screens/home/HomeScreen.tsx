@@ -10,6 +10,7 @@ import {
   GestureResponderEvent,
   useColorScheme,
   Alert,
+  RefreshControl, // 1. Thêm RefreshControl
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -17,7 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -38,18 +39,19 @@ const filters = [
 
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
-
   const [categories, setCategories] = useState<Category[]>([]);
-
   const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  
+  // 3. Thêm state cho RefreshControl
+  const [refreshing, setRefreshing] = useState(false);
 
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
-  useEffect(() => {
-    axios
+  // 4. Tách logic fetching ra các hàm riêng
+  const fetchCategories = () => {
+    return axios
       .get(`${path}/categories`)
       .then((res) => {
         const mapped = res.data.map((item: Category) => ({
@@ -63,11 +65,14 @@ export default function HomeScreen({ navigation }: Props) {
         }));
         setCategories(mapped);
       })
-      .catch((err) => console.log("Lỗi khi lấy danh mục:", err.message));
-  }, []);
+      .catch((err) => {
+        console.log("Lỗi khi lấy danh mục:", err.message);
+        throw err; // Ném lỗi để Promise.all bắt được
+      });
+  };
 
-  useEffect(() => {
-    axios
+  const fetchProducts = () => {
+    return axios
       .get(`${path}/products`)
       .then((res) => {
         // dữ liệu là mảng
@@ -245,22 +250,27 @@ export default function HomeScreen({ navigation }: Props) {
         } else {
           console.log("Lỗi khi gọi API:", err.message);
         }
+        throw err; // Ném lỗi để Promise.all bắt được
       });
-  }, []);
+  };
 
+  const fetchFavorites = async () => {
+    try {
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (!userIdStr) return;
+      const userId = parseInt(userIdStr, 10);
+      const res = await axios.get(`${path}/favorites/user/${userId}`);
+      setFavoriteIds(res.data.productIds || []);
+    } catch (err) {
+      console.log("Lỗi khi lấy danh sách yêu thích:", err);
+      throw err; // Ném lỗi để Promise.all bắt được
+    }
+  };
+
+  // Gọi các hàm fetch khi component mount lần đầu
   useEffect(() => {
-    const fetchFavorites = async () => {
-      try {
-        const userIdStr = await AsyncStorage.getItem("userId");
-        if (!userIdStr) return;
-        const userId = parseInt(userIdStr, 10);
-        const res = await axios.get(`${path}/favorites/user/${userId}`);
-        setFavoriteIds(res.data.productIds || []);
-      } catch (err) {
-        console.log("Lỗi khi lấy danh sách yêu thích:", err);
-      }
-    };
-
+    fetchCategories();
+    fetchProducts();
     fetchFavorites();
   }, []);
 
@@ -332,6 +342,7 @@ export default function HomeScreen({ navigation }: Props) {
     interval = seconds / 60;
     return Math.floor(interval) + " phút trước";
   };
+  
   const handleBellPress = async () => {
     const userId = await AsyncStorage.getItem("userId");
     if (!userId) {
@@ -346,6 +357,25 @@ export default function HomeScreen({ navigation }: Props) {
       navigation.navigate("NotificationScreen");
     }
   };
+
+  // 5. Tạo hàm onRefresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      // Gọi song song các hàm fetch
+      await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+        fetchFavorites(),
+        fetchUnreadCount(),
+      ]);
+    } catch (error) {
+      console.error("Lỗi khi làm mới:", error);
+      Alert.alert("Lỗi", "Không thể tải lại dữ liệu. Vui lòng thử lại.");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchUnreadCount]); // fetchUnreadCount là dependency ổn định từ context
 
   return (
     <View className="flex-1 bg-[#f5f6fa]">
@@ -386,7 +416,13 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1">
+      {/* 6. Thêm prop `refreshControl` vào ScrollView */}
+      <ScrollView
+        className="flex-1"
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Banner */}
         <View className="bg-white">
           <View className="flex-row items-center px-4 py-4">

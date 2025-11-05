@@ -45,11 +45,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       // Anti-enumeration: luôn báo thông điệp trung tính
       Alert.alert('Nếu email hợp lệ, mã OTP đặt lại đã được gửi.');
       // Điều hướng sang màn xác thực OTP reset, kèm email
-      navigation.navigate('VerifyResetOtpScreen' as any, { email: emailTrim });
+      navigation.navigate('VerifyAccountScreen' as any, { email: emailTrim });
     } catch (err: any) {
       // Dù lỗi gì cũng nên giữ thông điệp trung tính để tránh lộ tồn tại email
       Alert.alert('Nếu email hợp lệ, mã OTP đặt lại đã được gửi.');
-      navigation.navigate('VerifyResetOtpScreen' as any, { email: emailTrim });
+      navigation.navigate('VerifyAccountScreen' as any, { email: emailTrim });
     } finally {
       setIsLoading(false);
     }

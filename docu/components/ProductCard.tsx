@@ -4,12 +4,11 @@ import { PostType, Product } from "../types";
 import React from "react";
 
 type ProductCardProps = {
-  product: Product; // truyền thẳng cả object Product
+  product: Product;
   isFavorite?: boolean;
   onPress?: () => void;
   onToggleFavorite?: () => void;
   onPressPostType?: (postType: PostType) => void;
-  onPressCategory?: () => void;
 };
 
 export default function ProductCard({
@@ -18,7 +17,6 @@ export default function ProductCard({
   onPress,
   onToggleFavorite,
   onPressPostType,
-  onPressCategory,
 }: ProductCardProps) {
   const placeholder = "https://cdn-icons-png.flaticon.com/512/8146/8146003.png";
   const image = product.image || product.thumbnail_url || placeholder;
@@ -91,7 +89,6 @@ export default function ProductCard({
             {name}
           </Text>
         </TouchableOpacity>
-
         {/* Post type as button */}
         {postType?.name && onPressPostType && (
           <TouchableOpacity
@@ -103,19 +100,16 @@ export default function ProductCard({
             </Text>
           </TouchableOpacity>
         )}
-
         {/* Danh mục */}
         <View className="flex-row justify-between items-center mb-1.5">
           <Text>{category}</Text>
         </View>
-
         {/* Giá */}
         <TouchableOpacity onPress={onPress}>
           <Text className="text-[15px] text-red-500 font-bold mb-1.5">
             {price}
           </Text>
         </TouchableOpacity>
-
         {/* Địa chỉ */}
         <Text
           className="text-[11px] text-[#666]"

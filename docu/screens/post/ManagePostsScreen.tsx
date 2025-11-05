@@ -3,7 +3,6 @@ import {
   View,
   Text,
   Image,
-  StyleSheet,
   TextInput,
   TouchableOpacity,
   ScrollView,
@@ -22,13 +21,13 @@ import axios from "axios";
 import { path } from "../../config";
 import ProductCard from "../../components/ProductCard";
 import "../../global.css";
+import { useNotification } from "../Notification/NotificationContext";
 
 const statusTabs = ["Đã duyệt", "Chờ duyệt", "Từ chối", "Đã ẩn"];
+
 const timeSince = (date: Date): string => {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  if (seconds < 60) {
-    return seconds < 5 ? "vừa xong" : `${seconds} giây trước`;
-  }
+  if (seconds < 60) return seconds < 5 ? "vừa xong" : `${seconds} giây trước`;
   let interval = seconds / 31536000;
   if (interval >= 1) return Math.floor(interval) + " năm trước";
   interval = seconds / 2592000;
@@ -57,15 +56,14 @@ const mapProductData = (item: any): Product => {
         typeof item.address_json === "string"
           ? JSON.parse(item.address_json)
           : item.address_json;
-      if (addr.full) {
-        locationText = addr.full;
-      } else {
+      if (addr.full) locationText = addr.full;
+      else {
         const parts = [addr.ward, addr.district, addr.province]
           .filter(Boolean)
           .slice(-2);
         locationText = parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
       }
-    } catch (e) {
+    } catch {
       locationText = "Chưa rõ địa chỉ";
     }
   }
@@ -78,25 +76,23 @@ const mapProductData = (item: any): Product => {
   let tagText = "Không có danh mục";
   const categoryName = item.category?.name || null;
   const subCategoryName = item.subCategory?.name || null;
-  if (categoryName && subCategoryName) {
+  if (categoryName && subCategoryName)
     tagText = `${categoryName} - ${subCategoryName}`;
-  } else if (categoryName) {
-    tagText = categoryName;
-  } else if (subCategoryName) {
-    tagText = subCategoryName;
-  }
+  else if (categoryName) tagText = categoryName;
+  else if (subCategoryName) tagText = subCategoryName;
 
   return {
     id: item.id.toString(),
     image: imageUrl,
     name: item.name || "Không có tiêu đề",
-    price: (() => {
-      if (item.dealType?.name === "Miễn phí") return "Miễn phí";
-      if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-      return item.price
-        ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-        : "Liên hệ";
-    })(),
+    price:
+      item.dealType?.name === "Miễn phí"
+        ? "Miễn phí"
+        : item.dealType?.name === "Trao đổi"
+          ? "Trao đổi"
+          : item.price
+            ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+            : "Liên hệ",
     location: locationText,
     time: timeDisplay,
     tag: tagText,
@@ -121,9 +117,7 @@ const mapProductData = (item: any): Product => {
     postType: item.postType || null,
     condition: item.condition || null,
     dealType: item.dealType || null,
-
     productStatus: item.productStatus || null,
-
     productType:
       item.productType && item.productType.name ? item.productType : null,
     origin: item.origin && item.origin.name ? item.origin : null,
@@ -174,50 +168,36 @@ export default function ManagePostsScreen({
   navigation: NavProps;
 }) {
   const isFocused = useIsFocused();
-  const [activeStatus, setActiveStatus] = useState(0); // Tab 0 = "Đang hiển thị"
-
-  // === THÊM STATE MỚI ===
+  const [activeStatus, setActiveStatus] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [allPosts, setAllPosts] = useState<Product[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Product[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-
-  // Hàm load data chính
+  const { unreadCount, setUnreadCount } = useNotification();
+  const [searchText, setSearchText] = useState("");
   const fetchMyPosts = async (currentUserId: string) => {
     setIsLoading(true);
     try {
-      // 1. Gọi API mới (bạn tạo ở Bước 1)
       const response = await axios.get(
         `${path}/products/my-posts/${currentUserId}`
       );
-      // 2. Map dữ liệu (dùng hàm mapProductData ở trên)
-      const mappedData = response.data.map(mapProductData);
-      setAllPosts(mappedData);
-
-      // 3. Lấy danh sách yêu thích (để ProductCard biết tim màu gì)
-      const favRes = await axios.get(`${path}/favorites/user/${currentUserId}`);
-      setFavoriteIds(favRes.data.productIds || []);
-    } catch (error: any) {
-      console.error("Lỗi tải tin đăng:", error.message);
+      setAllPosts(response.data.map(mapProductData));
+    } catch {
       Alert.alert("Lỗi", "Không thể tải tin đăng của bạn.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Tải dữ liệu khi vào màn hình hoặc quay lại
   useEffect(() => {
     const loadData = async () => {
       const id = await AsyncStorage.getItem("userId");
       const name = await AsyncStorage.getItem("userName");
       if (id) {
         setUserId(id);
-        setUserName(name || "Người dùng"); // Lấy tên user
-        if (isFocused) {
-          fetchMyPosts(id);
-        }
+        setUserName(name || "Người dùng");
+        if (isFocused) fetchMyPosts(id);
       } else {
         Alert.alert("Lỗi", "Vui lòng đăng nhập để xem tin.");
         navigation.goBack();
@@ -227,258 +207,280 @@ export default function ManagePostsScreen({
     loadData();
   }, [isFocused]);
 
-  // Lọc danh sách sản phẩm khi 'activeStatus' (tab) hoặc 'allPosts' thay đổi
   useEffect(() => {
-    const selectedTabName = statusTabs[activeStatus].trim();
-    let posts: Product[] = []; // Ánh xạ tên tab với product_status_id
+    const selectedTabName = statusTabs[activeStatus].trim(); // Bước 1: Lọc theo status (tab)
 
-    if (selectedTabName === "Đã duyệt") {
-      // SỬA: Lọc trực tiếp theo status 2
-      posts = allPosts.filter((p) => p.productStatus?.id === 2);
-    } else if (selectedTabName === "Chờ duyệt") {
-      // SỬA: Lọc trực tiếp theo status 1 (hoặc null nếu là tin mới)
-      posts = allPosts.filter(
-        (p) => p.productStatus?.id === 1 || p.productStatus == null
+    const postsByStatus = allPosts.filter((p) => {
+      if (selectedTabName === "Đã duyệt") return p.productStatus?.id === 2;
+      if (selectedTabName === "Chờ duyệt")
+        return p.productStatus?.id === 1 || p.productStatus == null;
+      if (selectedTabName === "Từ chối") return p.productStatus?.id === 3;
+      if (selectedTabName === "Đã ẩn") return p.productStatus?.id === 4;
+      return false;
+    }); // Bước 2: Lọc tiếp theo tên (từ kết quả Bước 1)
+
+    if (searchText.trim() === "") {
+      setFilteredPosts(postsByStatus); // Không tìm, dùng kết quả lọc status
+    } else {
+      const lowerCaseSearch = searchText.toLowerCase().trim();
+      const postsByName = postsByStatus.filter((p) =>
+        p.name.toLowerCase().includes(lowerCaseSearch)
       );
-    } else if (selectedTabName === "Từ chối") {
-      // Giữ nguyên: Lọc theo status 3
-      posts = allPosts.filter((p) => p.productStatus?.id === 3);
-    } else if (selectedTabName === "Đã ẩn") {
-      // Giữ nguyên: Lọc theo status 4
-      posts = allPosts.filter((p) => p.productStatus?.id === 4);
+      setFilteredPosts(postsByName);
+    }
+  }, [activeStatus, allPosts, searchText]); // ✅ THÊM searchText VÀO ĐÂY
+
+  const handleBellPress = async () => {
+    const userId = await AsyncStorage.getItem("userId");
+    if (!userId) return navigation.navigate("NotificationScreen");
+    try {
+      await axios.patch(`${path}/notifications/user/${userId}/mark-all-read`);
+      setUnreadCount(0);
+    } catch {}
+    navigation.navigate("NotificationScreen");
+  };
+
+  // Đây là code SỬA LẠI
+  const softDeleteProduct = async (productId: string) => {
+    if (!userId) {
+      Alert.alert("Lỗi", "Không thể xác thực người dùng, vui lòng thử lại.");
+      return;
     }
 
-    setFilteredPosts(posts);
-  }, [activeStatus, allPosts]);
-
-  // Hàm xử lý (Bỏ) Yêu thích
-  const handleToggleFavorite = async (productId: string) => {
-    if (!userId) return;
     try {
-      // Cập nhật UI trước (Optimistic Update)
-      const newFavoriteIds = favoriteIds.includes(productId)
-        ? favoriteIds.filter((id) => id !== productId)
-        : [...favoriteIds, productId];
-      setFavoriteIds(newFavoriteIds);
+      // 1. Lấy token từ AsyncStorage
+      const token = await AsyncStorage.getItem("token"); // (Giả sử bạn lưu token với key là "token")
+      console.log("Token lấy từ Storage:", token);
+      if (!token) {
+        Alert.alert("Lỗi", "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."); // Cân nhắc điều hướng về màn hình Đăng nhập
+        // navigation.navigate("LoginScreen");
+        return;
+      } // 2. Gửi request VỚI header Authorization
 
-      // Gọi API
       await axios.post(
-        `${path}/favorites/toggle/${productId}?userId=${userId}`
-      );
+        `${path}/products/${productId}/soft-delete`,
+        { user_id: String(userId) }, // Body (dữ liệu)
+        {
+          headers: {
+            // Config (chứa headers)
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      ); // Cập nhật UI
 
-      // (Không cần fetch lại vì chúng ta chỉ cập nhật mảng ID)
+      setAllPosts((prev) => prev.filter((p) => p.id !== productId));
+      setFilteredPosts((prev) => prev.filter((p) => p.id !== productId));
+
+      Alert.alert("Đã ẩn", "Sản phẩm đã được chuyển vào thùng rác.");
     } catch (err: any) {
-      console.log("Lỗi toggle yêu thích:", err.message);
-      // Rollback UI nếu lỗi
-      setFavoriteIds(favoriteIds);
+      console.error("Lỗi khi xóa mềm:", err.message); // Bắt lỗi 401 cụ thể
+      if (err.response && err.response.status === 401) {
+        Alert.alert(
+          "Lỗi",
+          "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại."
+        );
+      } else {
+        Alert.alert("Lỗi", "Không thể thực hiện. Vui lòng thử lại.");
+      }
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header (Giữ nguyên) */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Quản lý đăng tin</Text>
-        <View style={styles.headerIcons}>
-          <Feather name="search" size={22} color="black" style={styles.icon} />
-          <Ionicons
-            name="chatbox-ellipses-outline"
-            size={22}
-            color="black"
-            style={styles.icon}
-          />
-          <Feather name="bell" size={24} color="black" style={styles.icon} />
+    <SafeAreaView className="flex-1 bg-white">
+      {/* Header */}
+      <View className="flex-row items-center justify-between h-14 px-4 bg-indigo-50 shadow-sm">
+        <Text className="text-lg font-semibold text-gray-800">
+          Quản lý đăng tin
+        </Text>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ChatListScreen")}
+            className="mr-3"
+          >
+            <Ionicons name="chatbox-ellipses-outline" size={22} color="#333" />
+          </TouchableOpacity>
+          <TouchableOpacity className="relative" onPress={handleBellPress}>
+            <Feather name="bell" size={22} color="#333" />
+            {unreadCount > 0 && (
+              <View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
+                <Text className="text-[10px] font-bold text-white">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Body */}
-      {/* SỬA LẠI: Dùng FlatList thay vì ScrollView lồng nhau */}
       <FlatList
         ListHeaderComponent={
           <>
-            <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-              <TouchableOpacity style={styles.contactListButton}>
-                <Text style={styles.contactListText}>Danh sách liên hệ </Text>
-              </TouchableOpacity>
-
-              {/* Profile */}
-              <View style={styles.profileContainer}>
+            {/* Profile */}
+            <View className="px-5 pt-5">
+              <View className="flex-row items-center mb-5">
                 <Image
                   source={require("../../assets/meo.jpg")}
-                  style={styles.avatar}
+                  className="w-14 h-14 rounded-full"
                 />
-                <View style={styles.profileText}>
-                  <Text style={styles.name}>{userName || "Người dùng"}</Text>
-                  <TouchableOpacity>
-                    <Text style={styles.createShop}>+ Tạo cửa hàng</Text>
-                  </TouchableOpacity>
+                <View className="ml-3">
+                  <Text className="text-base font-semibold text-gray-800">
+                    {userName || "Người dùng"}
+                  </Text>
                 </View>
               </View>
             </View>
-
             {/* Status Tabs */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              style={styles.statusTabs}
-              contentContainerStyle={{ paddingHorizontal: 20 }} // Thêm padding
+              className="mb-3 px-5"
             >
               {statusTabs.map((item, index) => (
                 <TouchableOpacity
                   key={index}
-                  style={[
-                    styles.statusTab,
-                    index === activeStatus && styles.statusTabActive,
-                  ]}
                   onPress={() => setActiveStatus(index)}
+                  className={`mr-3 px-4 py-2 rounded-full ${
+                    index === activeStatus ? "bg-indigo-600" : "bg-gray-100"
+                  }`}
                 >
                   <Text
-                    style={[
-                      styles.statusText,
-                      index === activeStatus && styles.statusTextActive,
-                    ]}
+                    className={`text-sm font-medium ${
+                      index === activeStatus ? "text-white" : "text-gray-700"
+                    }`}
                   >
                     {item}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
+            <View className="flex-row items-center bg-white rounded-lg px-4 w-full mx-2 h-12 mb-4">
+              {/* Ô tìm kiếm */}
+              <View className="flex-row items-center flex-1 border border-gray-200 rounded-md h-full px-3">
+                <Feather name="search" size={20} color="#9ca3af" />
+                <TextInput
+                  placeholder="Tìm theo tên"
+                  placeholderTextColor="#9ca3af"
+                  className="flex-1 ml-3 text-base text-gray-800"
+                  value={searchText}
+                  onChangeText={setSearchText}
+                />
+              </View>
 
-            {/* Search Bar */}
-            <View style={[styles.searchBar, { marginHorizontal: 20 }]}>
-              <Feather name="search" size={18} color="#888" />
-              <TextInput
-                placeholder="Tìm tin đăng của bạn"
-                style={styles.searchInput}
-              />
+              {/* Nút thùng rác */}
+              <TouchableOpacity
+                onPress={() => navigation.navigate("TrashScreen")}
+                className="flex-row items-center bg-red-50 px-3 py-2 rounded-md border border-red-200 ml-3 h-full"
+              >
+                <Feather name="trash-2" size={18} color="#dc2626" />
+                <Text className="text-red-600 font-medium ml-1 text-sm">
+                  Thùng rác
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            {/* HIỂN THỊ LOADING HOẶC DANH SÁCH */}
-            {isLoading ? (
+            {/* Loading*/}
+            {isLoading && (
               <ActivityIndicator
                 size="large"
-                color="#8c7ae6"
-                style={{ marginTop: 50 }}
+                color="#6366f1"
+                className="mt-10"
               />
-            ) : filteredPosts.length === 0 ? (
-              // No posts (Giữ nguyên)
-              <View style={styles.noPosts}>
-                <Text style={styles.noPostsTitle}>Không tìm thấy tin đăng</Text>
-                <Text style={styles.noPostsSubtitle}>
-                  Bạn hiện tại không có tin đăng nào cho trạng thái này
-                </Text>
-                <TouchableOpacity
-                  style={styles.postButton}
-                  onPress={() => navigation.navigate("ChooseCategoryScreen")}
-                >
-                  <Text style={styles.postButtonText}>Đăng tin</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
+            )}
           </>
         }
-        // === RENDER DANH SÁCH SẢN PHẨM ===
-        data={filteredPosts} // Dùng data đã lọc
-        numColumns={2}
+        data={filteredPosts}
         keyExtractor={(item) => item.id.toString()}
-        columnWrapperStyle={{
-          justifyContent: "space-between",
-          paddingHorizontal: 20, // Di chuyển padding vào đây
-        }}
-        contentContainerStyle={{ paddingBottom: 80 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
+        ListEmptyComponent={
+          isLoading ? null : (
+            <View className="items-center mt-10">
+              <Text className="text-base font-semibold text-gray-800 mb-1">
+                Không tìm thấy tin đăng
+              </Text>
+              <Text className="text-sm text-gray-500 text-center mb-4">
+                Bạn hiện tại không có tin đăng nào cho trạng thái này
+              </Text>
+              <TouchableOpacity
+                className="bg-amber-400 px-6 py-2 rounded-lg shadow"
+                onPress={() => navigation.navigate("ChooseCategoryScreen")}
+              >
+                <Text className="font-semibold text-sm text-gray-800">
+                  Đăng tin
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )
+        }
         renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            isFavorite={favoriteIds.includes(item.id)} // Lấy từ state
-            onToggleFavorite={() => handleToggleFavorite(item.id)}
-            onPress={() =>
-              navigation.navigate("ProductDetail", { product: item })
-            }
-            onPressPostType={() => {}} // Không cần thiết ở đây
-          />
+          <View className="flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-sm border border-gray-100">
+            <TouchableOpacity
+              className="flex-1 flex-row items-center"
+              onPress={() =>
+                navigation.navigate("ProductDetail", {
+                  product: item,
+                  isApproved: item.is_approved,
+                })
+              }
+            >
+              {/* Ảnh sản phẩm */}
+              <Image
+                source={{ uri: item.image }}
+                className="w-20 h-20 rounded-lg"
+                resizeMode="cover"
+              />
+
+              {/* Thông tin sản phẩm */}
+              <View className="flex-1 ml-3">
+                <Text
+                  className="text-base font-semibold text-gray-800 mb-1"
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+                <Text className="text-sm font-medium text-indigo-600">
+                  {item.price}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {/* Nút chỉnh sửa và xóa */}
+            <View className="flex-col space-y-2">
+              {/* Nút chỉnh sửa */}
+              <TouchableOpacity
+                // onPress={() => navigation.navigate("EditProductScreen", { product: item })}
+                className="flex-row items-center bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
+              >
+                <Feather name="edit-2" size={18} color="#2563eb" />
+                <Text className="text-blue-600 font-medium ml-1">
+                  Chỉnh sửa
+                </Text>
+              </TouchableOpacity>
+
+              {/* Nút xóa */}
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert(
+                    "Xác nhận xóa",
+                    `Bạn có chắc muốn chuyển "${item.name}" vào thùng rác không?`,
+                    [
+                      { text: "Hủy", style: "cancel" },
+                      {
+                        text: "Xóa",
+                        style: "destructive",
+                        onPress: () => softDeleteProduct(item.id),
+                      },
+                    ]
+                  )
+                }
+                className="flex-row items-center bg-red-50 border border-red-200 px-3 py-2 rounded-lg"
+              >
+                <Feather name="trash-2" size={18} color="#dc2626" />
+                <Text className="text-red-600 font-medium ml-1">Xóa</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
       />
-
       <Menu />
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    height: 60,
-    paddingHorizontal: 16,
-    backgroundColor: "#F2F0FF",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "600" },
-  headerIcons: { flexDirection: "row" },
-  icon: { marginLeft: 16 },
-
-  // body: { flex: 1 }, // (Đã xóa style này vì dùng FlatList)
-  profileContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 20,
-    // paddingHorizontal: 20, // (Đã chuyển padding ra ngoài)
-  },
-  avatar: { width: 60, height: 60, borderRadius: 30 },
-  profileText: { marginLeft: 12 },
-  name: { fontSize: 16, fontWeight: "600" },
-  createShop: { color: "#3C2EFC", marginTop: 4 },
-
-  statusTabs: { marginVertical: 10 },
-  statusTab: {
-    marginRight: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: "#F2F2F2",
-  },
-  statusTabActive: { backgroundColor: "#3C2EFC" },
-  statusText: { fontSize: 14, color: "#333" },
-  statusTextActive: { color: "#fff" },
-
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    marginVertical: 10,
-    height: 50,
-    // marginHorizontal: 20, // (Đã chuyển lên style inline)
-  },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 14 },
-
-  noPosts: { alignItems: "center", marginTop: 50, paddingHorizontal: 20 },
-  noPostsTitle: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
-  noPostsSubtitle: {
-    fontSize: 14,
-    color: "#888",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  postButton: {
-    backgroundColor: "#F6C200",
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  postButtonText: { fontWeight: "600", fontSize: 14 },
-
-  contactListButton: {
-    backgroundColor: "#E5E5E5",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    marginBottom: 16,
-    alignSelf: "flex-start",
-    // marginHorizontal: 20, // (Đã chuyển padding ra ngoài)
-  },
-  contactListText: { fontSize: 14, color: "#555" },
-});
