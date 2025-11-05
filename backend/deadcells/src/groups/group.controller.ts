@@ -114,27 +114,27 @@ export class GroupController {
 
   // ==================== Quản Lý Thành Viên ====================
 
-  /** Lấy danh sách thành viên */
+  /** Lấy danh sách thành viên (pending = 3) */
   @Get(':groupId/members')
   @UseGuards(JwtAuthGuard)
   async getMembers(@Req() req, @Param('groupId') groupId: number) {
     return this.groupService.getMembers(groupId, req.user.id);
   }
 
-  /** Lấy danh sách yêu cầu tham gia chờ duyệt */
+  /** Lấy danh sách yêu cầu tham gia chờ duyệt (pending = 2) */
   @Get(':groupId/pending-members')
   @UseGuards(JwtAuthGuard)
   async getPendingMembers(@Req() req, @Param('groupId') groupId: number) {
     return this.groupService.getPendingMembers(groupId, req.user.id);
   }
 
-  /** Duyệt thành viên */
-  @Post(':groupId/members/:userId/approve')
+  /** Duyệt thành viên (pending: 2 → 3) */
+  @Post(':groupId/members/:targetUserId/approve')
   @UseGuards(JwtAuthGuard)
   async approveMember(
     @Req() req,
     @Param('groupId') groupId: number,
-    @Param('userId') targetUserId: number,
+    @Param('targetUserId') targetUserId: number,
     @Body('approve') approve: boolean,
   ) {
     return this.groupService.approveMember(
@@ -184,15 +184,27 @@ export class GroupController {
 
   // ==================== Join / Leave Group ====================
 
-  /** User tham gia nhóm */
+  /**
+   * User tham gia nhóm
+   * - Public: pending = 3 (joined ngay)
+   * - Private: pending = 2 (chờ duyệt)
+   */
   @Post(':groupId/join')
   @UseGuards(JwtAuthGuard)
   async joinGroup(@Req() req, @Param('groupId') groupId: number) {
     const result = await this.groupService.joinGroup(groupId, req.user.id);
-    return { success: true, message: 'Tham gia nhóm thành công', result };
+    return result;
   }
 
-  /** User rời nhóm */
+  /** Hủy yêu cầu tham gia (xóa pending = 2) */
+  @Delete(':groupId/join-request')
+  @UseGuards(JwtAuthGuard)
+  async cancelJoinRequest(@Req() req, @Param('groupId') groupId: number) {
+    await this.groupService.cancelJoinRequest(groupId, req.user.id);
+    return { success: true, message: 'Đã hủy yêu cầu tham gia' };
+  }
+
+  /** User rời nhóm (xóa pending = 3) */
   @Delete(':groupId/leave')
   @UseGuards(JwtAuthGuard)
   async leaveGroup(@Req() req, @Param('groupId') groupId: number) {
@@ -202,7 +214,7 @@ export class GroupController {
 
   // ==================== Get/List Groups ====================
 
-  /** Lấy danh sách nhóm mà user tham gia */
+  /** Lấy danh sách nhóm mà user tham gia (pending = 3) */
   @Get()
   @UseGuards(JwtAuthGuard)
   async getGroups(@Req() req) {
@@ -234,7 +246,16 @@ export class GroupController {
 
   // ==================== Group Role / Membership ====================
 
-  /** Lấy role của user trong nhóm */
+  /** Lấy trạng thái tham gia nhóm (none/pending/joined) */
+  @Get(':groupId/join-status')
+  @UseGuards(JwtAuthGuard)
+  async getJoinStatus(@Req() req, @Param('groupId') groupId: number) {
+    const userId = req.user.id;
+    const status = await this.groupService.getJoinStatus(groupId, userId);
+    return { status };
+  }
+
+  /** Lấy role của user trong nhóm (chỉ pending = 3) */
   @Get(':groupId/role')
   @UseGuards(JwtAuthGuard)
   async getUserRole(@Req() req, @Param('groupId') groupId: number) {
