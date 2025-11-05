@@ -41,6 +41,9 @@ export class User {
   @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;
 
+  @Column({ nullable: true })
+  hometown: string;
+
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
 
