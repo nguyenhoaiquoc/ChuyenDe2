@@ -66,20 +66,13 @@ export default function GroupDetailScreen({
 
       setProducts(productsRes.data);
 
-      // Xử lý role
       const r = roleRes.data.role;
       setRole(r === "leader" || r === "member" || r === "none" ? r : "none");
 
-      // Xử lý joinStatus
       const s = statusRes.data.status;
-      let mappedStatus: "none" | "pending" | "joined" = "none";
-
-      // Nếu BE trả dạng số (vd: 0=none, 1=joined, 3=pending)
-      if (s === 1 || s === "joined") mappedStatus = "joined";
-      else if (s === 3 || s === "pending") mappedStatus = "pending";
-      else mappedStatus = "none";
-
-      setJoinStatus(mappedStatus);
+      setJoinStatus(
+        s === "none" || s === "pending" || s === "joined" ? s : "none"
+      );
     } catch (err) {
       console.log("Lỗi khi tải dữ liệu nhóm:", err);
       setRole("none");
@@ -103,25 +96,30 @@ export default function GroupDetailScreen({
   }, [fetchData]);
 
   const handleJoinGroup = async () => {
+    const token = await AsyncStorage.getItem("token");
     try {
-      const token = await AsyncStorage.getItem("token");
-      const response = await axios.post(
+      const res = await axios.post(
         `${path}/groups/${group.id}/join`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      console.log("JOIN RESPONSE:", response.data);
+      Alert.alert("Thành công", res.data.message);
 
-      // ✅ Cập nhật joinStatus tại đây
-      if (response.data.joinStatus) {
-        setJoinStatus(response.data.joinStatus);
+      // Cập nhật trạng thái dựa trên response
+      if (res.data.joinStatus === "joined") {
+        setJoinStatus("joined");
+        setRole("member");
+      } else if (res.data.joinStatus === "pending") {
+        setJoinStatus("pending");
       }
 
-      Alert.alert("Thành công", response.data.message);
-    } catch (error) {
-      console.log("Lỗi khi tham gia nhóm:", error);
-      Alert.alert("Lỗi", "Không thể tham gia nhóm");
+      await fetchData();
+    } catch (error: any) {
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Không thể tham gia nhóm"
+      );
     }
   };
 
