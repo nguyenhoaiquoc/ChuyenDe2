@@ -47,6 +47,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const [jwt, setJwt] = useState<string | null>(null);
   const [selfId, setSelfId] = useState<string | null>(null);
 
+  const [isSending, setIsSending] = useState(false);
   useEffect(() => {
     (async () => {
       const [t, uid] = await Promise.all([
@@ -58,11 +59,17 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     })();
   }, []);
 
-  const [headerMeta, setHeaderMeta] = useState<{ name?: string; avatar?: string } | null>(null);
+  const [headerMeta, setHeaderMeta] = useState<{
+    name?: string;
+    avatar?: string;
+  } | null>(null);
   const [contextVisible, setContextVisible] = useState(false);
   const [contextMsg, setContextMsg] = useState<UiMsg | null>(null);
   const [messages, setMessages] = useState<UiMsg[]>([]);
-  const [onlineStatus, setOnlineStatus] = useState<{ online: boolean; lastOnlineAt?: string }>({ online: false });
+  const [onlineStatus, setOnlineStatus] = useState<{
+    online: boolean;
+    lastOnlineAt?: string;
+  }>({ online: false });
   const [content, setContent] = useState("");
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -86,16 +93,21 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     initialAutoScrollDoneRef.current = false;
   }, [roomId, highlightMessageId]);
 
-  const DEFAULT_AVATAR = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  const DEFAULT_AVATAR =
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
   const otherUserId = otherUserIdFromParams ?? null;
-  const otherUserName = otherUserNameFromParams ?? headerMeta?.name ?? "Người dùng";
-  const otherUserAvatar = otherUserAvatarFromParams ?? headerMeta?.avatar ?? DEFAULT_AVATAR;
+  const otherUserName =
+    otherUserNameFromParams ?? headerMeta?.name ?? "Người dùng";
+  const otherUserAvatar =
+    otherUserAvatarFromParams ?? headerMeta?.avatar ?? DEFAULT_AVATAR;
 
   const searchKeyword = (searchKeywordFromParams ?? "").toString().trim();
 
   const timeAgo = (dateString?: string) => {
     if (!dateString) return "lâu rồi";
-    const diff = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+    const diff = Math.floor(
+      (Date.now() - new Date(dateString).getTime()) / 1000
+    );
     if (diff < 60) return `${diff}s`;
     if (diff < 3600) return `${Math.floor(diff / 60)} phút`;
     if (diff < 86400) return `${Math.floor(diff / 3600)} giờ`;
@@ -115,8 +127,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const handleCopy = async () => {
     if (!contextMsg) return;
     try {
-      if (contextMsg.text?.trim()) await Clipboard.setStringAsync(contextMsg.text);
-      else if (contextMsg.mediaUrl) await Clipboard.setStringAsync(contextMsg.mediaUrl);
+      if (contextMsg.text?.trim())
+        await Clipboard.setStringAsync(contextMsg.text);
+      else if (contextMsg.mediaUrl)
+        await Clipboard.setStringAsync(contextMsg.mediaUrl);
       Alert.alert("Đã sao chép");
     } catch {}
     closeContextMenu();
@@ -124,9 +138,15 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
 
   const handleRecall = () => {
     if (!contextMsg) return;
-    socketRef.current?.emit("recallMessage", { message_id: Number(contextMsg.id) });
+    socketRef.current?.emit("recallMessage", {
+      message_id: Number(contextMsg.id),
+    });
     setMessages((prev) =>
-      prev.map((m) => (m.id === contextMsg.id ? { ...m, isRecalled: true, text: "", mediaUrl: null } : m))
+      prev.map((m) =>
+        m.id === contextMsg.id
+          ? { ...m, isRecalled: true, text: "", mediaUrl: null }
+          : m
+      )
     );
     closeContextMenu();
   };
@@ -182,12 +202,19 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       }
     });
 
-    socket.on("messageRecalled", (payload: { id: number; recalled_at?: string }) => {
-      const idStr = String(payload.id);
-      setMessages((prev) =>
-        prev.map((m) => (m.id === idStr ? { ...m, isRecalled: true, text: "", mediaUrl: null } : m))
-      );
-    });
+    socket.on(
+      "messageRecalled",
+      (payload: { id: number; recalled_at?: string }) => {
+        const idStr = String(payload.id);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === idStr
+              ? { ...m, isRecalled: true, text: "", mediaUrl: null }
+              : m
+          )
+        );
+      }
+    );
 
     socket.on("messageEdited", (msg: any) => {
       const idStr = String(msg.id);
@@ -198,7 +225,9 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                 ...m,
                 text: msg.content ?? "",
                 edited: true,
-                time: new Date(msg.updated_at ?? Date.now()).toLocaleTimeString("vi-VN").slice(0, 5),
+                time: new Date(msg.updated_at ?? Date.now())
+                  .toLocaleTimeString("vi-VN")
+                  .slice(0, 5),
               }
             : m
         )
@@ -221,7 +250,12 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       .get(`${path}/chat/online-status/${otherUserId}`, {
         headers: { Authorization: `Bearer ${jwt}` },
       })
-      .then((res) => setOnlineStatus({ online: res.data.online, lastOnlineAt: res.data.lastOnlineAt }))
+      .then((res) =>
+        setOnlineStatus({
+          online: res.data.online,
+          lastOnlineAt: res.data.lastOnlineAt,
+        })
+      )
       .catch(() => {});
   }, [jwt, otherUserId]);
 
@@ -259,7 +293,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           setMessages(ui);
 
           setTimeout(() => {
-            const anchorIndex = typeof data?.anchorIndex === "number" ? data.anchorIndex : null;
+            const anchorIndex =
+              typeof data?.anchorIndex === "number" ? data.anchorIndex : null;
             if (anchorIndex != null) {
               scrollViewRef.current?.scrollTo({
                 y: anchorIndex * 68,
@@ -268,10 +303,16 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
             }
           }, 80);
         } else {
-          socketRef.current?.emit("getMessagesByRoom", { roomId: String(roomId) });
+          socketRef.current?.emit("getMessagesByRoom", {
+            roomId: String(roomId),
+          });
         }
 
-        await axios.post(`${path}/chat/mark-read/${roomId}`, {}, { headers: { Authorization: `Bearer ${jwt}` } });
+        await axios.post(
+          `${path}/chat/mark-read/${roomId}`,
+          {},
+          { headers: { Authorization: `Bearer ${jwt}` } }
+        );
       } catch (e) {
         try {
           const res = await axios.get(`${path}/chat/history/${roomId}`, {
@@ -302,7 +343,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   // Theo dõi scroll để biết có đang gần đáy không
   const handleScroll = (event: any) => {
     const { contentOffset, layoutMeasurement, contentSize } = event.nativeEvent;
-    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    const distanceFromBottom =
+      contentSize.height - (contentOffset.y + layoutMeasurement.height);
     setIsNearBottom(distanceFromBottom < 100);
   };
 
@@ -324,21 +366,38 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   };
 
   const handleSend = async () => {
+    if (isSending) return;
     if (!selfId || (!content.trim() && selectedImages.length === 0)) return;
 
     if (editTarget) {
-      socketRef.current?.emit("editMessage", {
-        message_id: Number(editTarget.id),
-        content: content.trim(),
-      });
-      setMessages((prev) =>
-        prev.map((m) => (m.id === editTarget.id ? { ...m, text: content.trim(), edited: true } : m))
-      );
-      setContent("");
-      setEditTarget(null);
+      if (!content.trim()) return; // Không cho cập nhật nội dung rỗng
+
+      setIsSending(true);
+      try {
+        socketRef.current?.emit("editMessage", {
+          message_id: Number(editTarget.id),
+          content: content.trim(),
+        });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === editTarget.id
+              ? { ...m, text: content.trim(), edited: true }
+              : m
+          )
+        );
+        setContent("");
+        setEditTarget(null);
+      } catch (err) {
+        console.error("❌ Lỗi sửa tin:", err);
+        Alert.alert("Lỗi", "Không thể cập nhật tin nhắn.");
+      } finally {
+        setIsSending(false);
+      }
       return;
     }
+    if (!content.trim() && selectedImages.length === 0) return; // Không gửi nếu rỗng
 
+    setIsSending(true);
     try {
       let imageUrl: string | undefined;
 
@@ -351,7 +410,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
         } as any);
 
         const uploadRes = await axios.post(`${path}/chat/upload`, formData, {
-          headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "multipart/form-data" },
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+            "Content-Type": "multipart/form-data",
+          },
         });
 
         imageUrl = uploadRes.data.url;
@@ -375,8 +437,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           receiver_id: String(otherUserId || ""),
           content: content.trim(),
           reply_to_id: Number(replyTarget.id),
-              product_id: productFromParams?.id, // thêm dòng này
-
+          product_id: productFromParams?.id, // thêm dòng này
         });
       } else {
         socketRef.current?.emit("sendMessage", {
@@ -385,7 +446,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           receiver_id: String(otherUserId || ""),
           content: content.trim(),
           media_url: imageUrl ?? undefined,
-            product_id: productFromParams?.id, // thêm dòng này
+          product_id: productFromParams?.id, // thêm dòng này
         });
       }
 
@@ -395,21 +456,32 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       setReplyTarget(null);
     } catch (err) {
       console.error("❌ Lỗi gửi tin:", err);
+      Alert.alert("Lỗi", "Không thể gửi tin nhắn. Vui lòng thử lại!");
+    } finally {
+      setIsSending(false);
     }
   };
 
   const handleImageUpload = async (useCamera: boolean) => {
     if (useCamera) {
       const camPerm = await ImagePicker.requestCameraPermissionsAsync();
-      if (camPerm.status !== "granted") return Alert.alert("Thiếu quyền", "Cần cấp quyền Camera để chụp ảnh.");
+      if (camPerm.status !== "granted")
+        return Alert.alert("Thiếu quyền", "Cần cấp quyền Camera để chụp ảnh.");
     } else {
       const libPerm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (libPerm.status !== "granted") return Alert.alert("Thiếu quyền", "Cần cấp quyền Thư viện ảnh để chọn ảnh.");
+      if (libPerm.status !== "granted")
+        return Alert.alert(
+          "Thiếu quyền",
+          "Cần cấp quyền Thư viện ảnh để chọn ảnh."
+        );
     }
 
     let result: ImagePicker.ImagePickerResult;
     result = useCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 1 })
+      ? await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          quality: 1,
+        })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ImagePicker.MediaTypeOptions.Images,
           allowsMultipleSelection: true,
@@ -458,7 +530,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     let i = 0;
     while (true) {
       const idx = tl.indexOf(k, i);
-      if (idx === -1) { out.push({ text: t.slice(i), hit: false }); break; }
+      if (idx === -1) {
+        out.push({ text: t.slice(i), hit: false });
+        break;
+      }
       if (idx > i) out.push({ text: t.slice(i, idx), hit: false });
       out.push({ text: t.slice(idx, idx + k.length), hit: true });
       i = idx + k.length;
@@ -466,14 +541,22 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     return out;
   }
 
-  function InlineHighlight({ text, keyword }: { text: string; keyword: string }) {
+  function InlineHighlight({
+    text,
+    keyword,
+  }: {
+    text: string;
+    keyword: string;
+  }) {
     const parts = useMemo(() => splitHighlight(text, keyword), [text, keyword]);
     if (!keyword) return <Text>{text}</Text>;
     return (
       <Text>
         {parts.map((p, idx) =>
           p.hit ? (
-            <Text key={idx} className="bg-yellow-300 rounded-sm">{p.text}</Text>
+            <Text key={idx} className="bg-yellow-300 rounded-sm">
+              {p.text}
+            </Text>
           ) : (
             <Text key={idx}>{p.text}</Text>
           )
@@ -485,11 +568,19 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const renderReplyPreview = (msg: UiMsg) => {
     const origin = msg.replyToId ? msgById.get(msg.replyToId) : undefined;
     if (!origin) return null;
-    const who = selfId && String(origin.senderId) === String(selfId) ? "bạn" : "đối phương";
+    const who =
+      selfId && String(origin.senderId) === String(selfId)
+        ? "bạn"
+        : "đối phương";
     const txt = origin.mediaUrl ? "[Ảnh]" : origin.text || "";
     return (
-      <View className={`${String(msg.senderId) === String(selfId) ? "bg-yellow-100" : "bg-gray-100"} px-3 py-2 rounded-lg mb-1`} style={{ opacity: 0.7 }}>
-        <Text className="text-[11px] text-gray-600" numberOfLines={1}>Trả lời {who}</Text>
+      <View
+        className={`${String(msg.senderId) === String(selfId) ? "bg-yellow-100" : "bg-gray-100"} px-3 py-2 rounded-lg mb-1`}
+        style={{ opacity: 0.7 }}
+      >
+        <Text className="text-[11px] text-gray-600" numberOfLines={1}>
+          Trả lời {who}
+        </Text>
         <Text className="text-[12px] text-gray-700" numberOfLines={2}>
           <InlineHighlight text={txt} keyword={searchKeyword} />
         </Text>
@@ -511,33 +602,42 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       <StatusBar style="auto" />
 
       {/* Header */}
-<View className="flex flex-row mt-14 items-center px-5 justify-between border-b border-gray-200 pb-2">
-  <View className="flex flex-row items-center gap-4">
-    <FontAwesome5 name="arrow-left" size={20} color="gray" onPress={() => navigation.goBack()} />
+      <View className="flex flex-row mt-14 items-center px-5 justify-between border-b border-gray-200 pb-2">
+        <View className="flex flex-row items-center gap-4">
+          <FontAwesome5
+            name="arrow-left"
+            size={20}
+            color="gray"
+            onPress={() => navigation.goBack()}
+          />
 
-    {/* 👇 Bọc avatar + tên bằng TouchableOpacity để mở UserInforScreen */}
-    <TouchableOpacity
-      className="flex flex-row gap-2 items-center"
-      activeOpacity={0.7}
-      onPress={() =>
-        navigation.navigate("UserInforScreen", {
-          userId: otherUserId ?? selfId, // nếu không có otherUserId thì mở profile của chính mình
-        })
-      }
-    >
-      <Image className="w-[46px] h-[46px] rounded-full" source={{ uri: otherUserAvatar }} />
-      <View>
-        <Text className="font-semibold">{otherUserName}</Text>
-        <Text className="text-gray-400 text-xs">
-          {onlineStatus.online ? "Đang hoạt động" : `Hoạt động ${timeAgo(onlineStatus.lastOnlineAt)} trước`}
-        </Text>
+          {/* 👇 Bọc avatar + tên bằng TouchableOpacity để mở UserInforScreen */}
+          <TouchableOpacity
+            className="flex flex-row gap-2 items-center"
+            activeOpacity={0.7}
+            onPress={() =>
+              navigation.navigate("UserInforScreen", {
+                userId: otherUserId ?? selfId, // nếu không có otherUserId thì mở profile của chính mình
+              })
+            }
+          >
+            <Image
+              className="w-[46px] h-[46px] rounded-full"
+              source={{ uri: otherUserAvatar }}
+            />
+            <View>
+              <Text className="font-semibold">{otherUserName}</Text>
+              <Text className="text-gray-400 text-xs">
+                {onlineStatus.online
+                  ? "Đang hoạt động"
+                  : `Hoạt động ${timeAgo(onlineStatus.lastOnlineAt)} trước`}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <FontAwesome5 name="bars" size={20} color="gray" />
       </View>
-    </TouchableOpacity>
-  </View>
-
-  <FontAwesome5 name="bars" size={20} color="gray" />
-</View>
-
 
       {/* Danh sách tin nhắn */}
       <ScrollView
@@ -551,56 +651,89 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
         {messages.map((msg) => {
           const isMe = selfId && String(msg.senderId) === String(selfId);
           return (
-            <View key={msg.id} className={`flex flex-col gap-1 ${isMe ? "self-end" : "self-start"} mb-3 max-w-[80%]`}>
+            <View
+              key={msg.id}
+              className={`flex flex-col gap-1 ${isMe ? "self-end" : "self-start"} mb-3 max-w-[80%]`}
+            >
               {/* Ô trích (mờ) */}
-              {msg.replyToId && !msg.isRecalled ? renderReplyPreview(msg) : null}
+              {msg.replyToId && !msg.isRecalled
+                ? renderReplyPreview(msg)
+                : null}
 
               {/* Bong bóng */}
-              <TouchableOpacity activeOpacity={0.8} onLongPress={() => openContextMenu(msg)}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onLongPress={() => openContextMenu(msg)}
+              >
                 {msg.isRecalled ? (
-                  <Text className="italic text-gray-400 text-sm">Tin nhắn đã được thu hồi</Text>
+                  <Text className="italic text-gray-400 text-sm">
+                    Tin nhắn đã được thu hồi
+                  </Text>
                 ) : (
                   <>
                     {msg.mediaUrl ? (
-                      <Image source={{ uri: msg.mediaUrl }} style={{ width: 220, height: 220, borderRadius: 12 }} />
+                      <Image
+                        source={{ uri: msg.mediaUrl }}
+                        style={{ width: 220, height: 220, borderRadius: 12 }}
+                      />
                     ) : null}
                     {msg.text?.trim() ? (
                       <Text
                         className={`${isMe ? "bg-yellow-200" : "bg-gray-200"} px-3 py-3 rounded-xl`}
                         style={{ overflow: "hidden" }}
                       >
-                        <InlineHighlight text={msg.text} keyword={searchKeyword} />
-                        {msg.edited ? <Text className="text-gray-500 text-xs"> (đã chỉnh sửa)</Text> : null}
+                        <InlineHighlight
+                          text={msg.text}
+                          keyword={searchKeyword}
+                        />
+                        {msg.edited ? (
+                          <Text className="text-gray-500 text-xs">
+                            {" "}
+                            (đã chỉnh sửa)
+                          </Text>
+                        ) : null}
                       </Text>
                     ) : null}
                   </>
                 )}
               </TouchableOpacity>
 
-              <Text className={`text-gray-400 text-xs ${isMe ? "self-end" : "self-start"}`}>{msg.time}</Text>
+              <Text
+                className={`text-gray-400 text-xs ${isMe ? "self-end" : "self-start"}`}
+              >
+                {msg.time}
+              </Text>
             </View>
           );
         })}
       </ScrollView>
 
       {/* Context Menu */}
-      <Modal visible={contextVisible} transparent animationType="fade" onRequestClose={closeContextMenu}>
+      <Modal
+        visible={contextVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeContextMenu}
+      >
         <View className="flex-1 bg-black/40 justify-end">
           <View className="bg-white px-4 py-3 rounded-t-2xl">
             <TouchableOpacity className="py-3" onPress={handleCopy}>
               <Text className="text-base">Sao chép</Text>
             </TouchableOpacity>
 
-            {contextMsg && selfId && String(contextMsg.senderId) === String(selfId) && !contextMsg.isRecalled && (
-              <>
-                <TouchableOpacity className="py-3" onPress={handleRecall}>
-                  <Text className="text-base text-red-600">Thu hồi</Text>
-                </TouchableOpacity>
-                <TouchableOpacity className="py-3" onPress={handleEdit}>
-                  <Text className="text-base text-blue-600">Chỉnh sửa</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            {contextMsg &&
+              selfId &&
+              String(contextMsg.senderId) === String(selfId) &&
+              !contextMsg.isRecalled && (
+                <>
+                  <TouchableOpacity className="py-3" onPress={handleRecall}>
+                    <Text className="text-base text-red-600">Thu hồi</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity className="py-3" onPress={handleEdit}>
+                    <Text className="text-base text-blue-600">Chỉnh sửa</Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
             <TouchableOpacity className="py-3" onPress={handleReply}>
               <Text className="text-base">Trả lời</Text>
@@ -619,12 +752,16 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           {editTarget && (
             <View className="mb-2 bg-yellow-100 border-l-4 border-yellow-400 px-3 py-2 rounded">
               <View className="flex-row justify-between items-center">
-                <Text className="font-semibold text-gray-700">Đang chỉnh sửa tin nhắn</Text>
+                <Text className="font-semibold text-gray-700">
+                  Đang chỉnh sửa tin nhắn
+                </Text>
                 <TouchableOpacity onPress={() => setEditTarget(null)}>
                   <Text className="text-blue-600">Hủy</Text>
                 </TouchableOpacity>
               </View>
-              <Text className="text-gray-600 text-xs">Nhập nội dung mới và bấm Gửi để cập nhật</Text>
+              <Text className="text-gray-600 text-xs">
+                Nhập nội dung mới và bấm Gửi để cập nhật
+              </Text>
             </View>
           )}
 
@@ -632,14 +769,20 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
             <View className="mb-2 bg-gray-100 border-l-4 border-gray-400 px-3 py-2 rounded">
               <View className="flex-row justify-between items-center">
                 <Text className="font-semibold text-gray-700">
-                  Trả lời {selfId && String(replyTarget.senderId) === String(selfId) ? "chính bạn" : "đối phương"}
+                  Trả lời{" "}
+                  {selfId && String(replyTarget.senderId) === String(selfId)
+                    ? "chính bạn"
+                    : "đối phương"}
                 </Text>
                 <TouchableOpacity onPress={() => setReplyTarget(null)}>
                   <Text className="text-blue-600">Đóng</Text>
                 </TouchableOpacity>
               </View>
               <Text numberOfLines={2} className="text-gray-600">
-                <InlineHighlight text={replyTarget.mediaUrl ? "[Ảnh]" : (replyTarget.text || "")} keyword={searchKeyword} />
+                <InlineHighlight
+                  text={replyTarget.mediaUrl ? "[Ảnh]" : replyTarget.text || ""}
+                  keyword={searchKeyword}
+                />
               </Text>
             </View>
           )}
@@ -650,10 +793,25 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
               className="w-full px-4 py-2 rounded-lg bg-white"
               value={content}
               onChangeText={setContent}
-              placeholder={editTarget ? "Nhập nội dung mới..." : "Nhập tin nhắn..."}
+              placeholder={
+                editTarget ? "Nhập nội dung mới..." : "Nhập tin nhắn..."
+              }
+              editable={!isSending}
             />
-            <TouchableOpacity onPress={handleSend} className="absolute right-2 top-2 bg-blue-500 px-3 py-2 rounded-lg">
-              <Text className="text-white font-semibold">{editTarget ? "Cập nhật" : "Gửi"}</Text>
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={isSending}
+              className="absolute right-2 top-2 bg-blue-500 px-3 py-2 rounded-lg"
+            >
+              <Text className="text-white font-semibold">
+                {
+                  isSending
+                    ? "Đang gửi..." // Text khi đang gửi
+                    : editTarget
+                      ? "Cập nhật"
+                      : "Gửi" // Text bình thường
+                }
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -681,8 +839,14 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
 
               <View className="flex flex-row gap-2 mt-2">
                 {selectedImages.map((image, index) => (
-                  <TouchableOpacity key={`${image.uri}-${index}`} onPress={() => removeImage(index)}>
-                    <Image source={{ uri: image.uri }} style={{ width: 50, height: 50, borderRadius: 8 }} />
+                  <TouchableOpacity
+                    key={`${image.uri}-${index}`}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={{ width: 50, height: 50, borderRadius: 8 }}
+                    />
                   </TouchableOpacity>
                 ))}
               </View>
