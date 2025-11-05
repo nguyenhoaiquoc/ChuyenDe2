@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -26,6 +27,13 @@ export default function GroupMembersScreen({
   route,
 }: GroupMembersScreenProps) {
   const { groupId, isLeader } = route.params;
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchData();
+    setRefreshing(false);
+  };
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"members" | "pending">("members");
@@ -264,6 +272,9 @@ export default function GroupMembersScreen({
         data={data}
         keyExtractor={(item: any) => String(item.id || item.user_id)}
         contentContainerStyle={{ padding: 16 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         ListEmptyComponent={
           <View className="items-center py-10">
             <Feather name="users" size={48} color="#9CA3AF" />

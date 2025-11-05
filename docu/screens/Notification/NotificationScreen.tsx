@@ -75,33 +75,45 @@ export default function NotificationScreen({ navigation }: Props) {
     }, [activeTab]);
 
     //  HÀM XỬ LÝ KHI BẤM 
+    // ✅ HÀM XỬ LÝ KHI BẤM (Full code)
     const handleNotificationPress = async (item: Notification) => {
-        if (isNavigating) return;
+        if (isNavigating) return; // Chặn bấm đúp
         setIsNavigating(true);
 
         const userId = await AsyncStorage.getItem("userId");
 
         try {
-            if (!item.is_read) {
+            // 1. Đánh dấu là đã đọc (gọi API PATCH)
+            if (!item.is_read && userId) { // Thêm kiểm tra userId
                 await axios.patch(`${path}/notifications/${item.id}/read/user/${userId}`);
+                // Cập nhật UI ngay lập tức
                 setNotifications(prev =>
                     prev.map(n => n.id === item.id ? { ...n, is_read: true } : n)
                 );
             }
 
+            // 2. Xử lý điều hướng (chuyển trang)
             if (item.targetType?.name === 'product' && item.product?.id) {
+
                 console.log(`Đang tải chi tiết sản phẩm ${item.product.id}...`);
 
+                // Gọi API lấy chi tiết sản phẩm ĐẦY ĐỦ (raw object)
                 const response = await axios.get(`${path}/products/${item.product.id}`);
-                const fullProductData: Product = response.data;
+                const rawProduct = response.data; // Đây là object thô từ API
+                const fullProductData: Product = {
+                    ...rawProduct, 
+                    authorName: rawProduct.user?.fullName || rawProduct.user?.name || "Ẩn danh",
+                    price: rawProduct.price ? `${Number(rawProduct.price).toLocaleString("vi-VN")} đ` : "Liên hệ",
+                };
 
                 navigation.navigate('ProductDetail', { product: fullProductData });
             }
+
         } catch (error: any) {
             console.error("Lỗi khi xử lý thông báo:", error.response?.data || error.message);
             Alert.alert("Lỗi", "Không thể mở mục này.");
         } finally {
-            setIsNavigating(false);
+            setIsNavigating(false); // Mở lại nút
         }
     };
 
@@ -118,7 +130,7 @@ export default function NotificationScreen({ navigation }: Props) {
             await axios.delete(
                 `${path}/notifications/user/${userId}`
             );
-            
+
             // 3. Xóa thành công, cập nhật UI
             setNotifications([]); // Set list rỗng
 
@@ -132,16 +144,16 @@ export default function NotificationScreen({ navigation }: Props) {
     const showConfirmDeleteAlert = () => {
         Alert.alert(
             "Xóa tất cả thông báo?",
-            "Hành động này không thể hoàn tác.", 
+            "Hành động này không thể hoàn tác.",
             [
                 {
                     text: "Hủy",
-                    style: "cancel", 
+                    style: "cancel",
                 },
                 {
                     text: "Xóa",
-                    onPress: handleDeleteAll, 
-                    style: "destructive", 
+                    onPress: handleDeleteAll,
+                    style: "destructive",
                 },
             ]
         );
@@ -204,10 +216,10 @@ export default function NotificationScreen({ navigation }: Props) {
                     <Ionicons name="arrow-back" size={24} color="black" />
                 </TouchableOpacity>
                 <Text className="text-lg font-semibold">Thông báo</Text>
-                <TouchableOpacity onPress={showConfirmDeleteAlert}> 
+                <TouchableOpacity onPress={showConfirmDeleteAlert}>
                     <Text className="text-sm text-red-500">Xóa tất cả</Text>
-                </TouchableOpacity> 
-                
+                </TouchableOpacity>
+
             </View>
 
             {/* Tab Navigator */}
