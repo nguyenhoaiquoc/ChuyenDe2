@@ -31,7 +31,7 @@ const { width } = Dimensions.get("window");
 
 export default function ProductDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
+  const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
       const id = await AsyncStorage.getItem("userId");
@@ -251,19 +251,20 @@ export default function ProductDetailScreen() {
       const otherUserId =
         sellerId === String(currentUser.id) ? buyerId : sellerId;
       const otherUserName = product.authorName || "Người bán";
-      const otherUserAvatar =
-        product.user?.avatar ||
-        product.seller?.avatar ||
-        "https://cdn-icons-png.flaticon.com/512/149/149071.png"; // ✅ fallback
+      const otherUserAvatar = sellerAvatar
+        ? sellerAvatar.startsWith("http")
+          ? sellerAvatar
+          : `${path}${sellerAvatar}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      console.log("dewdew", otherUserAvatar);
 
-      console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
-      // ✅ Truyền avatar và product sang ChatRoom
+      // console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
       navigation.navigate("ChatRoomScreen", {
         roomId: room.id,
         product,
         otherUserId,
         otherUserName,
-        otherUserAvatar, // ✅ thêm dòng này
+        otherUserAvatar,
         currentUserId: currentUser.id,
         currentUserName: currentUser.name,
         token: tokenValue,
@@ -282,7 +283,7 @@ export default function ProductDetailScreen() {
         <Image
           source={imageSource}
           style={{ width: "100%", height: "100%" }}
-          resizeMode="contain" // ✅ Sửa: "contain" để giữ nét, full ảnh không crop, cùng kích thước frame nhưng scale fit
+          resizeMode="contain"
         />
       </View>
     );
@@ -303,8 +304,8 @@ export default function ProductDetailScreen() {
       product_id?: string;
     }
   ) {
-    console.log("🪙 Token gửi đi:", token);
-    console.log("📤 Payload gửi:", payload);
+    // console.log("🪙 Token gửi đi:", token);
+    // console.log("📤 Payload gửi:", payload);
 
     try {
       const authHeader = token?.startsWith("Bearer ")
@@ -336,7 +337,26 @@ export default function ProductDetailScreen() {
     }
     return lines.join("\n");
   };
+  useEffect(() => {
+    const fetchSellerAvatar = async () => {
+      // Chỉ chạy khi có product.user_id
+      if (!product.user_id) return;
 
+      try {
+        // Dùng user_id của sản phẩm để gọi API lấy thông tin người bán
+        const res = await axios.get(`${path}/users/${product.user_id}`);
+
+        // Dùng key 'image' (giống hệt trang UserScreen của bạn)
+        if (res.data?.image) {
+          setSellerAvatar(res.data.image);
+        }
+      } catch (err) {
+        console.log("Lỗi lấy avatar người bán:", err);
+      }
+    };
+
+    fetchSellerAvatar();
+  }, [product.user_id]);
   return (
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -488,7 +508,11 @@ export default function ProductDetailScreen() {
             <View className="flex-row items-center mt-4">
               <Image
                 source={{
-                  uri: "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                  uri: sellerAvatar
+                    ? sellerAvatar.startsWith("http")
+                      ? sellerAvatar
+                      : `${path}${sellerAvatar}`
+                    : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                 }}
                 className="w-12 h-12 rounded-full"
               />
@@ -935,7 +959,9 @@ export default function ProductDetailScreen() {
                     <Image
                       source={{
                         uri: c.user?.image
-                          ? `${path}${c.user.image}`
+                          ? c.user.image.startsWith("http")
+                            ? c.user.image
+                            : `${path}${c.user.image}`
                           : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
                       }}
                       className="w-10 h-10 rounded-full"

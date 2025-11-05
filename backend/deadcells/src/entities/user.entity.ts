@@ -34,9 +34,13 @@ export class User {
   @Column({ type: 'bigint', name: 'status_id' })
   statusId: number;
 
+  @Column({ nullable: true })
+  hometown: string;
+
   /** --------- Hồ sơ cơ bản --------- */
   @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;
+
 
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
@@ -54,7 +58,6 @@ export class User {
 
   @Column({ type: 'date', nullable: true })
   dob: Date; // Ngày sinh
-
 
   // Khuyến nghị: dùng CITEXT để unique không phân biệt hoa/thường (Postgres cần EXTENSION citext)
   @Column({ type: 'citext', unique: true })
@@ -76,13 +79,13 @@ export class User {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-
   /** --------- Trạng thái xác minh --------- */
   @Column({ type: 'boolean', default: false })
   is_verified: boolean;
 
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
+
   // ---- Thêm các trường xác thực sinh viên ----
   // @Column({ nullable: true })
   // studentId: string;
@@ -99,7 +102,6 @@ export class User {
   // isVerifiedStudent: boolean;
   // @Column({ nullable: true })
   // schoolName: string;
-
 
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
