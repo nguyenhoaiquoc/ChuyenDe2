@@ -7,8 +7,6 @@ import {
   Text,
   StatusBar,
   FlatList,
-  GestureResponderEvent,
-  useColorScheme,
   Alert,
   RefreshControl, // 1. Thêm RefreshControl
 } from "react-native";
@@ -24,6 +22,7 @@ import "../../global.css";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNotification } from "../Notification/NotificationContext";
+import React from "react";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
