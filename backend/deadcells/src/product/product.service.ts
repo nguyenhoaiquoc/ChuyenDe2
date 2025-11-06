@@ -7,7 +7,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { ProductImage } from 'src/entities/product-image.entity';
 import { DealType } from 'src/entities/deal-type.entity';
 import { Condition } from 'src/entities/condition.entity';
@@ -58,7 +58,7 @@ export class ProductService {
     private readonly imageRepo: Repository<ProductImage>,
 
     @InjectRepository(Favorite) // 👈 THÊM DÒNG NÀY
-    private readonly favoriteRepo: Repository<Favorite>,
+    private readonly favoriteRepo: Repository<Favorite>,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -416,7 +416,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, product_status_id: 2 }],
+      where: [{ category_id: categoryId, product_status_id: 2, is_approved: true, is_deleted: false}],
       relations: [
         'images',
         'user',
@@ -493,7 +493,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { is_approved: true, product_status_id: 2 },
+      where: { is_approved: true, product_status_id: 2, is_deleted: false },
       relations: [
         'images',
         'user',
@@ -562,7 +562,7 @@ export class ProductService {
         price: Number(p.price),
         thumbnail_url: p.images?.[0]?.image_url || null,
         phone: p.user?.phone || null,
-        user_id: p.user?.id, // Sửa: Lấy từ p.user.id
+        user_id: p.user?.id,
         user: p.user
           ? {
               id: p.user.id,
@@ -574,8 +574,7 @@ export class ProductService {
         author_name: p.user?.fullName || 'Người bán',
         author: p.author || null,
         year: p.year || null,
-        mileage: p.mileage ?? null, // Sửa: Dùng ??
-        // ===== SỬA LỖI FORMAT (p.FIELD.id) TỪ ĐÂY =====
+        mileage: p.mileage ?? null,
 
         postType: p.postType
           ? { id: p.postType.id, name: p.postType.name }
@@ -759,7 +758,7 @@ export class ProductService {
   }
   async findById(id: number): Promise<any> {
     const product = await this.productRepo.findOne({
-      where: { id },
+      where: { id},
       relations: [
         'images',
         'user',
@@ -792,10 +791,114 @@ export class ProductService {
     return await this.formatProduct(product);
   }
 
+  // 🟢 Lấy sản phẩm liên quan
+  async findRelatedProducts(
+    currentProductId: number,
+    categoryId: number,
+    subCategoryId: number,
+    limit: number = 8,
+  ): Promise<any[]> {
+    // Ưu tiên 1: Lấy theo subCategory (liên quan nhất)
+    let products = await this.productRepo.find({
+      where: {
+        sub_category_id: subCategoryId,
+        product_status_id: 2,
+        is_approved: true,
+        is_deleted: false,
+        id: Not(currentProductId),
+      },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+      ],
+      order: { created_at: 'DESC' },
+      take: limit,
+    });
+
+    const needed = limit - products.length;
+
+    // Nếu chưa đủ, lấy thêm ở category chính
+    if (needed > 0) {
+      const alreadyFoundIds = products.map((p) => p.id);
+      const idsToExclude = [currentProductId, ...alreadyFoundIds];
+
+      const categoryProducts = await this.productRepo.find({
+        where: {
+          category_id: categoryId,
+          sub_category_id: Not(subCategoryId), // Không lấy trùng subCategory đã lấy ở trên
+          product_status_id: 2,
+          is_approved: true,
+          is_deleted: false,
+          id: Not(In(idsToExclude)), // Loại trừ sản phẩm đang xem VÀ các sản phẩm đã tìm thấy
+        },
+        relations: [
+          'images',
+          'user',
+          'dealType',
+          'condition',
+          'category',
+          'subCategory',
+          'category_change',
+          'sub_category_change',
+          'postType',
+          'productType',
+          'origin',
+          'material',
+          'size',
+          'brand',
+          'color',
+          'capacity',
+          'warranty',
+          'productModel',
+          'processor',
+          'ramOption',
+          'storageType',
+          'graphicsCard',
+          'breed',
+          'ageRange',
+          'gender',
+          'engineCapacity',
+          'productStatus',
+        ],
+        order: { created_at: 'DESC' },
+        take: needed,
+      });
+
+      products = [...products, ...categoryProducts];
+    }
+
+    return this.formatProducts(products);
+  }
+
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: false, }, // không lọc is_approved
+      where: { user: { id: userId }, is_deleted: false }, // không lọc is_approved
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -890,7 +993,6 @@ export class ProductService {
 
   // xóa tạm thời (đưa vào thùng rác)
   async softDeleteProduct(productId: number, userId: number): Promise<string> {
-
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['user'],
@@ -965,7 +1067,7 @@ export class ProductService {
     }
 
     await this.favoriteRepo.delete({ product: { id: productId } });
-    
+
     // Xóa ảnh liên quan trước
     if (product.images && product.images.length > 0) {
       await this.imageRepo.remove(product.images);

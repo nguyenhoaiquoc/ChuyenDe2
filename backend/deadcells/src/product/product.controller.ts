@@ -13,6 +13,8 @@ import {
   ParseIntPipe,
   Delete,
   Request,
+  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -24,6 +26,8 @@ import { UpdateProductStatusDto } from './dto/update-status.dto';
 
 @Controller('products')
 export class ProductController {
+  private readonly logger = new Logger(ProductController.name);
+
   constructor(private readonly productService: ProductService) {}
 
   // 🟢 Tạo bài đăng (đăng sản phẩm mới)
@@ -68,34 +72,58 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/soft-delete')
   softDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id; 
+    const userId = req.user.id;
     return this.productService.softDeleteProduct(id, userId);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Post(':id/restore')
   restore(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id; 
+    const userId = req.user.id;
     return this.productService.restoreProduct(id, userId);
   }
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Delete(':id/hard-delete')
   hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id; 
+    const userId = req.user.id;
     return this.productService.hardDeleteProduct(id, userId);
   }
 
-@UseGuards(JwtAuthGuard) 
-  @Get('trash') 
-  getDeleted(@Request() req) {
-    const userId = req.user.id; 
-    return this.productService.findDeletedProducts(userId);
-  }
+  @UseGuards(JwtAuthGuard)
+  @Get('trash')
+  getDeleted(@Request() req) {
+    const userId = req.user.id;
+    return this.productService.findDeletedProducts(userId);
+  }
 
+  // 🟢 Lấy sản phẩm liên quan (ĐẶT TRƯỚC HÀM /:id)
+  @Get(':id/related')
+  async findRelated(@Param('id', ParseIntPipe) id: number) {
+    // Lấy thông tin sản phẩm hiện tại để biết category
+    const currentProduct = await this.productService.findById(id);
+    if (!currentProduct) {
+      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
+    }
+
+    // Kiểm tra xem có category và subCategory không
+    if (!currentProduct.category?.id || !currentProduct.subCategory?.id) {
+      this.logger.warn(
+        `Sản phẩm ${id} thiếu category hoặc subCategory, không thể tìm bài liên quan.`,
+      );
+      return []; // Trả về mảng rỗng nếu thiếu thông tin
+    }
+
+    return this.productService.findRelatedProducts(
+      id,
+      currentProduct.category.id,
+      currentProduct.subCategory.id,
+      8, // Lấy tối đa 8 sản phẩm liên quan
+    );
+  }
   // 🟢 Lấy chi tiết 1 bài
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
