@@ -44,7 +44,7 @@ export default function CreateGroupScreen() {
   const removeImage = () => setImages([]);
 
   const uploadGroupImage = async (uri: string) => {
-    const data = new FormData();
+    const data = new FormData();  
     const filename = uri.split("/").pop();
     const ext = filename?.split(".").pop();
     const type = ext ? `image/${ext}` : "image";
@@ -90,6 +90,7 @@ export default function CreateGroupScreen() {
           name: groupName,
           isPublic: privacy === "public",
           thumbnail_url,
+          
         },
         {
           headers: {

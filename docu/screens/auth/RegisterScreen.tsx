@@ -4,12 +4,13 @@ import { StatusBar } from 'expo-status-bar';
 import { FontAwesome } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import Header_lg_reg from '../../components/HeaderAuth';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import FloatingInput from '../../components/FloatingInput';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types';
+import { Group, RootStackParamList } from '../../types';
 import axios from 'axios';
 import { path } from '../../config';
+import { Picker } from '@react-native-picker/picker';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RegisterScreen'>;
@@ -20,6 +21,18 @@ export default function RegisterScreen({ navigation }: Props) {
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]); // [password, confirm]
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+const [groups, setGroups] = useState<Group[]>([]);
+
+  useEffect(() => {
+axios.get(`${path}/groups/public`)
+    .then(res => setGroups(res.data))
+    .catch(err => console.error(err))
+  },[])
+
+
+
+  const [selectedGroup, setSelectedGroup] = useState("")
+
 
   const content = ['Họ và tên', 'Email', 'Số điện thoại', 'Mật khẩu', 'Xác nhận mật khẩu'];
   const binding = [
@@ -68,7 +81,7 @@ export default function RegisterScreen({ navigation }: Props) {
       setIsLoading(true);
       const res = await axios.post(
         `${path}/auth/register`,
-        { fullName: fullName.trim(), email, password, phone },
+        { fullName: fullName.trim(), email, password, phone,group_id: selectedGroup },
         { timeout: 15000 },
       );
       Alert.alert(res.data?.message || 'Đăng ký thành công. Vui lòng kiểm tra email để xác minh.');
@@ -121,8 +134,23 @@ export default function RegisterScreen({ navigation }: Props) {
               autoCapitalize={label === 'Email' ? 'none' : 'sentences'}
               autoCorrect={label === 'Email' || isPassword ? false : true}
             />
+            
           );
         })}
+             {/*dropdow chon khoa */}
+        <View className="mt-4">
+          <Text className="mb-1 font-semibold">Khoa</Text>
+          <View className="border border-gray-300 rounded-lg overflow-hidden">
+            <Picker
+              selectedValue={selectedGroup}
+              onValueChange={(value) => setSelectedGroup(value)}
+            >
+              {groups.map(group => (
+                <Picker.Item key = {group.id} label={group.name} value={group.id}/>
+              ))}
+            </Picker>
+          </View>
+        </View>
 
         {binding.map((b, index) => (
           <View key={index} className="flex flex-row gap-2 mt-4">

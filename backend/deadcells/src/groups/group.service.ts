@@ -145,7 +145,6 @@ export class GroupService {
     if (approve) {
       const status = await this.productStatusRepo.findOne({ where: { id: 2 } });
       post.productStatus = status;
-      post.is_approved = true;
       await this.productRepo.save(post);
       return { success: true, message: 'Đã duyệt bài viết' };
     } else {
@@ -428,6 +427,12 @@ export class GroupService {
       order: { created_at: 'DESC' },
       ...options,
     });
+  }
+  async findAllPublic(isPublic?: true) {
+    if(isPublic === true) {
+      return this.groupRepo.find({where: {isPublic: true}})
+    }
+    return this.groupRepo.find()
   }
 
   async findOneById(id: number) {

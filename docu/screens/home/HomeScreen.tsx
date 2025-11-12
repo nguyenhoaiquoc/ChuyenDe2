@@ -135,13 +135,6 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
-          console.log(
-            "Product ID:",
-            item.id,
-            "is_approved:",
-            item.is_approved,
-            typeof item.is_approved
-          );
 
           return {
             id: item.id.toString(),
@@ -236,7 +229,6 @@ export default function HomeScreen({ navigation }: Props) {
             status_id: item.status_id?.toString() || undefined,
             visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
-            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
 
@@ -517,7 +509,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View className="px-4 mt-4">
           <FlatList
             data={(selectedFilter ? filteredProducts : products).filter(
-              (p) => p.is_approved === true
+              (p) => p.productStatus?.id === 2
             )}
             numColumns={2}
             keyExtractor={(item) => item.id}

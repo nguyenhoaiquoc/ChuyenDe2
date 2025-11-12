@@ -269,7 +269,6 @@ export type Product = {
   status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
-  is_approved?: boolean;
   image?: any;
   location?: string;
   time?: string;
@@ -360,3 +359,10 @@ export type GroupType = {
   mustApprovePosts?: boolean;
   
 };
+
+export interface Group {
+  id: number;
+  name: string;
+  isPublic: boolean;
+}
+
