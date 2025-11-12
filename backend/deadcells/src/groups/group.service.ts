@@ -38,7 +38,6 @@ export class GroupService {
       mustApprovePosts: data.isPublic ? true : false,
       thumbnail_url: data.thumbnail_url || undefined,
       owner_id: userId,
-      count_member: 1,
       status_id: 1,
     });
     const savedGroup = await this.groupRepo.save(group);
@@ -55,12 +54,7 @@ export class GroupService {
     return savedGroup;
   }
 
-  /** Đếm số thành viên của nhóm (chỉ đếm pending = 3) */
-  async countMembers(groupId: number): Promise<number> {
-    return this.groupMemberRepo.count({
-      where: { group_id: groupId, pending: 3 },
-    });
-  }
+
 
   /** Cập nhật thông tin nhóm */
   async updateGroup(
@@ -233,7 +227,6 @@ export class GroupService {
     if (approve) {
       member.pending = 3; // Chuyển sang joined
       await this.groupMemberRepo.save(member);
-      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
       console.log('✅ Approved successfully');
       return { success: true, message: 'Đã duyệt thành viên' };
     } else {
@@ -270,10 +263,6 @@ export class GroupService {
       user_id: targetUserId,
     });
 
-    // Chỉ giảm count nếu user đã joined (pending = 3)
-    if (member.pending === 3) {
-      await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
-    }
   }
 
   /** Chuyển quyền trưởng nhóm */
@@ -370,10 +359,6 @@ export class GroupService {
 
     await this.groupMemberRepo.save(member);
 
-    // Chỉ tăng count_member nếu là public (joined ngay)
-    if (group.isPublic) {
-      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
-    }
 
     return {
       success: true,
@@ -416,7 +401,6 @@ export class GroupService {
       user_id: userId,
     });
 
-    await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
   }
 
   // ==================== Get/List Groups ====================
@@ -439,27 +423,8 @@ export class GroupService {
     return this.groupRepo.findOne({ where: { id } });
   }
 
-  async getFeaturedGroups(limit = 5) {
-    const groups = await this.groupRepo.find({
-      order: { count_member: 'DESC' },
-      take: limit,
-    });
 
-    return Promise.all(
-      groups.map(async (g) => {
-        const postCount = await this.countPostsByGroup(g.id);
-        const memberCount = await this.countMembers(g.id);
-        return {
-          id: g.id,
-          name: g.name,
-          members: `${memberCount} thành viên`,
-          posts: `${postCount} bài viết`,
-          image: g.thumbnail_url || null,
-          isPublic: g.isPublic,
-        };
-      }),
-    );
-  }
+
 
   async getLatestGroups(userId: number, limit = 5) {
     const memberships = await this.groupMemberRepo.find({
@@ -476,11 +441,9 @@ export class GroupService {
     return Promise.all(
       joinedGroups.map(async (g) => {
         const postCount = await this.countPostsByGroup(g.id);
-        const memberCount = await this.countMembers(g.id);
         return {
           id: g.id,
           name: g.name,
-          members: `${memberCount} thành viên`,
           posts: `${postCount} bài viết`,
           image: g.thumbnail_url || null,
           isPublic: g.isPublic,
@@ -501,7 +464,6 @@ export class GroupService {
       groups.map(async (g) => ({
         id: g.id,
         name: g.name,
-        memberCount: `${await this.countMembers(g.id)}`,
         posts: `${await this.countPostsByGroup(g.id)}`,
         image: g.thumbnail_url || null,
         isPublic: g.isPublic,
@@ -526,12 +488,10 @@ export class GroupService {
 
     return Promise.all(
       allGroups.map(async (g) => {
-        const memberCount = await this.countMembers(g.id);
         return {
           id: g.id,
           name: g.name,
           image: g.thumbnail_url || null,
-          memberCount: `${memberCount}`,
           isPublic: g.isPublic,
         };
       }),

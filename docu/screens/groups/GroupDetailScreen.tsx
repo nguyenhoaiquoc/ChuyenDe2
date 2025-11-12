@@ -376,9 +376,7 @@ export default function GroupDetailScreen({
           <Text className="text-white text-2xl font-bold">{group.name}</Text>
           <View className="flex-row items-center mt-1">
             <Feather name="users" size={14} color="white" />
-            <Text className="text-white text-sm ml-1">
-              {group.memberCount} thành viên
-            </Text>
+          
           </View>
           <View className="flex-row items-center mt-1">
             <Feather

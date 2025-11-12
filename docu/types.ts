@@ -354,7 +354,6 @@ export type GroupType = {
   id: number;
   name: string;
   image: string | number;
-  memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
   
