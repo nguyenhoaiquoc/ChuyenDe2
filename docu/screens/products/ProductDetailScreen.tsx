@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
@@ -29,6 +30,19 @@ import {
 
 const { width } = Dimensions.get("window");
 
+const formatPrice = (price: number | string, dealTypeName?: string) => {
+  if (dealTypeName === "Miễn phí") return "Miễn phí";
+  if (dealTypeName === "Trao đổi") return "Trao đổi";
+
+  const rawPrice = String(price).replace(/[^\d]/g, "");
+  const priceNumber = Number(rawPrice);
+
+  if (priceNumber > 0) {
+    return `${priceNumber.toLocaleString("vi-VN")} đ`;
+  }
+  return "Liên hệ";
+};
+
 export default function ProductDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
@@ -45,11 +59,8 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const { product: routeProduct, isApproved: routeIsApproved } =
-    route.params || {};
+  const { product: routeProduct } = route.params || {};
   const product: Product = routeProduct || ({} as Product);
-  // Mặc định là 'true' nếu không được truyền (cho các màn hình khác)
-  const isApproved = routeIsApproved ?? true;
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -59,6 +70,8 @@ export default function ProductDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
 
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
   useEffect(() => {
     const fetchFavoriteData = async () => {
       try {
@@ -80,10 +93,12 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id && isApproved) {
+    const isProductApproved = product.productStatus?.id === 2;
+
+    if (product.id && isProductApproved) {
       fetchFavoriteData();
     }
-  }, [product.id, currentUser, isApproved]);
+  }, [product.id, currentUser, product.productStatus?.id]);
 
   const handleToggleFavorite = async () => {
     if (!currentUser?.id) {
@@ -115,7 +130,6 @@ export default function ProductDetailScreen() {
       try {
         setLoadingComments(true);
         const res = await axios.get(`${path}/comments/${product.id}`);
-        // API trả về mảng comments
         setComments(res.data);
       } catch (error) {
         console.error("Lỗi khi tải bình luận:", error);
@@ -124,8 +138,29 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id && isApproved) fetchComments();
-  }, [product.id, isApproved]);
+    const fetchRelatedProducts = async () => {
+      try {
+        setLoadingRelated(true);
+        const res = await axios.get(`${path}/products/${product.id}/related`);
+        const formattedData = (res.data || []).map((item: any) => ({
+          ...item,
+          authorName: item.author_name || item.authorName || "Người bán",
+        }));
+        setRelatedProducts(formattedData);
+      } catch (error) {
+        console.error("Lỗi khi tải sản phẩm liên quan:", error);
+      } finally {
+        setLoadingRelated(false);
+      }
+    };
+
+    const isProductApproved = product.productStatus?.id === 2;
+
+    if (product.id && isProductApproved) {
+      fetchComments();
+      fetchRelatedProducts();
+    }
+  }, [product.id, product.productStatus?.id]);
 
   useEffect(() => {}, [product]);
 
@@ -325,9 +360,6 @@ export default function ProductDetailScreen() {
     }
   }
 
-  const rawPrice = product.price?.toString().replace(/[^\d]/g, "");
-  const priceNumber = Number(rawPrice);
-
   const formatAgeRangeName = (text: string) => {
     if (!text) return "";
     const words = text.split(" ");
@@ -357,13 +389,56 @@ export default function ProductDetailScreen() {
 
     fetchSellerAvatar();
   }, [product.user_id]);
+
+  const renderRelatedItem = ({ item }: { item: Product }) => {
+    return (
+      <TouchableOpacity
+        onPress={() =>
+          navigation.push("ProductDetail", {
+            product: item,
+          })
+        }
+        className="w-40 bg-white border border-gray-200 rounded-lg shadow-sm mr-3 overflow-hidden"
+      >
+        <Image
+          source={{
+            uri:
+              item.thumbnail_url ||
+              item.image || // Fallback
+              "https://via.placeholder.com/160x130?text=No+Image",
+          }}
+          className="w-full h-32"
+          resizeMode="cover"
+        />
+        <View className="p-2">
+          <Text className="text-sm font-medium" numberOfLines={2}>
+            {item.name}
+          </Text>
+          <Text className="text-red-600 font-bold text-sm mt-1">
+            {/* 🚀 Tái sử dụng hàm formatPrice */}
+            {formatPrice(item.price, item.dealType?.name)}
+          </Text>
+          <Text className="text-gray-500 text-xs mt-1" numberOfLines={1}>
+            📍 {item.location || "Việt Nam"}
+          </Text>
+          <Text
+            className="text-blue-600 text-xs font-semibold mt-1"
+            numberOfLines={1}
+          >
+            👤 {item.authorName}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View className="flex-1 bg-white">
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Ảnh sản phẩm */}
         <View className="relative">
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate("Home")}
             className="absolute top-3 left-3 bg-white p-2 rounded-full z-10 shadow-md"
           >
             <Ionicons name="arrow-back" size={20} color="black" />
@@ -402,7 +477,7 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <TouchableOpacity
               onPress={handleToggleFavorite}
               className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
@@ -418,18 +493,6 @@ export default function ProductDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
-        {/* ✅ Ẩn nút Chat nếu sản phẩm của chính mình */}
-        {currentUser &&
-        Number(product.user_id) === Number(currentUser.id) ? null : (
-          <View className="bg-green-500 self-end rounded-md my-2 mr-4">
-            <TouchableOpacity
-              onPress={handleChatPress}
-              className="bg-green-500 self-end rounded-md"
-            >
-              <Text className="text-white px-4 py-1 font-bold">Chat</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         <View className="px-4 py-3 pb-12">
           {/* Tiêu đề */}
@@ -446,17 +509,11 @@ export default function ProductDetailScreen() {
           <View className="flex-row justify-between items-center mb-2">
             {/* Giá  */}
             <Text className="text-red-600 text-xl font-bold">
-              {product.dealType?.name === "Miễn phí"
-                ? "Miễn phí"
-                : product.dealType?.name === "Trao đổi"
-                  ? "Trao đổi"
-                  : priceNumber > 0
-                    ? `${priceNumber.toLocaleString("vi-VN")} đ`
-                    : "Liên hệ"}
+              {formatPrice(product.price, product.dealType?.name)}
             </Text>
 
             {/* Tim */}
-            {isApproved && (
+            {product.productStatus?.id === 2 && (
               <TouchableOpacity
                 className="flex-row items-center"
                 onPress={handleToggleFavorite}
@@ -947,7 +1004,7 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Bình luận */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <View className="mb-6">
               <Text className="text-lg font-bold mb-3">Bình luận</Text>
 
@@ -1024,8 +1081,58 @@ export default function ProductDetailScreen() {
               </View>
             </View>
           )}
+
+          {/* Sản phẩm liên quan */}
+          {product.productStatus?.id === 2 && (
+            <View className="px-4">
+              <Text className="text-xl font-bold mb-4">Sản phẩm liên quan</Text>
+              {loadingRelated ? (
+                <ActivityIndicator size="large" color="#3b82f6" />
+              ) : relatedProducts.length > 0 ? (
+                <FlatList
+                  data={relatedProducts}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={renderRelatedItem} // Dùng hàm render mới
+                />
+              ) : (
+                <Text className="text-gray-500 text-sm">
+                  Không tìm thấy sản phẩm liên quan.
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
+
+      {/* Chỉ hiển thị thanh bar nếu KHÔNG PHẢI sản phẩm của mình */}
+      {product.productStatus?.id === 2 && currentUser && Number(product.user_id) !== Number(currentUser.id) && (
+        <View className="flex-row border-t border-gray-200 bg-white p-2 shadow-lg">
+          {/* Nút Gọi Ngay */}
+          <TouchableOpacity
+            onPress={handleCall} // Gọi thẳng hàm handleCall
+            disabled={!product.phone} // Vô hiệu hóa nếu không có SĐT
+            className={`flex-1 flex-row items-center justify-center rounded-lg py-3 mr-1.5 ${
+              !product.phone ? "bg-gray-300" : "bg-blue-500"
+            }`}
+          >
+            <Ionicons name="call-outline" size={18} color="white" />
+            <Text className="text-white font-bold ml-2 text-base">
+              Gọi ngay
+            </Text>
+          </TouchableOpacity>
+
+          {/* Nút Chat */}
+          <TouchableOpacity
+            onPress={handleChatPress}
+            className="flex-1 flex-row items-center justify-center rounded-lg bg-green-500 py-3 ml-1.5"
+          >
+            <Ionicons name="chatbubbles-outline" size={18} color="white" />
+            <Text className="text-white font-bold ml-2 text-base">Chat</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

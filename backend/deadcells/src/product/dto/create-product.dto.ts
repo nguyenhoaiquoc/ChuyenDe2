@@ -168,7 +168,7 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(transformToNumberOrNull)
   mileage: number | null;
-  
+
   @IsOptional()
   @Transform(transformToNumberOrNull)
   category_change_id: number | null;
@@ -193,4 +193,7 @@ export class CreateProductDto {
   @IsNumberString()
   group_id: string;
 
+  @IsOptional()
+  @IsString()
+  imageIdsToDelete?: string;
 }

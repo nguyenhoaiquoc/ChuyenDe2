@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PostType, Product } from "../types";
+import React from "react";
 
 type ProductCardProps = {
   product: Product;
