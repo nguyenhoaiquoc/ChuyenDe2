@@ -300,4 +300,10 @@ export class GroupController {
   async uploadGroupImage(@UploadedFile() file: Express.Multer.File) {
     return { url: file?.path };
   }
+ @Get('public')
+ async findPublic() {
+  return this.groupService.findAllPublic(true);
+}
+
+
 }

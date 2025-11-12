@@ -379,3 +379,10 @@ export type GroupType = {
   mustApprovePosts?: boolean;
   
 };
+
+export interface Group {
+  id: number;
+  name: string;
+  isPublic: boolean;
+}
+

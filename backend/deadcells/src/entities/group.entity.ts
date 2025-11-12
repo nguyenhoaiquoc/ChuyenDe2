@@ -51,7 +51,7 @@ export class Group {
 
   @OneToMany(() => GroupMember, (member) => member.group)
   members: GroupMember[];
-
+  
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

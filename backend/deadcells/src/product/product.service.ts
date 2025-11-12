@@ -1002,7 +1002,6 @@ export class ProductService {
     }
 
     product.product_status_id = dto.product_status_id; // Nếu admin đang duyệt (chuyển sang status 2)
-    // (Hàm approveExtension đã xử lý status 5, nên ở đây chỉ cần xử lý các status khác)
 
     if (dto.product_status_id === 2) {
       const newExpiresAt = new Date();

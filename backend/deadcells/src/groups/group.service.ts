@@ -428,6 +428,12 @@ export class GroupService {
       ...options,
     });
   }
+  async findAllPublic(isPublic?: true) {
+    if(isPublic === true) {
+      return this.groupRepo.find({where: {isPublic: true}})
+    }
+    return this.groupRepo.find()
+  }
 
   async findOneById(id: number) {
     return this.groupRepo.findOne({ where: { id } });
