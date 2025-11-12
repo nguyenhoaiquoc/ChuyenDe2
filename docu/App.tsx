@@ -47,6 +47,8 @@ import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
 import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
 import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
 import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
+import React from 'react';
+import FollowListScreen from './screens/profile/FollowListScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

@@ -19,23 +19,27 @@ import { path } from "../../config";
 import { io } from "socket.io-client";
 import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import React from "react";
+import { useIsFocused } from '@react-navigation/native';
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null); 
+  const [roleId, setRoleId] = useState<string | null>(null);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const isFocused = useIsFocused();
 
+  // 👇 4. CHÉP ĐÈ HẾT HÀM useEffect CŨ BẰNG HÀM NÀY
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndFollows = async () => { // Đổi tên hàm
       try {
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
 
-        // Nếu không có userId (ví dụ: người dùng chưa đăng nhập),
-        // thử tải dữ liệu local (nếu có) rồi thoát
         if (!userId || !token) {
+          // Fallback (code cũ của ông)
           const localName = await AsyncStorage.getItem("userName");
           const localAvatar = await AsyncStorage.getItem("userAvatar");
           const localRoleId = await AsyncStorage.getItem("role_id");
@@ -45,38 +49,49 @@ export default function UserScreen() {
           return;
         }
 
-        // Nếu có userId, gọi API để lấy dữ liệu MỚI NHẤT
-        const res = await axios.get(`${path}/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        // 1. Lấy thông tin User (Code cũ của ông)
+        // Dùng Promise.all để gọi 3 API song song cho nhanh
+        const [
+          userRes,
+          followerRes,
+          followingRes
+        ] = await Promise.all([
+          // API 1: Lấy thông tin user
+          axios.get(`${path}/users/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          // API 2: Lấy số người theo dõi
+          axios.get(`${path}/follow/${userId}/follower-count`),
+          // API 3: Lấy số người đang theo dõi
+          axios.get(`${path}/follow/${userId}/following-count`),
+        ]);
 
-        // Lấy dữ liệu từ API response
-        const fullName = res.data.fullName || res.data.name || "";
-        const image = res.data.image || null;
-
-        // ✨ LẤY ROLE_ID TỪ API ✨
+        // Xử lý kết quả 1 (Thông tin user)
+        const fullName = userRes.data.fullName || userRes.data.name || "";
+        const image = userRes.data.image || null;
         const apiRoleId =
-          res.data.roleId != null ? String(res.data.roleId) : null;
-        // Cập nhật State
+          userRes.data.roleId != null ? String(userRes.data.roleId) : null;
+
         setName(fullName);
         setAvatar(image);
         if (apiRoleId) {
-          setRoleId(apiRoleId); // Set state bằng dữ liệu mới từ API
+          setRoleId(apiRoleId);
+          await AsyncStorage.setItem("role_id", apiRoleId);
         }
-
-        // Cập nhật lại AsyncStorage bằng dữ liệu mới nhất
         await AsyncStorage.setItem("userName", fullName);
         if (image) {
           await AsyncStorage.setItem("userAvatar", image);
         } else {
-          await AsyncStorage.removeItem("userAvatar"); // Xóa nếu avatar bị gỡ
+          await AsyncStorage.removeItem("userAvatar");
         }
-        if (apiRoleId) {
-          await AsyncStorage.setItem("role_id", apiRoleId); // Cập nhật role_id
-        }
+
+        // Xử lý kết quả 2 & 3 (Follow)
+        setFollowerCount(followerRes.data.count || 0);
+        setFollowingCount(followingRes.data.count || 0);
+
       } catch (err) {
-        // Nếu API lỗi, TẠM DÙNG dữ liệu cũ trong Storage
-        console.log("Lỗi fetchUser, dùng fallback data:", err);
+        // Fallback (code cũ của ông)
+        console.log("Lỗi fetchUserAndFollows, dùng fallback data:", err);
         const localName = await AsyncStorage.getItem("userName");
         const localAvatar = await AsyncStorage.getItem("userAvatar");
         const localRoleId = await AsyncStorage.getItem("role_id");
@@ -86,8 +101,12 @@ export default function UserScreen() {
       }
     };
 
-    fetchUser();
-  }, []); 
+ 
+    if (isFocused) {
+      fetchUserAndFollows();
+    }
+
+  }, [isFocused]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -121,10 +140,10 @@ export default function UserScreen() {
                 source={
                   avatar
                     ? {
-                        uri: avatar.startsWith("http")
-                          ? avatar
-                          : `${path}${avatar}`,
-                      }
+                      uri: avatar.startsWith("http")
+                        ? avatar
+                        : `${path}${avatar}`,
+                    }
                     : require("../../assets/meo.jpg")
                 }
                 style={{ width: "100%", height: "100%", borderRadius: 48 }}
@@ -144,10 +163,10 @@ export default function UserScreen() {
           </Text>
           <View style={{ flexDirection: "row", marginTop: 4 }}>
             <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
-              Người theo dõi 1
+              Người theo dõi : {followerCount}
             </Text>
             <Text style={{ color: "#6b7280", fontSize: 14 }}>
-              Đang theo dõi 1
+              Đang theo dõi : {followingCount}
             </Text>
           </View>
         </View>
@@ -289,7 +308,7 @@ function UtilityItem({
         <Ionicons name={icon} size={24} color={iconColor} />
         <Text
           style={[
-            { marginLeft: 16, fontSize: 16, color: textColor }, 
+            { marginLeft: 16, fontSize: 16, color: textColor },
             textStyle,
           ]}
         >

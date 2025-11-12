@@ -68,19 +68,6 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
-  @UseGuards(JwtAuthGuard) 
-  @Post(':id/soft-delete')
-  softDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id; 
-    return this.productService.softDeleteProduct(id, userId);
-  }
-
-  @UseGuards(JwtAuthGuard) 
-  @Post(':id/restore')
-  restore(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id; 
-    return this.productService.restoreProduct(id, userId);
-  }
 
   @UseGuards(JwtAuthGuard) 
   @Delete(':id/hard-delete')
@@ -89,12 +76,6 @@ export class ProductController {
     return this.productService.hardDeleteProduct(id, userId);
   }
 
-@UseGuards(JwtAuthGuard) 
-  @Get('trash') 
-  getDeleted(@Request() req) {
-    const userId = req.user.id; 
-    return this.productService.findDeletedProducts(userId);
-  }
 
   // 🟢 Lấy chi tiết 1 bài
   @Get(':id')

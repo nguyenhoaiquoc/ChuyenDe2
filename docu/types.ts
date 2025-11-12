@@ -269,7 +269,6 @@ export type Product = {
   status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
-  is_approved?: boolean;
   image?: any;
   location?: string;
   time?: string;
@@ -349,6 +348,11 @@ export type Notification = {
     name: string;
     // Thêm các trường khác của Product nếu ông cần
   };
+
+  FollowListScreen: {
+    userId: number | string; // ID của người mà mình xem
+    initialTab: 'followers' | 'following'; // Bấm vào nút nào thì mở tab đó
+  };
 };
 
 export type GroupType = {
@@ -360,3 +364,4 @@ export type GroupType = {
   mustApprovePosts?: boolean;
   
 };
+

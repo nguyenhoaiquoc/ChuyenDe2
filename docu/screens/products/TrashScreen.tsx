@@ -157,7 +157,6 @@ export default function TrashScreen() {
       status_id: item.status_id?.toString() || undefined,
       visibility_type: item.visibility_type?.toString() || undefined,
       group_id: item.group_id || null,
-      is_approved: item.is_approved == 1 || item.is_approved === true,
     };
   };
 

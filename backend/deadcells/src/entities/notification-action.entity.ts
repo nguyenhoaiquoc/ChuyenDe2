@@ -14,7 +14,7 @@ export class NotificationAction {
   id: number;
 
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
-  name: string; // 'message', 'comment', 'report', 'follow'
+  name: string; 
 
   @OneToMany(() => Notification, (notification) => notification.action)
   notifications: Notification[];

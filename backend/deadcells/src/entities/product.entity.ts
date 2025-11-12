@@ -243,7 +243,7 @@ export class Product {
 
   @ManyToOne(() => Condition)
   @JoinColumn({ name: 'condition_id' })
-  condition: Condition;
+  condition: Condition | null;
 
   // ===== Địa chỉ =====
   @Column({ type: 'json', nullable: true })
@@ -269,9 +269,6 @@ export class Product {
   @JoinColumn({ name: 'group_id' })
   group: Group;
 
-  @Column({ type: 'boolean', default: false })
-  is_approved: boolean;
-
   // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })
   author: string | null;
@@ -279,15 +276,19 @@ export class Product {
   @Column({ type: 'int', nullable: true })
   year: number | null;
 
-  @Column({ default: false })
-  is_deleted: boolean;
-
-  @Column({ type: 'timestamp', nullable: true })
-  deleted_at: Date | null;
-
+  @Column({
+    name: 'expires_at',
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Ngày sản phẩm sẽ hết hạn',
+  })
+  expires_at: Date | null;
+  
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
+
 }

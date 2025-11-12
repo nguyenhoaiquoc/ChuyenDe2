@@ -44,6 +44,7 @@ import { EngineCapacityModule } from './engine-capacities/engine-capacity.module
 import { ProductStatus } from './entities/product-status.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { ProductStatusModule } from './product-statuses/product-status.module';
+import { FollowModule } from './follow/follow.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { ProductStatusModule } from './product-statuses/product-status.module';
     GenderModule,
     EngineCapacityModule,
     ProductStatusModule,
+    FollowModule,
   ],
   controllers: [AppController],
   providers: [AppService],

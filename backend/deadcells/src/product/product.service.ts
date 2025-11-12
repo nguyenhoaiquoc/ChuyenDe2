@@ -331,7 +331,6 @@ export class ProductService {
 
       productStatus: productStatusGr,
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
-      is_approved: isApproved,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
 
       visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
@@ -357,22 +356,22 @@ export class ProductService {
 
     // 5. Gửi thông báo
     if (savedProduct) {
-      this.notificationService
-        .notifyUserOfPostSuccess(savedProduct)
-        .catch((err) =>
-          this.logger.error(
-            'Lỗi (từ service) notifyUserOfPostSuccess:',
-            err.message,
-          ),
-        );
-      this.notificationService
-        .notifyAdminsOfNewPost(savedProduct)
-        .catch((err) =>
-          this.logger.error(
-            'Lỗi (từ service) notifyAdminsOfNewPost:',
-            err.message,
-          ),
-        );
+      // this.notificationService
+      //   .notifyUserOfPostSuccess(savedProduct)
+      //   .catch((err) =>
+      //     this.logger.error(
+      //       'Lỗi (từ service) notifyUserOfPostSuccess:',
+      //       err.message,
+      //     ),
+      //   );
+      // this.notificationService
+      //   .notifyAdminsOfNewPost(savedProduct)
+      //   .catch((err) =>
+      //     this.logger.error(
+      //       'Lỗi (từ service) notifyAdminsOfNewPost:',
+      //       err.message,
+      //     ),
+      //   );
     }
 
     // 6. Trả về sản phẩm đầy đủ (Query lại để lấy đủ relations)
@@ -493,7 +492,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { is_approved: true, product_status_id: 2 },
+      where: {  product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -687,7 +686,6 @@ export class ProductService {
         status_id: p.status_id,
         visibility_type: p.visibility_type,
         group_id: p.group_id,
-        is_approved: p.is_approved,
 
         // Thông tin phụ
         address_json: p.address_json,
@@ -795,7 +793,7 @@ export class ProductService {
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: false, }, // không lọc is_approved
+      where: { user: { id: userId }}, // không lọc 
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -868,85 +866,36 @@ export class ProductService {
   }
 
   // Cập nhật trạng thái (Duyệt/Từ chối)
-  async updateProductStatus(
-    id: number,
-    dto: UpdateProductStatusDto,
-  ): Promise<Product> {
-    const product = await this.productRepo.findOneBy({ id });
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
-    }
+  async updateProductStatus(id: number, dto: UpdateProductStatusDto) {
+    
 
-    product.is_approved = dto.is_approved;
-    product.product_status_id = dto.product_status_id;
 
-    const updatedProduct = await this.productRepo.save(product);
-
-    // Thông báo
-    // this.notificationService.notifyUserOfApproval(updatedProduct);
-
-    return updatedProduct;
-  }
-
-  // xóa tạm thời (đưa vào thùng rác)
-  async softDeleteProduct(productId: number, userId: number): Promise<string> {
-
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
-    });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-
-    if (product.user!.id !== userId)
-      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
-
-    product.is_deleted = true;
-    product.deleted_at = new Date();
-
-    await this.productRepo.save(product);
-    console.log(`✅ Sản phẩm ${product.id} đã được chuyển vào thùng rác.`);
-
-    return `Sản phẩm ID=${productId} đã được chuyển vào thùng rác`;
-  }
-
-  //khôi phục sản phẩm đã xóa tạm thời
-  async restoreProduct(productId: number, userId: number): Promise<string> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
+    // 1. Cập nhật trạng thái sản phẩm
+    await this.productRepo.update(id, { 
+      product_status_id : dto.product_status_id,
+      // status_id: dto.status_id, // (Nếu ông dùng status_id)
     });
 
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
+    // 2. LOGIC IF/ELSE: CHỈ THÔNG BÁO KHI ĐÃ DUYỆT
+    if (dto.product_status_id === 2) {
+      // Lấy lại thông tin đầy đủ của sản phẩm
+      const product = await this.productRepo.findOne({
+        where: { id: id },
+        relations: ['user'], // Cần 'user' để biết ai là người nhận
+      });
+
+      if (product && product.user) {
+        // ✅ BẬT THÔNG BÁO Ở ĐÂY
+        this.logger.log(`Bài đăng ${product.id} đã được duyệt. Gửi thông báo...`);
+        this.notificationService.notifyUserOfPostSuccess(product);
+        this.notificationService.notifyAdminsOfNewPost(product);
+      }
+    } else {
+      // (Nếu ông muốn thông báo "Bài bị từ chối" thì code ở đây)
+      this.logger.log(`Bài đăng ${id} đã bị từ chối hoặc cập nhật.`);
     }
 
-    if (!product.user || product.user.id !== userId) {
-      throw new UnauthorizedException(
-        'Bạn không có quyền khôi phục sản phẩm này.',
-      );
-    }
-
-    if (!product.is_deleted) {
-      throw new Error('Sản phẩm chưa bị xóa, không thể khôi phục.');
-    }
-
-    product.is_deleted = false;
-    product.deleted_at = null;
-    await this.productRepo.save(product);
-
-    this.logger.log(`♻️ Đã khôi phục sản phẩm ID=${productId}`);
-    return `Đã khôi phục sản phẩm ID=${productId}`;
-  }
-
-  //lấy danh sách “Thùng rác” (đã xóa tạm thời)
-  async findDeletedProducts(userId: number): Promise<any[]> {
-    const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: true },
-      relations: ['images', 'category', 'subCategory', 'dealType'],
-      order: { deleted_at: 'DESC' },
-    });
-
-    return this.formatProducts(products);
+    return { message: 'Cập nhật trạng thái thành công.' };
   }
 
   //xóa vĩnh viễn

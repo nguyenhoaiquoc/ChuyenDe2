@@ -85,6 +85,29 @@ export class NotificationService {
     }
   }
 
+  //  Thông báo cho người bị theo dõ
+  async notifyUserOfNewFollower(actorId: number, followedUserId: number) {
+    try {
+      // 'new_follow' (ông vừa thêm ở Bước 1)
+      const action = await this.actionRepo.findOneByOrFail({ name: 'new_follow' }); 
+      // 'user' (ông đã có)
+      const targetType = await this.targetTypeRepo.findOneByOrFail({ name: 'user' }); 
+
+      const dto: CreateNotificationDto = {
+        userId: followedUserId, // Người NHẬN là người BỊ theo dõi
+        actorId: actorId,       // Người LÀM là người đi theo dõi
+        actionId: action.id,
+        targetTypeId: targetType.id,
+        targetId: actorId,      // Đối tượng là chính người đi theo dõi
+        productId: undefined,   // Không liên quan đến sản phẩm
+      };
+      await this.create(dto);
+      
+    } catch (error) {
+      this.logger.error(`Lỗi tạo thông báo new_follow: ${error.message}`, error.stack);
+    }
+  }
+
   // HÀM: Gửi xác nhận cho người vừa thả tim
   async notifyUserOfFavoriteConfirmation(actorId: number, productId: number) {
     try {
