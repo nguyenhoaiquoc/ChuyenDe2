@@ -11,6 +11,7 @@ import { Group, RootStackParamList } from '../../types';
 import axios from 'axios';
 import { path } from '../../config';
 import { Picker } from '@react-native-picker/picker';
+import React from 'react';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'RegisterScreen'>;
