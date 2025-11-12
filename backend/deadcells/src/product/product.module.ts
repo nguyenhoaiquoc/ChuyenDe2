@@ -57,7 +57,7 @@ import { ProductStatusModule } from 'src/product-statuses/product-status.module'
 import { GroupMember } from 'src/entities/group-member.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { Favorite } from 'src/entities/favorite.entity';
-
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -67,7 +67,7 @@ import { Favorite } from 'src/entities/favorite.entity';
       DealType,
       Condition,
       SubCategory,
-      Category, 
+      Category,
       FashionCategory,
       GameCategory,
       AcademicCategory,
@@ -77,9 +77,10 @@ import { Favorite } from 'src/entities/favorite.entity';
       VehicleCategory,
       PostType,
       GroupMember,
-      Favorite
+      Favorite,
     ]),
-
+    
+    ScheduleModule.forRoot(),
     NotificationModule,
     forwardRef(() => GroupModule),
     SizeModule,

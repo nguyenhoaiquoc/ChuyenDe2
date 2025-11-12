@@ -9,44 +9,300 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import * as ImagePicker from "expo-image-picker";
 import AddressPicker from "../../components/AddressPicker";
 import axios from "axios";
-import { Alert } from "react-native";
 import { path } from "../../config";
 import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import {
+  RootStackParamList,
+  Product,
+  ProductImage as ProductImageType,
+  Category,
+  SubCategory,
+} from "../../types";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import "../../global.css";
+
+// Định nghĩa kiểu
+type EditNavProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "EditProductScreen"
+>;
+type EditRouteProp = RouteProp<RootStackParamList, "EditProductScreen">;
+
+// Kiểu dữ liệu cho ảnh (để phân biệt cũ/mới/xóa)
+type ImageStateType = {
+  id: string | null; // null nếu là ảnh mới
+  uri: string;
+  isNew: boolean;
+};
 
 const { width } = Dimensions.get("window");
-const PostFormScreen = ({
-  navigation,
-  route,
-}: {
-  navigation: any;
-  route: any;
-}) => {
-  interface Category {
-    id: string;
-    name: string;
-    image: string;
-  }
-  interface SubCategory {
-    id: string;
-    name: string;
-  }
-  const { category, subCategory } = route.params || {};
 
-  const [title, setTitle] = useState("");
-  const [isFree, setIsFree] = useState(false);
-  const [price, setPrice] = useState("");
-  const [images, setImages] = useState<string[]>([]);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+export default function EditProductScreen() {
+  const navigation = useNavigation<EditNavProp>();
+  const route = useRoute<EditRouteProp>();
+  const { product } = route.params; // 🚀 LẤY SẢN PHẨM TỪ ROUTE
+
+  // === KHỞI TẠO STATE TỪ PRODUCT ===
+  const [name, setName] = useState(product.name);
+  const [description, setDescription] = useState(product.description);
+
+  // Xử lý giá
+  const getInitialPrice = () => {
+    // Sửa lỗi so sánh string vs number
+    if (
+      Number(product.dealType?.id) === 2 ||
+      Number(product.dealType?.id) === 3
+    )
+      return "0";
+    // Xóa " đ" và ","
+    const priceString = product.price || "";
+    return priceString.replace(/\D/g, "");
+  };
+  const [price, setPrice] = useState(getInitialPrice());
+
+  // Xử lý ảnh
+  const [images, setImages] = useState<ImageStateType[]>(
+    product.images.map((img: ProductImageType) => ({
+      id: img.id, // Lưu ID của ảnh cũ
+      uri: img.image_url,
+      isNew: false,
+    }))
+  );
+  const [imageIdsToDelete, setImageIdsToDelete] = useState<string[]>([]); // Lưu ID ảnh để xóa
+
+  const [address, setAddress] = useState(product.address_json?.full || "");
   const [user, setUser] = useState<{ id: number; name: string } | null>(null);
+
+  // ID
+  const [conditionId, setConditionId] = useState<number | null>(
+    product.condition ? Number(product.condition.id) : null
+  );
+  const [productTypeId, setProductTypeId] = useState<number | null>(
+    product.productType ? Number(product.productType.id) : null
+  );
+  const [dealTypeId, setDealTypeId] = useState<number | null>(
+    product.dealType ? Number(product.dealType.id) : null
+  );
+  const [postTypeId, setPostTypeId] = useState<number | null>(
+    product.postType ? Number(product.postType.id) : null
+  );
+  const [originId, setOriginId] = useState<number | null>(
+    product.origin ? Number(product.origin.id) : null
+  );
+  const [materialId, setMaterialId] = useState<number | null>(
+    product.material ? Number(product.material.id) : null
+  );
+  const [sizeId, setSizeId] = useState<number | null>(
+    product.size ? Number(product.size.id) : null
+  );
+  const [brandId, setBrandId] = useState<number | null>(
+    product.brand ? Number(product.brand.id) : null
+  );
+  const [productModelId, setProductModelId] = useState<number | null>(
+    product.productModel ? Number(product.productModel.id) : null
+  );
+  const [colorId, setColorId] = useState<number | null>(
+    product.color ? Number(product.color.id) : null
+  );
+  const [capacityId, setCapacityId] = useState<number | null>(
+    product.capacity ? Number(product.capacity.id) : null
+  );
+  const [warrantyId, setWarrantyId] = useState<number | null>(
+    product.warranty ? Number(product.warranty.id) : null
+  );
+  const [processorId, setProcessorId] = useState<number | null>(
+    product.processor ? Number(product.processor.id) : null
+  );
+  const [ramOptionId, setRamOptionId] = useState<number | null>(
+    product.ramOption ? Number(product.ramOption.id) : null
+  );
+  const [storageTypeId, setStorageTypeId] = useState<number | null>(
+    product.storageType ? Number(product.storageType.id) : null
+  );
+  const [graphicsCardId, setGraphicsCardId] = useState<number | null>(
+    product.graphicsCard ? Number(product.graphicsCard.id) : null
+  );
+  const [breedId, setBreedId] = useState<number | null>(
+    product.breed ? Number(product.breed.id) : null
+  );
+  const [ageRangeId, setAgeRangeId] = useState<number | null>(
+    product.ageRange ? Number(product.ageRange.id) : null
+  );
+  const [genderId, setGenderId] = useState<number | null>(
+    product.gender ? Number(product.gender.id) : null
+  );
+  const [engineCapacityId, setEngineCapacityId] = useState<number | null>(
+    product.engineCapacity ? Number(product.engineCapacity.id) : null
+  );
+
+  const [mileage, setMileage] = useState(product.mileage?.toString() || "");
+  const [author, setAuthor] = useState(product.author || "");
+  const [year, setYear] = useState(product.year || null);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [conditions, setConditions] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [postTypes, setPostTypes] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [productTypes, setProductTypes] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [origins, setOrigins] = useState<{ id: number; name: string }[]>([]);
+  const [materials, setMaterials] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [sizes, setSizes] = useState<{ id: number; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [productModels, setProductModels] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [colors, setColors] = useState<{ id: number; name: string }[]>([]);
+  const [capacities, setCapacities] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [warranties, setWarranties] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [processors, setProcessors] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [ramOptions, setRamOptions] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [storageTypes, setStorageTypes] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [graphicsCards, setGraphicsCards] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [breeds, setBreeds] = useState<{ id: number; name: string }[]>([]);
+  const [ageRanges, setAgeRanges] = useState<{ id: number; name: string }[]>(
+    []
+  );
+  const [genders, setGenders] = useState<{ id: number; name: string }[]>([]);
+  const [engineCapacities, setEngineCapacities] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>(
+    []
+  );
+
+  const [selectedConditionId, setSelectedConditionId] = useState<number | null>(
+    conditionId
+  );
+  const [selectedProductTypeId, setSelectedProductTypeId] = useState<
+    number | null
+  >(productTypeId);
+  const [selectedOriginId, setSelectedOriginId] = useState<number | null>(
+    originId
+  );
+  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(
+    materialId
+  );
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(sizeId);
+  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(
+    brandId
+  );
+  const [selectedProductModelId, setSelectedProductModelId] = useState<
+    number | null
+  >(productModelId);
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(
+    colorId
+  );
+  const [selectedCapacityId, setSelectedCapacityId] = useState<number | null>(
+    capacityId
+  );
+  const [selectedWarrantyId, setSelectedWarrantyId] = useState<number | null>(
+    warrantyId
+  );
+  const [selectedProcessorId, setSelectedProcessorId] = useState<number | null>(
+    processorId
+  );
+  const [selectedRamOptionId, setSelectedRamOptionId] = useState<number | null>(
+    ramOptionId
+  );
+  const [selectedStorageTypeId, setSelectedStorageTypeId] = useState<
+    number | null
+  >(storageTypeId);
+  const [selectedGraphicsCardId, setSelectedGraphicsCardId] = useState<
+    number | null
+  >(graphicsCardId);
+  const [selectedBreedId, setSelectedBreedId] = useState<number | null>(
+    breedId
+  );
+  const [selectedAgeRangeId, setSelectedAgeRangeId] = useState<number | null>(
+    ageRangeId
+  );
+  const [selectedGenderId, setSelectedGenderId] = useState<number | null>(
+    genderId
+  );
+  const [selectedEngineCapacityId, setSelectedEngineCapacityId] = useState<
+    number | null
+  >(engineCapacityId);
+
+  // Modals (giữ nguyên)
+  const [showConditionModal, setShowConditionModal] = useState(false);
+  const [showPostTypeModal, setShowPostTypeModal] = useState(false);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showOriginModal, setShowOriginModal] = useState(false);
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [showProductModelModal, setShowProductModelModal] = useState(false);
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
+  const [showProcessorModal, setShowProcessorModal] = useState(false);
+  const [showRamOptionModal, setShowRamOptionModal] = useState(false);
+  const [showStorageTypeModal, setShowStorageTypeModal] = useState(false);
+  const [showGraphicsCardModal, setShowGraphicsCardModal] = useState(false);
+  const [showBreedModal, setShowBreedModal] = useState(false);
+  const [showAgeRangeModal, setShowAgeRangeModal] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showEngineCapacityModal, setShowEngineCapacityModal] = useState(false);
+  const [showDealTypeModal, setShowDealTypeModal] = useState(false);
+
+  // Loaders (giữ nguyên)
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
+  const [isLoadingProductTypes, setIsLoadingProductTypes] = useState(false);
+  const [isLoadingOrigins, setIsLoadingOrigins] = useState(false);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [isLoadingSizes, setIsLoadingSizes] = useState(false);
+  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
+  const [isLoadingColors, setIsLoadingColors] = useState(false);
+  const [isLoadingCapacities, setIsLoadingCapacities] = useState(false);
+  const [isLoadingWarranties, setIsLoadingWarranties] = useState(false);
+  const [isLoadingProcessors, setIsLoadingProcessors] = useState(false);
+  const [isLoadingRamOptions, setIsLoadingRamOptions] = useState(false);
+  const [isLoadingStorageTypes, setIsLoadingStorageTypes] = useState(false);
+  const [isLoadingGraphicsCards, setIsLoadingGraphicsCards] = useState(false);
+  const [isLoadingBreeds, setIsLoadingBreeds] = useState(false);
+  const [isLoadingAgeRanges, setIsLoadingAgeRanges] = useState(false);
+  const [isLoadingGenders, setIsLoadingGenders] = useState(false);
+  const [isLoadingEngineCapacities, setIsLoadingEngineCapacities] =
+    useState(false);
+
+  // Exchange (giữ nguyên)
+  const [exchangeCategory, setExchangeCategory] = useState<Category | null>(
+    product.category_change ?? null
+  );
+  const [exchangeSubCategory, setExchangeSubCategory] =
+    useState<SubCategory | null>(product.sub_category_change ?? null);
+
+  // === HÀM GIỮ NGUYÊN TỪ POSTFORMSCREEN ===
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -59,466 +315,211 @@ const PostFormScreen = ({
     fetchUser();
   }, []);
 
-  const [conditionId, setConditionId] = useState<number | null>(null);
-  const [productTypeId, setProductTypeId] = useState<number | null>(null);
-  const [dealTypeId, setDealTypeId] = useState<number | null>(null);
-  const [address, setAddress] = useState("");
-
-  // STATE ĐANG TẢI
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [showConditionModal, setShowConditionModal] = useState(false);
-  const [conditions, setConditions] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedConditionId, setSelectedConditionId] = useState<number | null>(
-    null
-  );
-
   const handleSelectCondition = (id: number) => {
     setSelectedConditionId(id);
     setConditionId(id);
     setShowConditionModal(false);
   };
-
-  const [postTypeId, setPostTypeId] = useState<number | null>(null);
-  const [showPostTypeModal, setShowPostTypeModal] = useState(false);
-  const [postTypes, setPostTypes] = useState<{ id: number; name: string }[]>(
-    []
-  );
-
   const handleSelectPostType = (id: number) => {
     setPostTypeId(id);
     setShowPostTypeModal(false);
   };
-
-  const [showTypeModal, setShowTypeModal] = useState(false);
-  const [productTypes, setProductTypes] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [selectedProductTypeId, setSelectedProductTypeId] = useState<
-    number | null
-  >(null);
-
   const handleSelectProductType = (id: number) => {
     setSelectedProductTypeId(id);
     setProductTypeId(id);
     setShowTypeModal(false);
   };
-
-  // State cho Xuất xứ
-  const [originId, setOriginId] = useState<number | null>(null);
-  const [origins, setOrigins] = useState<{ id: number; name: string }[]>([]);
-  const [selectedOriginId, setSelectedOriginId] = useState<number | null>(null);
-  const [showOriginModal, setShowOriginModal] = useState(false);
-  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
-
   const handleSelectOrigin = (id: number) => {
     setSelectedOriginId(id);
     setOriginId(id);
     setShowOriginModal(false);
   };
-
-  // State cho Chất liệu
-  const [materialId, setMaterialId] = useState<number | null>(null);
-  const [materials, setMaterials] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedMaterialId, setSelectedMaterialId] = useState<number | null>(
-    null
-  );
-  const [showMaterialModal, setShowMaterialModal] = useState(false);
-  const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
-
   const handleSelectMaterial = (id: number) => {
     setSelectedMaterialId(id);
     setMaterialId(id);
     setShowMaterialModal(false);
   };
-
-  // State cho Kích cỡ
-  const [sizeId, setSizeId] = useState<number | null>(null);
-  const [sizes, setSizes] = useState<{ id: number; name: string }[]>([]);
-  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
-  const [showSizeModal, setShowSizeModal] = useState(false);
-  const [showSizeDropdown, setShowSizeDropdown] = useState(false);
-
   const handleSelectSize = (id: number) => {
     setSelectedSizeId(id);
     setSizeId(id);
     setShowSizeModal(false);
   };
-
-  // State cho Hãng
-  const [brandId, setBrandId] = useState<number | null>(null);
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
-  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
-  const [showBrandModal, setShowBrandModal] = useState(false);
-  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
-
-  // State cho Dòng
-  const [productModelId, setProductModelId] = useState<number | null>(null);
-  const [productModels, setProductModels] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [selectedProductModelId, setSelectedProductModelId] = useState<
-    number | null
-  >(null);
-  const [showProductModelModal, setShowProductModelModal] = useState(false);
-  const [showProductModelDropdown, setShowProductModelDropdown] =
-    useState(false);
-
-  // State cho Màu sắc
-  const [colorId, setColorId] = useState<number | null>(null);
-  const [colors, setColors] = useState<{ id: number; name: string }[]>([]);
-  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
-  const [showColorModal, setShowColorModal] = useState(false);
-  const [showColorDropdown, setShowColorDropdown] = useState(false);
-
-  // State cho Dung lượng
-  const [capacityId, setCapacityId] = useState<number | null>(null);
-  const [capacities, setCapacities] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedCapacityId, setSelectedCapacityId] = useState<number | null>(
-    null
-  );
-  const [showCapacityModal, setShowCapacityModal] = useState(false);
-  const [showCapacityDropdown, setShowCapacityDropdown] = useState(false);
-
-  // State cho Bảo hành
-  const [warrantyId, setWarrantyId] = useState<number | null>(null);
-  const [warranties, setWarranties] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedWarrantyId, setSelectedWarrantyId] = useState<number | null>(
-    null
-  );
-  const [showWarrantyModal, setShowWarrantyModal] = useState(false);
-  const [showWarrantyDropdown, setShowWarrantyDropdown] = useState(false);
-
-  // ===== BẮT ĐẦU THÊM 4 STATE MỚI (LAPTOP) =====
-  // State cho Bộ vi xử lý
-  const [processorId, setProcessorId] = useState<number | null>(null);
-  const [processors, setProcessors] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedProcessorId, setSelectedProcessorId] = useState<number | null>(
-    null
-  );
-  const [showProcessorModal, setShowProcessorModal] = useState(false);
-  const [showProcessorDropdown, setShowProcessorDropdown] = useState(false);
-
-  // State cho RAM
-  const [ramOptionId, setRamOptionId] = useState<number | null>(null);
-  const [ramOptions, setRamOptions] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedRamOptionId, setSelectedRamOptionId] = useState<number | null>(
-    null
-  );
-  const [showRamOptionModal, setShowRamOptionModal] = useState(false);
-  const [showRamOptionDropdown, setShowRamOptionDropdown] = useState(false);
-
-  // State cho Loại ổ cứng
-  const [storageTypeId, setStorageTypeId] = useState<number | null>(null);
-  const [storageTypes, setStorageTypes] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [selectedStorageTypeId, setSelectedStorageTypeId] = useState<
-    number | null
-  >(null);
-  const [showStorageTypeModal, setShowStorageTypeModal] = useState(false);
-  const [showStorageTypeDropdown, setShowStorageTypeDropdown] = useState(false);
-
-  // State cho Card màn hình
-  const [graphicsCardId, setGraphicsCardId] = useState<number | null>(null);
-  const [graphicsCards, setGraphicsCards] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [selectedGraphicsCardId, setSelectedGraphicsCardId] = useState<
-    number | null
-  >(null);
-  const [showGraphicsCardModal, setShowGraphicsCardModal] = useState(false);
-  const [showGraphicsCardDropdown, setShowGraphicsCardDropdown] =
-    useState(false);
-
-  // State cho Giống (Thú cưng)
-  const [breedId, setBreedId] = useState<number | null>(null);
-  const [breeds, setBreeds] = useState<{ id: number; name: string }[]>([]);
-  const [selectedBreedId, setSelectedBreedId] = useState<number | null>(null);
-  const [showBreedModal, setShowBreedModal] = useState(false);
-  const [showBreedDropdown, setShowBreedDropdown] = useState(false);
-
-  // State cho Độ tuổi (Thú cưng)
-  const [ageRangeId, setAgeRangeId] = useState<number | null>(null);
-  const [ageRanges, setAgeRanges] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [selectedAgeRangeId, setSelectedAgeRangeId] = useState<number | null>(
-    null
-  );
-  const [showAgeRangeModal, setShowAgeRangeModal] = useState(false);
-  const [showAgeRangeDropdown, setShowAgeRangeDropdown] = useState(false);
-
-  // State cho Giới tính (Thú cưng)
-  const [genderId, setGenderId] = useState<number | null>(null);
-  const [genders, setGenders] = useState<{ id: number; name: string }[]>([]);
-  const [selectedGenderId, setSelectedGenderId] = useState<number | null>(null);
-  const [showGenderModal, setShowGenderModal] = useState(false);
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-
-  // State cho Dung tích xe (Xe máy)
-  const [engineCapacityId, setEngineCapacityId] = useState<number | null>(null);
-  const [engineCapacities, setEngineCapacities] = useState<
-    { id: number; name: string }[]
-  >([]);
-  const [selectedEngineCapacityId, setSelectedEngineCapacityId] = useState<
-    number | null
-  >(null);
-  const [showEngineCapacityModal, setShowEngineCapacityModal] = useState(false);
-  const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] =
-    useState(false);
-
-  // State cho Số km đã đi (Xe cộ)
-  const [mileage, setMileage] = useState("");
-  const [showMileageInput, setShowMileageInput] = useState(false);
-
-  // Loaders
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(true);
-  const [isLoadingProductTypes, setIsLoadingProductTypes] = useState(false);
-  const [isLoadingOrigins, setIsLoadingOrigins] = useState(false);
-  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
-  const [isLoadingSizes, setIsLoadingSizes] = useState(false);
-  const [isLoadingBrands, setIsLoadingBrands] = useState(false);
-  const [isLoadingColors, setIsLoadingColors] = useState(false);
-  const [isLoadingCapacities, setIsLoadingCapacities] = useState(false);
-  const [isLoadingWarranties, setIsLoadingWarranties] = useState(false);
-
-  const [isLoadingProcessors, setIsLoadingProcessors] = useState(false);
-  const [isLoadingRamOptions, setIsLoadingRamOptions] = useState(false);
-  const [isLoadingStorageTypes, setIsLoadingStorageTypes] = useState(false);
-  const [isLoadingGraphicsCards, setIsLoadingGraphicsCards] = useState(false);
-
-  const [isLoadingBreeds, setIsLoadingBreeds] = useState(false);
-  const [isLoadingAgeRanges, setIsLoadingAgeRanges] = useState(false);
-  const [isLoadingGenders, setIsLoadingGenders] = useState(false);
-
-  const [isLoadingEngineCapacities, setIsLoadingEngineCapacities] =
-    useState(false);
-
-  const [exchangeCategory, setExchangeCategory] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [exchangeSubCategory, setExchangeSubCategory] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-
-  const [dealTypes, setDealTypes] = useState<{ id: number; name: string }[]>(
-    []
-  );
-  const [showDealTypeModal, setShowDealTypeModal] = useState(false);
-
-  // === CÁC HÀM HANDLE SELECT ===
-
-  const handleSelectDealType = (id: number) => {
-    setDealTypeId(id);
-    setShowDealTypeModal(false);
-
-    if (id === 1) {
-      setIsFree(false);
-    } else if (id === 2) {
-      setPrice("0");
-      setIsFree(true);
-    } else if (id === 3) {
-      setPrice("0");
-      setIsFree(false);
-    }
-  };
-
   const handleSelectBrand = (id: number) => {
     setSelectedBrandId(id);
     setShowBrandModal(false);
-
-    if (id === brandId) {
-      console.log("Đã chọn lại cùng hãng, tự gọi fetch...");
-      fetchProductModels(id);
-    } else {
+    if (id !== brandId) {
       setBrandId(id);
+      // reset model
+      setSelectedProductModelId(null);
+      setProductModelId(null);
     }
   };
-
   const handleSelectProductModel = (id: number) => {
     setSelectedProductModelId(id);
     setProductModelId(id);
     setShowProductModelModal(false);
   };
-
   const handleSelectColor = (id: number) => {
     setSelectedColorId(id);
     setColorId(id);
     setShowColorModal(false);
   };
-
   const handleSelectCapacity = (id: number) => {
     setSelectedCapacityId(id);
     setCapacityId(id);
     setShowCapacityModal(false);
   };
-
   const handleSelectWarranty = (id: number) => {
     setSelectedWarrantyId(id);
     setWarrantyId(id);
     setShowWarrantyModal(false);
   };
-
-  // ===== BẮT ĐẦU THÊM 4 HÀM HANDLE MỚI (LAPTOP) =====
   const handleSelectProcessor = (id: number) => {
     setSelectedProcessorId(id);
     setProcessorId(id);
     setShowProcessorModal(false);
   };
-
   const handleSelectRamOption = (id: number) => {
     setSelectedRamOptionId(id);
     setRamOptionId(id);
     setShowRamOptionModal(false);
   };
-
   const handleSelectStorageType = (id: number) => {
     setSelectedStorageTypeId(id);
     setStorageTypeId(id);
     setShowStorageTypeModal(false);
   };
-
   const handleSelectGraphicsCard = (id: number) => {
     setSelectedGraphicsCardId(id);
     setGraphicsCardId(id);
     setShowGraphicsCardModal(false);
   };
-
   const handleSelectBreed = (id: number) => {
     setSelectedBreedId(id);
     setBreedId(id);
     setShowBreedModal(false);
   };
-
   const handleSelectAgeRange = (id: number) => {
     setSelectedAgeRangeId(id);
     setAgeRangeId(id);
     setShowAgeRangeModal(false);
   };
-
   const handleSelectGender = (id: number) => {
     setSelectedGenderId(id);
     setGenderId(id);
     setShowGenderModal(false);
   };
-
   const handleSelectEngineCapacity = (id: number) => {
     setSelectedEngineCapacityId(id);
     setEngineCapacityId(id);
     setShowEngineCapacityModal(false);
   };
+  const handleSelectDealType = (id: number) => {
+    setDealTypeId(id);
+    setShowDealTypeModal(false);
 
-  // Hàm xử lý ảnh mới
-  const processImageForUpload = async (uri: string) => {
-    try {
-      console.log("Đang xử lý ảnh:", uri);
-      const manipResult = await ImageManipulator.manipulateAsync(
-        uri,
-        [
-          { resize: { width: 1080 } }, // Thay đổi kích thước, giữ tỷ lệ
-        ],
-        {
-          compress: 0.7, // Nén ảnh (0.7 = 70% chất lượng)
-          format: ImageManipulator.SaveFormat.JPEG,
-        }
-      );
-      console.log("Đã xử lý xong:", manipResult.uri);
-      return manipResult.uri; // Trả về uri của ảnh mới đã nén
-    } catch (error) {
-      console.error("Lỗi khi xử lý ảnh:", error);
-      return uri; // Nếu lỗi, trả về ảnh gốc (rủi ro)
+    if (id === 1) {
+      // Giá bán
+      setPrice(getInitialPrice() === "0" ? "" : getInitialPrice());
+      setExchangeCategory(null);
+      setExchangeSubCategory(null);
+    } else if (id === 3) {
+      // Trao đổi
+      setPrice("0");
+      // giữ nguyên nếu đã chọn trước đó
+    } else {
+      // Miễn phí
+      setPrice("0");
+      setExchangeCategory(null);
+      setExchangeSubCategory(null);
     }
   };
 
+  // Hàm xử lý ảnh (giữ nguyên)
+  const processImageForUpload = async (uri: string) => {
+    try {
+      const manipResult = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1080 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+      return manipResult.uri;
+    } catch (error) {
+      console.error("Lỗi khi xử lý ảnh:", error);
+      return uri;
+    }
+  };
+
+  // === HÀM UPLOAD ẢNH ===
   const handleUploadImage = async (useCamera: boolean) => {
+    if (images.length >= 4) {
+      alert("Bạn chỉ được đăng tối đa 4 ảnh.");
+      return;
+    }
+
     let result;
     if (useCamera) {
       result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.7, // Giảm chất lượng ngay khi chụp
+        quality: 0.7,
       });
     } else {
       result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        selectionLimit: 4,
+        selectionLimit: 4 - images.length, // 👈 Giới hạn số lượng còn lại
         quality: 1,
       });
     }
 
     if (!result.canceled && result.assets) {
-      // Kiểm tra giới hạn TỔNG SỐ ẢNH
-      if (images.length + result.assets.length > 4) {
-        alert("Bạn chỉ được chọn tối đa 4 ảnh.");
-        return;
-      }
-
-      const selected: string[] = []; // Bật loading hoặc spinner ở đây nếu bạn muốn
+      setIsLoading(true); // Bật loading
       console.log("Bắt đầu xử lý nén ảnh...");
 
+      const newImages: ImageStateType[] = [];
       for (const asset of result.assets) {
-        // LUÔN LUÔN xử lý ảnh (nén + resize)
         const processedUri = await processImageForUpload(asset.uri);
-        selected.push(processedUri);
+        newImages.push({
+          id: null, // Ảnh mới
+          uri: processedUri,
+          isNew: true, // Đánh dấu là ảnh mới
+        });
       }
-      console.log("Đã xử lý ảnh xong."); // Tắt loading
-      setImages((prev) => [...prev, ...selected]);
+
+      console.log("Đã xử lý ảnh xong.");
+      setIsLoading(false); // Tắt loading
+      setImages((prev) => [...prev, ...newImages]);
     }
   };
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== "granted") {
-        alert("Cần quyền truy cập camera để chụp ảnh");
-      }
-    })();
-  }, []);
-
-  // Hàm xóa ảnh
+  // === HÀM XÓA ẢNH ===
   const removeImage = (index: number) => {
+    const imageToRemove = images[index];
+
+    // Nếu là ảnh cũ (có ID), thêm ID vào danh sách cần xóa
+    if (imageToRemove.id && !imageToRemove.isNew) {
+      setImageIdsToDelete((prev) => [...prev, imageToRemove.id!]);
+    }
+
+    // Xóa ảnh khỏi state (cả cũ và mới)
     const updatedImages = [...images];
     updatedImages.splice(index, 1);
     setImages(updatedImages);
   };
 
-  // Hàm đăng bài
-  const handlePost = async () => {
+  // === HÀM CẬP NHẬT ===
+  const handleUpdate = async () => {
     if (isLoading) return;
 
-    const finalName =
-      title && title.trim() !== ""
-        ? title.trim()
-        : name && name.trim() !== ""
-          ? name.trim()
-          : "";
-
-    // VALIDATION (Kiểm tra thiếu trường)
+    const finalName = name.trim();
     const missingFields: string[] = [];
-    if (!category) missingFields.push("Danh mục cha");
-    if (!subCategory) missingFields.push("Danh mục con");
     if (!finalName) missingFields.push("Tên sản phẩm");
     if (!description || description.trim() === "")
       missingFields.push("Mô tả sản phẩm");
-    if (category?.name !== "Thú cưng" && !conditionId) {
+    if (product.category?.name !== "Thú cưng" && !conditionId) {
       missingFields.push("Tình trạng sản phẩm");
     }
+
     if (showProductTypeDropdown && !productTypeId)
       missingFields.push("Loại sản phẩm");
     if (showMaterialDropdown && !materialId) missingFields.push("Chất liệu");
@@ -529,7 +530,6 @@ const PostFormScreen = ({
     if (showCapacityDropdown && !capacityId) missingFields.push("Dung lượng");
     if (showWarrantyDropdown && !warrantyId) missingFields.push("Bảo hành");
     if (showOriginDropdown && !originId) missingFields.push("Xuất xứ");
-
     if (showProcessorDropdown && !processorId)
       missingFields.push("Bộ vi xử lý");
     if (showRamOptionDropdown && !ramOptionId) missingFields.push("RAM");
@@ -537,15 +537,12 @@ const PostFormScreen = ({
       missingFields.push("Loại ổ cứng");
     if (showGraphicsCardDropdown && !graphicsCardId)
       missingFields.push("Card màn hình");
-
     if (showBreedDropdown && !breedId) missingFields.push("Giống");
     if (showAgeRangeDropdown && !ageRangeId) missingFields.push("Độ tuổi");
     if (showGenderDropdown && !genderId) missingFields.push("Giới tính");
-
     if (showEngineCapacityDropdown && !engineCapacityId)
       missingFields.push("Dung tích xe");
     if (showMileageInput && !mileage) missingFields.push("Số km đã đi");
-
     if (showAuthorField && !author) missingFields.push("Tác giả");
     if (showYearField && !year) missingFields.push("Năm sản xuất");
     if (!dealTypeId) missingFields.push("Hình thức giao dịch");
@@ -560,9 +557,7 @@ const PostFormScreen = ({
     if (missingFields.length > 0) {
       Alert.alert(
         "Thiếu thông tin",
-        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(
-          ", "
-        )}.`,
+        `Vui lòng điền đầy đủ các trường bắt buộc: ${missingFields.join(", ")}.`,
         [{ text: "OK" }]
       );
       return;
@@ -572,23 +567,21 @@ const PostFormScreen = ({
     try {
       const formData = new FormData();
 
-      // 1. Các trường bắt buộc (String)
+      // 1. Gửi các trường text/number
       formData.append("name", finalName);
       formData.append("description", description);
       formData.append("price", dealTypeId === 1 ? String(price) : "0");
       formData.append("address_json", JSON.stringify({ full: address }));
 
-      // 2. Các trường bắt buộc (Number)
-      formData.append("user_id", String(user?.id));
+      // Không gửi user_id, category_id, sub_category_id
+      // Backend sẽ dùng user_id từ token
+
       formData.append("post_type_id", String(postTypeId));
       formData.append("deal_type_id", String(dealTypeId));
-      formData.append("category_id", String((category as any)?.id));
-      formData.append("sub_category_id", String(subCategory?.id));
       if (conditionId) {
         formData.append("condition_id", String(conditionId));
       }
 
-      // 4. Các trường tùy chọn (Optional)
       if (productTypeId)
         formData.append("product_type_id", String(productTypeId));
       if (materialId) formData.append("material_id", String(materialId));
@@ -602,23 +595,18 @@ const PostFormScreen = ({
       if (originId) formData.append("origin_id", String(originId));
       if (author) formData.append("author", author);
       if (year) formData.append("year", String(year));
-
       if (processorId) formData.append("processor_id", String(processorId));
       if (ramOptionId) formData.append("ram_option_id", String(ramOptionId));
       if (storageTypeId)
         formData.append("storage_type_id", String(storageTypeId));
       if (graphicsCardId)
         formData.append("graphics_card_id", String(graphicsCardId));
-
       if (breedId) formData.append("breed_id", String(breedId));
       if (ageRangeId) formData.append("age_range_id", String(ageRangeId));
       if (genderId) formData.append("gender_id", String(genderId));
-
       if (engineCapacityId)
         formData.append("engine_capacity_id", String(engineCapacityId));
-      // Gửi đi số km (bỏ dấu chấm)
       if (mileage) formData.append("mileage", mileage.replace(/\D/g, ""));
-
       if (dealTypeId === 3 && exchangeCategory && exchangeSubCategory) {
         formData.append("category_change_id", String(exchangeCategory.id));
         formData.append(
@@ -627,35 +615,47 @@ const PostFormScreen = ({
         );
       }
 
-      // 5. Hình ảnh
-      images.forEach((uri, index) => {
-        const filename = uri.split("/").pop();
-        const ext = filename?.split(".").pop();
-        const type = ext ? `image/${ext}` : "image/jpeg";
-        formData.append("files", {
-          uri,
-          name: filename || `photo_${index}.jpg`,
-          type,
-        } as any);
+      // 2. Gửi danh sách ID ảnh cần xóa
+      if (imageIdsToDelete.length > 0) {
+        formData.append("imageIdsToDelete", JSON.stringify(imageIdsToDelete));
+      }
+
+      // 3. Gửi file ảnh MỚI
+      images.forEach((img, index) => {
+        if (img.isNew) {
+          const filename = img.uri.split("/").pop();
+          const ext = filename?.split(".").pop();
+          const type = ext ? `image/${ext}` : "image/jpeg";
+          formData.append("files", {
+            uri: img.uri,
+            name: filename || `photo_${index}.jpg`,
+            type,
+          } as any);
+        }
       });
 
-      console.log("FormData sẽ gửi đi:", formData);
+      const token = await AsyncStorage.getItem("token");
+      console.log("FormData sẽ gửi (PATCH):", formData);
 
-      const response = await axios.post(`${path}/products`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.patch(
+        `${path}/products/${product.id}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (response.status === 201 || response.status === 200) {
-        Alert.alert("Thành công", "Đăng tin thành công. Đang chờ duyệt");
-        navigation.navigate("Home");
+      if (response.status === 200) {
+        Alert.alert("Thành công", "Sửa tin thành công. Đang chờ duyệt lại.");
+        navigation.navigate("ManagePostsScreen");
       } else {
-        Alert.alert("Lỗi", "Không thể đăng tin. Vui lòng thử lại.");
+        Alert.alert("Lỗi", "Không thể sửa tin. Vui lòng thử lại.");
       }
     } catch (err: any) {
-      console.error("Lỗi khi đăng tin:", err);
-
+      console.error("Lỗi khi sửa tin:", err.response?.data || err.message);
       if (err.response && err.response.status === 400) {
         Alert.alert(
           "Thông tin không hợp lệ",
@@ -663,15 +663,9 @@ const PostFormScreen = ({
             "Vui lòng kiểm tra lại các trường đã nhập."
         );
       } else if (err.message === "Network Error") {
-        Alert.alert(
-          "Lỗi mạng",
-          "Không thể kết nối đến server. Vui lòng kiểm tra lại đường dẫn API và tường lửa."
-        );
+        Alert.alert("Lỗi mạng", "Không thể kết nối đến server.");
       } else {
-        Alert.alert(
-          "Lỗi máy chủ",
-          "Đã xảy ra lỗi phía máy chủ, vui lòng thử lại sau."
-        );
+        Alert.alert("Lỗi máy chủ", "Đã xảy ra lỗi, vui lòng thử lại sau.");
       }
     } finally {
       setIsLoading(false);
@@ -679,15 +673,23 @@ const PostFormScreen = ({
   };
 
   useEffect(() => {
+    (async () => {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        alert("Cần quyền truy cập camera để chụp ảnh");
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     const fetchOptions = async () => {
-      setIsLoadingOptions(true); // Bật loading
+      setIsLoadingOptions(true);
       try {
         const [conditionRes, dealTypeRes, postTypeRes] = await Promise.all([
           axios.get(`${path}/conditions`),
           axios.get(`${path}/deal-types`),
           axios.get(`${path}/post-types`),
         ]);
-
         if (conditionRes.status === 200) setConditions(conditionRes.data);
         if (dealTypeRes.status === 200) setDealTypes(dealTypeRes.data);
         if (postTypeRes.status === 200) setPostTypes(postTypeRes.data);
@@ -695,27 +697,59 @@ const PostFormScreen = ({
         console.error("Lỗi tải dữ liệu:", err);
         Alert.alert("Lỗi", "Không thể tải các tùy chọn cơ bản.");
       } finally {
-        setIsLoadingOptions(false); // Tắt loading
+        setIsLoadingOptions(false);
       }
     };
     fetchOptions();
   }, []);
 
-  const categoryId = category?.id;
-  const subCategoryId = subCategory?.id;
+  const categoryId = product.category?.id; // 🚀 Lấy từ product
+  const subCategoryId = product.subCategory?.id; // 🚀 Lấy từ product
 
   const [showProductTypeDropdown, setShowProductTypeDropdown] = useState(false);
   const [showAuthorField, setShowAuthorField] = useState(false);
   const [showYearField, setShowYearField] = useState(false);
+  const [showOriginDropdown, setShowOriginDropdown] = useState(false);
+  const [showMaterialDropdown, setShowMaterialDropdown] = useState(false);
+  const [showSizeDropdown, setShowSizeDropdown] = useState(false);
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+  const [showProductModelDropdown, setShowProductModelDropdown] =
+    useState(false);
+  const [showColorDropdown, setShowColorDropdown] = useState(false);
+  const [showCapacityDropdown, setShowCapacityDropdown] = useState(false);
+  const [showWarrantyDropdown, setShowWarrantyDropdown] = useState(false);
+  const [showProcessorDropdown, setShowProcessorDropdown] = useState(false);
+  const [showRamOptionDropdown, setShowRamOptionDropdown] = useState(false);
+  const [showStorageTypeDropdown, setShowStorageTypeDropdown] = useState(false);
+  const [showGraphicsCardDropdown, setShowGraphicsCardDropdown] =
+    useState(false);
+  const [showBreedDropdown, setShowBreedDropdown] = useState(false);
+  const [showAgeRangeDropdown, setShowAgeRangeDropdown] = useState(false);
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] =
+    useState(false);
+  const [showMileageInput, setShowMileageInput] = useState(false);
 
-  const [author, setAuthor] = useState("");
-  const [year, setYear] = useState<number | null>(null);
+  useEffect(() => {
+    // Reset exchange category/subCategory khi dealType != 3
+    if (Number(product.dealType?.id) !== 3) {
+      setExchangeCategory(null);
+      setExchangeSubCategory(null);
+    } else {
+      setExchangeCategory(product.category_change ?? null);
+      setExchangeSubCategory(product.sub_category_change ?? null);
+    }
+
+    setPrice(
+      Number(product.dealType?.id) === 1
+        ? (product.price?.toString() ?? "")
+        : "0"
+    );
+  }, [product]);
+
   useEffect(() => {
     // --- HÀM FETCH LOẠI SẢN PHẨM ---
     const fetchProductTypes = async () => {
-      setShowProductTypeDropdown(false);
-      setSelectedProductTypeId(null);
-      setProductTypeId(null);
       if (!categoryId) return;
       setIsLoadingProductTypes(true);
       if (subCategoryId) {
@@ -733,11 +767,7 @@ const PostFormScreen = ({
               return;
             }
           }
-        } catch (err) {
-          console.warn(
-            `[Loại SP] Không tìm thấy CỤ THỂ cho ${subCategoryId}, fallback...`
-          );
-        }
+        } catch (err) {}
       }
       try {
         const res = await fetch(
@@ -754,18 +784,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch loại SP chung:", (err as Error).message);
         setShowProductTypeDropdown(false);
       } finally {
         setIsLoadingProductTypes(false);
       }
-    };
-
-    // --- HÀM FETCH XUẤT XỨ ---
+    }; // --- HÀM FETCH XUẤT XỨ ---
     const fetchOrigins = async () => {
-      setShowOriginDropdown(false);
-      setSelectedOriginId(null);
-      setOriginId(null);
       if (!categoryId) return;
       setIsLoadingOrigins(true);
       if (subCategoryId) {
@@ -783,11 +807,7 @@ const PostFormScreen = ({
               return;
             }
           }
-        } catch (err) {
-          console.warn(
-            `[Xuất xứ] Không tìm thấy theo SubCat ${subCategoryId}, fallback...`
-          );
-        }
+        } catch (err) {}
       }
       try {
         const res = await fetch(`${path}/origins/by-category/${categoryId}`);
@@ -802,18 +822,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch xuất xứ:", (err as Error).message);
         setShowOriginDropdown(false);
       } finally {
         setIsLoadingOrigins(false);
       }
-    };
-
-    // --- HÀM FETCH CHẤT LIỆU ---
+    }; // --- HÀM FETCH CHẤT LIỆU ---
     const fetchMaterials = async () => {
-      setShowMaterialDropdown(false);
-      setSelectedMaterialId(null);
-      setMaterialId(null);
       if (!categoryId) return;
       setIsLoadingMaterials(true);
       if (subCategoryId) {
@@ -831,11 +845,7 @@ const PostFormScreen = ({
               return;
             }
           }
-        } catch (err) {
-          console.warn(
-            `[Chất liệu] Không tìm thấy theo SubCat ${subCategoryId}, fallback...`
-          );
-        }
+        } catch (err) {}
       }
       try {
         const res = await fetch(`${path}/materials/by-category/${categoryId}`);
@@ -850,18 +860,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch chất liệu:", (err as Error).message);
         setShowMaterialDropdown(false);
       } finally {
         setIsLoadingMaterials(false);
       }
-    };
-
-    // --- HÀM FETCH KÍCH CỠ ---
+    }; // --- HÀM FETCH KÍCH CỠ ---
     const fetchSizes = async () => {
-      setShowSizeDropdown(false);
-      setSelectedSizeId(null);
-      setSizeId(null);
       if (!subCategoryId) return;
       setIsLoadingSizes(true);
       try {
@@ -879,18 +883,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch kích cỡ:", (err as Error).message);
         setShowSizeDropdown(false);
       } finally {
         setIsLoadingSizes(false);
       }
-    };
-
-    // --- HÀM FETCH HÃNG ---
+    }; // --- HÀM FETCH HÃNG ---
     const fetchBrands = async () => {
-      setShowBrandDropdown(false);
-      setSelectedBrandId(null);
-      setBrandId(null);
       if (!subCategoryId) return;
       setIsLoadingBrands(true);
       try {
@@ -908,18 +906,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch hãng:", (err as Error).message);
         setShowBrandDropdown(false);
       } finally {
         setIsLoadingBrands(false);
       }
-    };
-
-    // --- HÀM FETCH MÀU SẮC ---
+    }; // --- HÀM FETCH MÀU SẮC ---
     const fetchColors = async () => {
-      setShowColorDropdown(false);
-      setSelectedColorId(null);
-      setColorId(null);
       if (!subCategoryId) return;
       setIsLoadingColors(true);
       try {
@@ -937,18 +929,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch màu:", (err as Error).message);
         setShowColorDropdown(false);
       } finally {
         setIsLoadingColors(false);
       }
-    };
-
-    // --- HÀM FETCH DUNG LƯỢNG ---
+    }; // --- HÀM FETCH DUNG LƯỢNG ---
     const fetchCapacities = async () => {
-      setShowCapacityDropdown(false);
-      setSelectedCapacityId(null);
-      setCapacityId(null);
       if (!subCategoryId) return;
       setIsLoadingCapacities(true);
       try {
@@ -966,18 +952,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch dung lượng:", (err as Error).message);
         setShowCapacityDropdown(false);
       } finally {
         setIsLoadingCapacities(false);
       }
-    };
-
-    // --- HÀM FETCH BẢO HÀNH ---
+    }; // --- HÀM FETCH BẢO HÀNH ---
     const fetchWarranties = async () => {
-      setShowWarrantyDropdown(false);
-      setSelectedWarrantyId(null);
-      setWarrantyId(null);
       if (!subCategoryId) return;
       setIsLoadingWarranties(true);
       try {
@@ -995,18 +975,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch bảo hành:", (err as Error).message);
         setShowWarrantyDropdown(false);
       } finally {
         setIsLoadingWarranties(false);
       }
-    };
-
-    // --- HÀM FETCH BỘ VI XỬ LÝ ---
+    }; // --- HÀM FETCH BỘ VI XỬ LÝ ---
     const fetchProcessors = async () => {
-      setShowProcessorDropdown(false);
-      setSelectedProcessorId(null);
-      setProcessorId(null);
       if (!subCategoryId) return;
       setIsLoadingProcessors(true);
       try {
@@ -1024,18 +998,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch BXL:", (err as Error).message);
         setShowProcessorDropdown(false);
       } finally {
         setIsLoadingProcessors(false);
       }
-    };
-
-    // --- HÀM FETCH RAM ---
+    }; // --- HÀM FETCH RAM ---
     const fetchRamOptions = async () => {
-      setShowRamOptionDropdown(false);
-      setSelectedRamOptionId(null);
-      setRamOptionId(null);
       if (!subCategoryId) return;
       setIsLoadingRamOptions(true);
       try {
@@ -1053,18 +1021,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch RAM:", (err as Error).message);
         setShowRamOptionDropdown(false);
       } finally {
         setIsLoadingRamOptions(false);
       }
-    };
-
-    // --- HÀM FETCH LOẠI Ổ CỨNG ---
+    }; // --- HÀM FETCH LOẠI Ổ CỨNG ---
     const fetchStorageTypes = async () => {
-      setShowStorageTypeDropdown(false);
-      setSelectedStorageTypeId(null);
-      setStorageTypeId(null);
       if (!subCategoryId) return;
       setIsLoadingStorageTypes(true);
       try {
@@ -1082,18 +1044,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch loại ổ cứng:", (err as Error).message);
         setShowStorageTypeDropdown(false);
       } finally {
         setIsLoadingStorageTypes(false);
       }
-    };
-
-    // --- HÀM FETCH CARD MÀN HÌNH ---
+    }; // --- HÀM FETCH CARD MÀN HÌNH ---
     const fetchGraphicsCards = async () => {
-      setShowGraphicsCardDropdown(false);
-      setSelectedGraphicsCardId(null);
-      setGraphicsCardId(null);
       if (!subCategoryId) return;
       setIsLoadingGraphicsCards(true);
       try {
@@ -1111,18 +1067,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch card MH:", (err as Error).message);
         setShowGraphicsCardDropdown(false);
       } finally {
         setIsLoadingGraphicsCards(false);
       }
-    };
-
-    // --- HÀM FETCH GIỐNG THÚ CƯNG ---
+    }; // --- HÀM FETCH GIỐNG THÚ CƯNG ---
     const fetchBreeds = async () => {
-      setShowBreedDropdown(false);
-      setSelectedBreedId(null);
-      setBreedId(null);
       if (!subCategoryId) return;
       setIsLoadingBreeds(true);
       try {
@@ -1140,18 +1090,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch giống thú cưng:", (err as Error).message);
         setShowBreedDropdown(false);
       } finally {
         setIsLoadingBreeds(false);
       }
-    };
-
-    // --- HÀM FETCH ĐỘ TUỔI ---
+    }; // --- HÀM FETCH ĐỘ TUỔI ---
     const fetchAgeRanges = async () => {
-      setShowAgeRangeDropdown(false);
-      setSelectedAgeRangeId(null);
-      setAgeRangeId(null);
       if (!subCategoryId) return;
       setIsLoadingAgeRanges(true);
       try {
@@ -1169,18 +1113,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch độ tuổi:", (err as Error).message);
         setShowAgeRangeDropdown(false);
       } finally {
         setIsLoadingAgeRanges(false);
       }
-    };
-
-    // --- HÀM FETCH GIỚI TÍNH ---
+    }; // --- HÀM FETCH GIỚI TÍNH ---
     const fetchGenders = async () => {
-      setShowGenderDropdown(false);
-      setSelectedGenderId(null);
-      setGenderId(null);
       if (!subCategoryId) return;
       setIsLoadingGenders(true);
       try {
@@ -1198,18 +1136,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch giới tính:", (err as Error).message);
         setShowGenderDropdown(false);
       } finally {
         setIsLoadingGenders(false);
       }
-    };
-
-    // --- HÀM FETCH DUNG TÍCH XE ---
+    }; // --- HÀM FETCH DUNG TÍCH XE ---
     const fetchEngineCapacities = async () => {
-      setShowEngineCapacityDropdown(false);
-      setSelectedEngineCapacityId(null);
-      setEngineCapacityId(null);
       if (!subCategoryId) return;
       setIsLoadingEngineCapacities(true);
       try {
@@ -1227,16 +1159,12 @@ const PostFormScreen = ({
           }
         }
       } catch (err) {
-        console.error("Lỗi fetch dung tích xe:", (err as Error).message);
         setShowEngineCapacityDropdown(false);
       } finally {
         setIsLoadingEngineCapacities(false);
       }
-    };
+    }; // 1. Reset VISIBILITY
 
-    //  LOGIC CHẠY CHÍNH
-
-    // 1. Reset tất cả các trường
     setShowAuthorField(false);
     setShowYearField(false);
     setShowProductTypeDropdown(false);
@@ -1255,171 +1183,81 @@ const PostFormScreen = ({
     setShowAgeRangeDropdown(false);
     setShowGenderDropdown(false);
     setShowEngineCapacityDropdown(false);
-    setShowMileageInput(false);
+    setShowMileageInput(false); // 2. Chạy logic fetch
 
-    // Tắt loading (nếu có)
-    setIsLoadingProductTypes(false);
-    setIsLoadingOrigins(false);
-    setIsLoadingMaterials(false);
-    setIsLoadingSizes(false);
-    setIsLoadingBrands(false);
-    setIsLoadingColors(false);
-    setIsLoadingCapacities(false);
-    setIsLoadingWarranties(false);
-    setIsLoadingProcessors(false);
-    setIsLoadingRamOptions(false);
-    setIsLoadingStorageTypes(false);
-    setIsLoadingGraphicsCards(false);
-    setIsLoadingBreeds(false);
-    setIsLoadingAgeRanges(false);
-    setIsLoadingGenders(false);
-    setIsLoadingEngineCapacities(false);
-
-    // Reset giá trị
-    setProductTypeId(null);
-    setOriginId(null);
-    setMaterialId(null);
-    setSizeId(null);
-    setBrandId(null);
-    setColorId(null);
-    setCapacityId(null);
-    setWarrantyId(null);
-    setProcessorId(null);
-    setRamOptionId(null);
-    setStorageTypeId(null);
-    setGraphicsCardId(null);
-    setBreedId(null);
-    setAgeRangeId(null);
-    setGenderId(null);
-    setEngineCapacityId(null);
-    setMileage("");
-    setAuthor("");
-    setYear(null);
-
-    // Nếu là "Thú cưng" (ID 5) hoặc "Tài liệu khoa" (ID 1)
-    if (category?.name === "Tài liệu khoa") {
+    if (product.category?.name === "Tài liệu khoa") {
       setShowAuthorField(true);
       setShowYearField(true);
-    } else if (category?.name === "Thú cưng") {
-      // (ID 53, 54, 55, 56, 57)
+    } else if (product.category?.name === "Thú cưng") {
       const petSubIds = [53, 54, 55, 56, 57];
       if (petSubIds.includes(Number(subCategoryId))) {
         fetchBreeds();
         fetchAgeRanges();
         fetchGenders();
       }
-    }
-    // 2. Nếu là danh mục khác
+    } // 3. Nếu là danh mục khác
     else {
-      const subIdNum = Number(subCategoryId);
-
-      // Chạy chung
+      const subIdNum = Number(subCategoryId); // Chạy chung
       fetchProductTypes();
-      fetchOrigins();
-
-      // Đồ gia dụng (23, 24)
+      fetchOrigins(); // (Copy y hệt logic if/else của PostFormScreen)
       if ([23, 24].includes(subIdNum)) {
         fetchMaterials();
       }
-
-      // Kích cỡ (Giường 25, Đồ điện tử 39, 40, 41, Xe cộ 49, 51, 52)
       if ([25, 39, 40, 41, 62].includes(subIdNum)) {
         fetchSizes();
       }
-
-      // Hãng (Đồ điện tử 38, 39, 40, 46, Xe cộ 49, 51, 52)
       if ([38, 39, 40, 46, 60, 61, 62].includes(subIdNum)) {
         fetchBrands();
       }
-
-      // Màu sắc, Bảo hành: (Áp dụng cho Đồ điện tử VÀ Xe cộ)
       if ([38, 39, 40, 41, 60, 61, 62].includes(subIdNum)) {
         fetchColors();
         fetchWarranties();
-      } else {
-        setShowColorDropdown(false);
-        setColorId(null);
-        setShowWarrantyDropdown(false);
-        setWarrantyId(null);
       }
-
-      // Dung lượng (Storage): (Chỉ cho Đồ điện tử)
       if ([38, 39, 40, 41].includes(subIdNum)) {
         fetchCapacities();
-      } else {
-        setShowCapacityDropdown(false);
-        setCapacityId(null);
       }
-
-      // Bảo hành (Cho các mục con khác 42-48)
       if ([42, 43, 44, 45, 46, 47, 48].includes(subIdNum)) {
         fetchWarranties();
       }
-
-      // Laptop & PC (40, 41)
       if ([40, 41].includes(subIdNum)) {
         fetchProcessors();
         fetchRamOptions();
         fetchStorageTypes();
         fetchGraphicsCards();
       }
-
-      // Xe cộ (60, 61, 62)
       if ([60, 61, 62].includes(subIdNum)) {
-        setShowYearField(true); // Bật Năm sản xuất (cho cả 3)
-
+        setShowYearField(true);
         if (subIdNum === 60) {
-          // Chỉ Xe máy (60)
-          setShowMileageInput(true); // Bật Số km
-          fetchEngineCapacities(); // Bật Dung tích xe
-        } else {
-          // Ẩn (Xe điện 61, Xe đạp 62)
-          setShowMileageInput(false);
-          setMileage("");
-          setShowEngineCapacityDropdown(false);
-          setEngineCapacityId(null);
+          setShowMileageInput(true);
+          fetchEngineCapacities();
         }
       }
     }
-  }, [category, categoryId, subCategoryId]);
+  }, [categoryId, subCategoryId, product.category]);
 
+  // Hàm fetchProductModels
   const fetchProductModels = useCallback(
     async (currentBrandId: number | null) => {
-      // 1. Reset
       setShowProductModelDropdown(false);
-      setSelectedProductModelId(null);
-      setProductModelId(null);
-
-      // 2. Nếu không có brandId, thì dừng lại
       if (!currentBrandId) return;
-
-      // 3. Bật loading
       setIsLoadingModels(true);
-
-      console.log(`[Dòng] Đang tìm dòng cho BrandID ${currentBrandId}...`);
       try {
         const res = await fetch(
-          `${path}/product-models/by-brand/${currentBrandId}` // <-- API DÒNG MÁY
+          `${path}/product-models/by-brand/${currentBrandId}`
         );
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            console.log(`[Dòng] Tìm thấy ${data.length} dòng.`);
             setProductModels(data);
             setShowProductModelModal(false);
-            setShowProductModelDropdown(true); // ✅ HIỂN THỊ
+            setShowProductModelDropdown(true);
           } else {
-            console.log(`[Dòng] Không tìm thấy cho BrandID ${currentBrandId}`);
-            setShowProductModelDropdown(false); // ẨN
+            setShowProductModelDropdown(false);
           }
         } else {
-          console.log(
-            `[Dòng] Không tìm thấy (non-ok) cho BrandID ${currentBrandId}`
-          );
-          setShowProductModelDropdown(false); // ẨN
+          setShowProductModelDropdown(false);
         }
       } catch (err) {
-        console.error("Lỗi fetch dòng:", (err as Error).message);
         setShowProductModelDropdown(false);
       } finally {
         setIsLoadingModels(false);
@@ -1429,7 +1267,10 @@ const PostFormScreen = ({
   );
 
   useEffect(() => {
-    fetchProductModels(brandId);
+    if (brandId) {
+      // Chỉ fetch khi brandId có
+      fetchProductModels(brandId);
+    }
   }, [brandId, fetchProductModels]);
 
   const currentYear = new Date().getFullYear();
@@ -1437,97 +1278,114 @@ const PostFormScreen = ({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header (Sửa tiêu đề) */}
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => navigation.navigate("Home")}
+          onPress={() => navigation.goBack()} // 🚀 Sửa thành goBack
           style={styles.headerIcon}
         >
           <MaterialCommunityIcons name="close" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Đăng tin</Text>
+        <Text style={styles.headerTitle}>Chỉnh sửa tin</Text>
         <View style={styles.headerSpacer} />
       </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* Danh mục */}
+        {/* ================================== */}
+        {/* PHẦN BỊ KHÓA             */}
+        {/* ================================== */}
         <View style={styles.section}>
           <TouchableOpacity
             style={styles.dropdown}
-            onPress={() => navigation.navigate("ChooseCategoryScreen")}
+            // 🚀 VÔ HIỆU HÓA
+            onPress={() =>
+              Alert.alert(
+                "Không thể sửa",
+                "Bạn không thể thay đổi danh mục của tin đã đăng."
+              )
+            }
           >
-            <Text style={styles.dropdownLabel}>Danh mục sản phẩm</Text>
-            <View style={styles.dropdownContent}>
+            <Text style={styles.dropdownLabel}>
+              Danh mục sản phẩm (Không thể sửa)
+            </Text>
+            <View style={[styles.dropdownContent, styles.disabledDropdown]}>
               <Text
-                style={styles.dropdownText}
+                style={[styles.dropdownText, styles.disabledDropdownText]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
               >
-                {category
-                  ? `${category.name}${
-                      subCategory ? ` - ${subCategory.name || subCategory}` : ""
+                {product.category
+                  ? `${product.category.name}${
+                      product.subCategory
+                        ? ` - ${product.subCategory.name}`
+                        : ""
                     }`
                   : "Chọn danh mục"}
               </Text>
-
-              <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+              <FontAwesome6 name="lock" size={18} color="#9ca3af" />
             </View>
           </TouchableOpacity>
         </View>
 
+        {/* ================================== */}
+        {/* CÁC PHẦN CÒN LẠI (Y HỆT)     */}
+        {/* ================================== */}
+
         {/* Upload hình ảnh */}
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Hình ảnh sản phẩm</Text>
-
           <View style={{ flexDirection: "row", gap: 12, marginVertical: 8 }}>
             {/* Nút chọn từ thư viện */}
             <TouchableOpacity
               style={styles.uploadBox}
               onPress={() => handleUploadImage(false)}
+              disabled={images.length >= 4} // 🚀 Disable nếu đủ 4 ảnh
             >
               <MaterialCommunityIcons name="image" size={28} color="#f59e0b" />
-              <Text style={styles.uploadText}>Chọn từ thư viện</Text>
+              <Text style={styles.uploadText}>
+                Thêm ảnh ({images.length}/4)
+              </Text>
             </TouchableOpacity>
 
             {/* Nút chụp ảnh */}
             <TouchableOpacity
               style={styles.uploadBox}
-              onPress={() => handleUploadImage(true)} // true = chụp ảnh
+              onPress={() => handleUploadImage(true)}
+              disabled={images.length >= 4} // 🚀 Disable nếu đủ 4 ảnh
             >
               <MaterialCommunityIcons name="camera" size={28} color="#f59e0b" />
               <Text style={styles.uploadText}>Chụp ảnh</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.helperText}>
-            Ảnh đầu tiên sẽ là ảnh chính của sản phẩm
-          </Text>
+          <Text style={styles.helperText}>Ảnh đầu tiên sẽ là ảnh chính.</Text>
 
           <View style={styles.imageRow}>
-            {images.map((uri, idx) => (
+            {images.map((img, idx) => (
               <View key={idx} style={{ position: "relative", marginRight: 8 }}>
-                <Image source={{ uri }} style={styles.imagePreview} />
+                <Image source={{ uri: img.uri }} style={styles.imagePreview} />
                 <TouchableOpacity
-                  onPress={() => removeImage(idx)}
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    backgroundColor: "#fff",
-                    borderRadius: 10,
-                  }}
+                  onPress={() => removeImage(idx)} // 🚀 Dùng hàm remove mới
+                  style={styles.removeButton} // 🚀 Style mới
                 >
                   <MaterialCommunityIcons
                     name="close-circle"
-                    size={20}
-                    color="red"
+                    size={22}
+                    color="#ef4444" // Đổi màu đỏ
                   />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
+          {isLoading && ( // 🚀 Thêm loading khi xử lý ảnh
+            <ActivityIndicator
+              size="small"
+              color="#8c7ae6"
+              style={{ marginTop: 10 }}
+            />
+          )}
         </View>
 
         {/* Tên sản phẩm */}
@@ -1536,20 +1394,14 @@ const PostFormScreen = ({
           <TextInput
             style={styles.input}
             placeholder="Tên sản phẩm *"
-            value={name}
+            value={name} // 🚀 Đã có state
             onChangeText={setName}
           />
           <Text style={styles.helperText}>Nhập tên sản phẩm của bạn</Text>
         </View>
-        {isLoadingOptions && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color="#8c7ae6" />
-            <Text style={styles.loadingText}>Đang tải tùy chọn...</Text>
-          </View>
-        )}
 
         {/* Tình trạng sản phẩm */}
-        {!isLoadingOptions && category?.name !== "Thú cưng" && (
+        {!isLoadingOptions && product.category?.name !== "Thú cưng" && (
           <View style={styles.section}>
             <TouchableOpacity
               style={styles.dropdown}
@@ -1559,7 +1411,7 @@ const PostFormScreen = ({
               <View style={styles.dropdownContent}>
                 <Text style={styles.dropdownText}>
                   {conditionId
-                    ? conditions.find((item) => item.id === conditionId)
+                    ? conditions.find((item) => Number(item.id) === conditionId)
                         ?.name || "Không xác định"
                     : "Chọn tình trạng"}
                 </Text>
@@ -1594,8 +1446,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedBreedId
-                    ? (breeds.find((t) => t.id === selectedBreedId)?.name ??
-                      "Không xác định")
+                    ? (breeds.find((t) => Number(t.id) === selectedBreedId)
+                        ?.name ?? "Không xác định")
                     : "Chọn giống"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1627,8 +1479,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedAgeRangeId
-                    ? (ageRanges.find((t) => t.id === selectedAgeRangeId)
-                        ?.name ?? "Không xác định")
+                    ? (ageRanges.find(
+                        (t) => Number(t.id) === selectedAgeRangeId
+                      )?.name ?? "Không xác định")
                     : "Chọn độ tuổi"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1660,8 +1513,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedGenderId
-                    ? (genders.find((t) => t.id === selectedGenderId)?.name ??
-                      "Không xác định")
+                    ? (genders.find((t) => Number(t.id) === selectedGenderId)
+                        ?.name ?? "Không xác định")
                     : "Chọn giới tính"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1691,7 +1544,7 @@ const PostFormScreen = ({
                   <Text style={styles.dropdownText}>
                     {selectedProductTypeId
                       ? (productTypes.find(
-                          (t) => t.id === selectedProductTypeId
+                          (t) => Number(t.id) === selectedProductTypeId
                         )?.name ?? "Không xác định")
                       : "Chọn loại sản phẩm"}
                   </Text>
@@ -1725,8 +1578,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedBrandId
-                    ? (brands.find((t) => t.id === selectedBrandId)?.name ??
-                      "Không xác định")
+                    ? (brands.find((t) => Number(t.id) === selectedBrandId)
+                        ?.name ?? "Không xác định")
                     : "Chọn hãng"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1759,7 +1612,7 @@ const PostFormScreen = ({
                 >
                   {selectedProductModelId
                     ? (productModels.find(
-                        (t) => t.id === selectedProductModelId
+                        (t) => Number(t.id) === selectedProductModelId
                       )?.name ?? "Không xác định")
                     : "Chọn dòng"}
                 </Text>
@@ -1792,7 +1645,7 @@ const PostFormScreen = ({
                 >
                   {selectedEngineCapacityId
                     ? (engineCapacities.find(
-                        (t) => t.id === selectedEngineCapacityId
+                        (t) => Number(t.id) === selectedEngineCapacityId
                       )?.name ?? "Không xác định")
                     : "Chọn dung tích xe (cc)"}
                 </Text>
@@ -1844,8 +1697,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedProcessorId
-                    ? (processors.find((t) => t.id === selectedProcessorId)
-                        ?.name ?? "Không xác định")
+                    ? (processors.find(
+                        (t) => Number(t.id) === selectedProcessorId
+                      )?.name ?? "Không xác định")
                     : "Chọn bộ vi xử lý"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1877,8 +1731,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedRamOptionId
-                    ? (ramOptions.find((t) => t.id === selectedRamOptionId)
-                        ?.name ?? "Không xác định")
+                    ? (ramOptions.find(
+                        (t) => Number(t.id) === selectedRamOptionId
+                      )?.name ?? "Không xác định")
                     : "Chọn dung lượng RAM"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1910,8 +1765,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedStorageTypeId
-                    ? (storageTypes.find((t) => t.id === selectedStorageTypeId)
-                        ?.name ?? "Không xác định")
+                    ? (storageTypes.find(
+                        (t) => Number(t.id) === selectedStorageTypeId
+                      )?.name ?? "Không xác định")
                     : "Chọn loại ổ cứng"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -1944,7 +1800,7 @@ const PostFormScreen = ({
                 >
                   {selectedGraphicsCardId
                     ? (graphicsCards.find(
-                        (t) => t.id === selectedGraphicsCardId
+                        (t) => Number(t.id) === selectedGraphicsCardId
                       )?.name ?? "Không xác định")
                     : "Chọn card màn hình"}
                 </Text>
@@ -1979,8 +1835,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedColorId
-                    ? (colors.find((t) => t.id === selectedColorId)?.name ??
-                      "Không xác định")
+                    ? (colors.find((t) => Number(t.id) === selectedColorId)
+                        ?.name ?? "Không xác định")
                     : "Chọn màu sắc"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2012,8 +1868,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedCapacityId
-                    ? (capacities.find((t) => t.id === selectedCapacityId)
-                        ?.name ?? "Không xác định")
+                    ? (capacities.find(
+                        (t) => Number(t.id) === selectedCapacityId
+                      )?.name ?? "Không xác định")
                     : "Chọn dung lượng"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2045,8 +1902,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedWarrantyId
-                    ? (warranties.find((t) => t.id === selectedWarrantyId)
-                        ?.name ?? "Không xác định")
+                    ? (warranties.find(
+                        (t) => Number(t.id) === selectedWarrantyId
+                      )?.name ?? "Không xác định")
                     : "Chọn tình trạng bảo hành"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2078,8 +1936,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedSizeId
-                    ? (sizes.find((t) => t.id === selectedSizeId)?.name ??
-                      "Không xác định")
+                    ? (sizes.find((t) => Number(t.id) === selectedSizeId)
+                        ?.name ?? "Không xác định")
                     : "Chọn kích cỡ"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2111,8 +1969,9 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedMaterialId
-                    ? (materials.find((t) => t.id === selectedMaterialId)
-                        ?.name ?? "Không xác định")
+                    ? (materials.find(
+                        (t) => Number(t.id) === selectedMaterialId
+                      )?.name ?? "Không xác định")
                     : "Chọn chất liệu"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2144,8 +2003,8 @@ const PostFormScreen = ({
                   ellipsizeMode="tail"
                 >
                   {selectedOriginId
-                    ? (origins.find((t) => t.id === selectedOriginId)?.name ??
-                      "Không xác định")
+                    ? (origins.find((t) => Number(t.id) === selectedOriginId)
+                        ?.name ?? "Không xác định")
                     : "Chọn xuất xứ"}
                 </Text>
                 <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
@@ -2201,12 +2060,9 @@ const PostFormScreen = ({
                     )?.name || "Không xác định"
                   : "Chọn hình thức"}
               </Text>
-
               <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
             </View>
           </TouchableOpacity>
-
-          {/* Giá bán - Chỉ hiển thị nếu chọn "Giá bán" */}
           {dealTypeId === 1 && (
             <View style={{ marginTop: 8 }}>
               <Text style={[styles.dropdownLabel, { marginBottom: 4 }]}>
@@ -2224,8 +2080,6 @@ const PostFormScreen = ({
               />
             </View>
           )}
-
-          {/* Danh mục trao đổi - Chỉ hiển thị nếu chọn "Trao đổi" */}
           {dealTypeId === 3 && (
             <TouchableOpacity
               style={styles.section} // để giữ style hiện tại
@@ -2251,7 +2105,6 @@ const PostFormScreen = ({
               </Text>
             </TouchableOpacity>
           )}
-
           <Text style={styles.helperText}>
             Chọn hình thức giao dịch bạn muốn
           </Text>
@@ -2263,7 +2116,7 @@ const PostFormScreen = ({
           <TextInput
             style={[styles.input, styles.textArea]}
             placeholder="Mô tả chi tiết sản phẩm *"
-            value={description}
+            value={description} // 🚀 Đã có state
             onChangeText={setDescription}
             multiline
             numberOfLines={4}
@@ -2276,11 +2129,14 @@ const PostFormScreen = ({
         {/* Địa chỉ giao dịch */}
         <View style={styles.section}>
           <Text style={styles.dropdownLabel}>Chọn địa chỉ giao dịch</Text>
-          <AddressPicker onChange={(fullAddress) => setAddress(fullAddress)} />
+          <AddressPicker
+            onChange={(fullAddress) => setAddress(fullAddress)}
+            initialValue={address} // 🚀 Thêm initialValue
+          />
           <Text style={styles.helperText}>Chọn địa chỉ giao dịch</Text>
         </View>
 
-        {/* Loại bài đăng */}
+        {/* Loại bài đăng  */}
         {!isLoadingOptions && (
           <View style={styles.section}>
             <Text style={styles.dropdownLabel}>Loại bài đăng *</Text>
@@ -2319,27 +2175,27 @@ const PostFormScreen = ({
             </Text>
           </View>
         )}
-        {/* Buttons */}
+
+        {/* Buttons*/}
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.postButton, isLoading && { opacity: 0.7 }]}
-            onPress={handlePost}
+            onPress={handleUpdate}
             disabled={isLoading}
           >
             {isLoading ? (
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-                <Text style={styles.postButtonText}>Đang đăng tin...</Text>
+                <Text style={styles.postButtonText}>Đang cập nhật...</Text>
               </View>
             ) : (
-              <Text style={styles.postButtonText}>Đăng tin</Text>
+              <Text style={styles.postButtonText}>Lưu & Gửi duyệt</Text>
             )}
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* === MODALS === */}
-
       {/* Menu chọn tình trạng sản phẩm */}
       {showConditionModal && (
         <View style={styles.modalOverlay}>
@@ -2350,9 +2206,9 @@ const PostFormScreen = ({
                 key={type.id}
                 style={[
                   styles.modalOption,
-                  conditionId === type.id && styles.modalOptionSelected,
+                  conditionId === Number(type.id) && styles.modalOptionSelected,
                 ]}
-                onPress={() => handleSelectCondition(type.id)}
+                onPress={() => handleSelectCondition(Number(type.id))}
               >
                 <Text style={styles.modalOptionText}>{type.name}</Text>
               </TouchableOpacity>
@@ -2378,10 +2234,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedProductTypeId === type.id &&
+                    selectedProductTypeId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectProductType(type.id)}
+                  onPress={() => handleSelectProductType(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2408,9 +2264,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedBrandId === type.id && styles.modalOptionSelected,
+                    selectedBrandId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectBrand(type.id)}
+                  onPress={() => handleSelectBrand(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2437,10 +2294,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedProductModelId === type.id &&
+                    selectedProductModelId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectProductModel(type.id)}
+                  onPress={() => handleSelectProductModel(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2467,10 +2324,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedProcessorId === type.id &&
+                    selectedProcessorId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectProcessor(type.id)}
+                  onPress={() => handleSelectProcessor(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2497,10 +2354,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedRamOptionId === type.id &&
+                    selectedRamOptionId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectRamOption(type.id)}
+                  onPress={() => handleSelectRamOption(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2527,10 +2384,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedStorageTypeId === type.id &&
+                    selectedStorageTypeId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectStorageType(type.id)}
+                  onPress={() => handleSelectStorageType(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2557,10 +2414,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedGraphicsCardId === type.id &&
+                    selectedGraphicsCardId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectGraphicsCard(type.id)}
+                  onPress={() => handleSelectGraphicsCard(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2587,9 +2444,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedBreedId === type.id && styles.modalOptionSelected,
+                    selectedBreedId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectBreed(type.id)}
+                  onPress={() => handleSelectBreed(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2616,10 +2474,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedAgeRangeId === type.id &&
+                    selectedAgeRangeId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectAgeRange(type.id)}
+                  onPress={() => handleSelectAgeRange(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2646,9 +2504,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedGenderId === type.id && styles.modalOptionSelected,
+                    selectedGenderId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectGender(type.id)}
+                  onPress={() => handleSelectGender(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2674,10 +2533,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedEngineCapacityId === type.id &&
+                    selectedEngineCapacityId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectEngineCapacity(type.id)}
+                  onPress={() => handleSelectEngineCapacity(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2703,9 +2562,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedColorId === type.id && styles.modalOptionSelected,
+                    selectedColorId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectColor(type.id)}
+                  onPress={() => handleSelectColor(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2732,10 +2592,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedCapacityId === type.id &&
+                    selectedCapacityId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectCapacity(type.id)}
+                  onPress={() => handleSelectCapacity(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2762,10 +2622,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedWarrantyId === type.id &&
+                    selectedWarrantyId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectWarranty(type.id)}
+                  onPress={() => handleSelectWarranty(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2791,9 +2651,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedSizeId === type.id && styles.modalOptionSelected,
+                    selectedSizeId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectSize(type.id)}
+                  onPress={() => handleSelectSize(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2820,10 +2681,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedMaterialId === type.id &&
+                    selectedMaterialId === Number(type.id) &&
                       styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectMaterial(type.id)}
+                  onPress={() => handleSelectMaterial(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2850,9 +2711,10 @@ const PostFormScreen = ({
                   key={type.id}
                   style={[
                     styles.modalOption,
-                    selectedOriginId === type.id && styles.modalOptionSelected,
+                    selectedOriginId === Number(type.id) &&
+                      styles.modalOptionSelected,
                   ]}
-                  onPress={() => handleSelectOrigin(type.id)}
+                  onPress={() => handleSelectOrigin(Number(type.id))}
                 >
                   <Text style={styles.modalOptionText}>{type.name}</Text>
                 </TouchableOpacity>
@@ -2877,7 +2739,8 @@ const PostFormScreen = ({
                 key={option.id}
                 style={[
                   styles.modalOption,
-                  dealTypeId === option.id && styles.modalOptionSelected,
+                  dealTypeId === Number(option.id) &&
+                    styles.modalOptionSelected,
                 ]}
                 onPress={() => handleSelectDealType(Number(option.id))}
               >
@@ -2896,17 +2759,31 @@ const PostFormScreen = ({
       )}
     </View>
   );
-};
+}
 
-export default PostFormScreen;
-
+// === STYLES ===
 const styles = StyleSheet.create({
+  disabledDropdown: {
+    backgroundColor: "#f3f4f6",
+    opacity: 0.7,
+  },
+  disabledDropdownText: {
+    color: "#6b7280",
+  },
+  removeButton: {
+    position: "absolute",
+    top: -8,
+    right: 0,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    backgroundColor: "#f8fafc", // Nền nhạt
+    backgroundColor: "#f8fafc",
     marginHorizontal: 16,
     marginVertical: 8,
     borderRadius: 12,
@@ -2914,7 +2791,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 10,
     fontSize: 14,
-    color: "#64748b", // Màu xám
+    color: "#64748b",
   },
   container: {
     flex: 1,
@@ -3023,19 +2900,18 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  imageRow: { flexDirection: "row", marginLeft: 10, marginTop: 10 },
-  imagePreview: { width: 60, height: 60, marginRight: 8, borderRadius: 5 },
-  removeButton: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+  imageRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginLeft: 10,
+    marginTop: 10,
+  },
+  imagePreview: {
+    width: 60,
+    height: 60,
+    marginRight: 8,
+    borderRadius: 5,
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,

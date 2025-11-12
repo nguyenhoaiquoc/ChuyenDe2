@@ -168,7 +168,7 @@ export class CreateProductDto {
   @IsOptional()
   @Transform(transformToNumberOrNull)
   mileage: number | null;
-  
+
   @IsOptional()
   @Transform(transformToNumberOrNull)
   category_change_id: number | null;
@@ -193,11 +193,7 @@ export class CreateProductDto {
   @IsNumberString()
   group_id: string;
 
-  /**
-   * Các trường này client gửi lên là chuỗi "true"/"false"
-   */
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  @IsBoolean()
-  is_approved: boolean;
+  @IsString()
+  imageIdsToDelete?: string;
 }

@@ -59,11 +59,8 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const { product: routeProduct, isApproved: routeIsApproved } =
-    route.params || {};
+  const { product: routeProduct } = route.params || {};
   const product: Product = routeProduct || ({} as Product);
-  // Mặc định là 'true' nếu không được truyền (cho các màn hình khác)
-  const isApproved = routeIsApproved ?? true;
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -96,10 +93,12 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id && isApproved) {
+    const isProductApproved = product.productStatus?.id === 2;
+
+    if (product.id && isProductApproved) {
       fetchFavoriteData();
     }
-  }, [product.id, currentUser, isApproved]);
+  }, [product.id, currentUser, product.productStatus?.id]);
 
   const handleToggleFavorite = async () => {
     if (!currentUser?.id) {
@@ -155,12 +154,13 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id && isApproved) {
+    const isProductApproved = product.productStatus?.id === 2;
+
+    if (product.id && isProductApproved) {
       fetchComments();
       fetchRelatedProducts();
     }
-    if (product.id && isApproved) fetchComments();
-  }, [product.id, isApproved]);
+  }, [product.id, product.productStatus?.id]);
 
   useEffect(() => {}, [product]);
 
@@ -396,7 +396,6 @@ export default function ProductDetailScreen() {
         onPress={() =>
           navigation.push("ProductDetail", {
             product: item,
-            isApproved: true,
           })
         }
         className="w-40 bg-white border border-gray-200 rounded-lg shadow-sm mr-3 overflow-hidden"
@@ -478,7 +477,7 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <TouchableOpacity
               onPress={handleToggleFavorite}
               className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
@@ -514,7 +513,7 @@ export default function ProductDetailScreen() {
             </Text>
 
             {/* Tim */}
-            {isApproved && (
+            {product.productStatus?.id === 2 && (
               <TouchableOpacity
                 className="flex-row items-center"
                 onPress={handleToggleFavorite}
@@ -1005,7 +1004,7 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Bình luận */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <View className="mb-6">
               <Text className="text-lg font-bold mb-3">Bình luận</Text>
 
@@ -1084,7 +1083,7 @@ export default function ProductDetailScreen() {
           )}
 
           {/* Sản phẩm liên quan */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <View className="px-4">
               <Text className="text-xl font-bold mb-4">Sản phẩm liên quan</Text>
               {loadingRelated ? (
@@ -1108,9 +1107,8 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Chỉ hiển thị thanh bar nếu KHÔNG PHẢI sản phẩm của mình */}
-      {currentUser && Number(product.user_id) !== Number(currentUser.id) && (
+      {product.productStatus?.id === 2 && currentUser && Number(product.user_id) !== Number(currentUser.id) && (
         <View className="flex-row border-t border-gray-200 bg-white p-2 shadow-lg">
-          
           {/* Nút Gọi Ngay */}
           <TouchableOpacity
             onPress={handleCall} // Gọi thẳng hàm handleCall
@@ -1120,7 +1118,9 @@ export default function ProductDetailScreen() {
             }`}
           >
             <Ionicons name="call-outline" size={18} color="white" />
-            <Text className="text-white font-bold ml-2 text-base">Gọi ngay</Text>
+            <Text className="text-white font-bold ml-2 text-base">
+              Gọi ngay
+            </Text>
           </TouchableOpacity>
 
           {/* Nút Chat */}

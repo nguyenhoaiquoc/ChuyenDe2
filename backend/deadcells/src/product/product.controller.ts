@@ -72,32 +72,28 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
+ /**
+   * (Người dùng) Cập nhật chi tiết tin đăng
+   */
   @UseGuards(JwtAuthGuard)
-  @Post(':id/soft-delete')
-  softDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
+  @Patch(':id')
+  @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter)) 
+  async updateProduct(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+    @Body() updateDto: Partial<CreateProductDto>,
+    @UploadedFiles() files: Express.Multer.File[], 
+  ) {
     const userId = req.user.id;
-    return this.productService.softDeleteProduct(id, userId);
+    // 👇 Truyền 'files' vào service
+    return this.productService.updateProduct(id, userId, updateDto, files);
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/restore')
-  restore(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id;
-    return this.productService.restoreProduct(id, userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id/hard-delete')
+  @Delete(':id')
   hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
     const userId = req.user.id;
     return this.productService.hardDeleteProduct(id, userId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get('trash')
-  getDeleted(@Request() req) {
-    const userId = req.user.id;
-    return this.productService.findDeletedProducts(userId);
   }
 
   // 🟢 Lấy sản phẩm liên quan (ĐẶT TRƯỚC HÀM /:id)
@@ -124,6 +120,39 @@ export class ProductController {
       8, // Lấy tối đa 8 sản phẩm liên quan
     );
   }
+
+  // === ẨN BÀI ĐĂNG ===
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/hide')
+  async hideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.productService.hideProduct(id, req.user.id);
+  }
+
+  // === HIỆN LẠI BÀI ĐÃ ẨN ===
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/unhide')
+  async unhideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.productService.unhideProduct(id, req.user.id);
+  }
+
+  // === YÊU CẦU GIA HẠN ===
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/extension')
+  async requestExtension(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+    @Body('reason') reason: string,
+  ) {
+    return this.productService.requestExtension(id, req.user.id, reason);
+  }
+
+  // === ADMIN DUYỆT GIA HẠN ===
+  @UseGuards(JwtAuthGuard) // + AdminGuard
+  @Patch(':id/approve-extension')
+  async approveExtension(@Param('id', ParseIntPipe) id: number) {
+    return this.productService.approveExtension(id);
+  }
+
   // 🟢 Lấy chi tiết 1 bài
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
