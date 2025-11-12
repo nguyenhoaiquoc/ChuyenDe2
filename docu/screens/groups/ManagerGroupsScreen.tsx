@@ -112,13 +112,7 @@ export default function ManagerGroupsScreen() {
   const renderContent = () => {
     switch (selectedTab) {
       case "Dành cho bạn":
-        return (
-          <ForYouTab
-            navigation={navigation}
-            onViewAllPress={handleViewAllGroups}
-            onJoinMorePress={() => setSelectedTab("Khám phá")}
-          />
-        );
+        return <ForYouTab navigation={navigation} />;
       case "Nhóm của bạn":
         return (
           <YourGroupsTab
@@ -127,17 +121,11 @@ export default function ManagerGroupsScreen() {
           />
         );
       case "Bài viết":
-        return <PostsTab navigation={navigation} limit={4} />;
+        return <PostsTab navigation={navigation} />;
       case "Khám phá":
         return <DiscoverTab />;
       default:
-        return (
-          <ForYouTab
-            navigation={navigation}
-            onViewAllPress={handleViewAllGroups}
-            onJoinMorePress={() => setSelectedTab("Khám phá")}
-          />
-        );
+        return <ForYouTab navigation={navigation} />;
     }
   };
 

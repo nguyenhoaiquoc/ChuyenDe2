@@ -11,7 +11,7 @@ export type RootStackParamList = {
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product?: Product; isApproved?: boolean } | undefined;
+  ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
     | {
@@ -59,7 +59,7 @@ export type RootStackParamList = {
   ApprovePostsScreen: { groupId: number };
   EditGroupScreen: { group: any };
 
-  GroupDetailScreen: { group: GroupType };
+  GroupDetailScreen: { groupId: number };
   PostGroupFormScreen: {
     group: GroupType;
     category?: Category;
@@ -310,6 +310,8 @@ export type Comment = {
 export type User = {
   id: number;
   name: string;
+  email?: string;
+  avatar?: string | null;
 };
 
 export type FileResult = {
@@ -323,6 +325,7 @@ export type Notification = {
   is_read: boolean;
   createdAt: string; // Hoặc Date nếu ông parse
   target_id: number;
+  group?: Partial<GroupType>;
 
   // Quan hệ: Người gây ra hành động
   actor: {

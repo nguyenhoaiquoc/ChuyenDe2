@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Image,
-  FlatList,
   ScrollView,
   ActivityIndicator,
   RefreshControl,
@@ -17,36 +16,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type ForYouTabProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
-  onViewAllPress: () => void;
-  onJoinMorePress: () => void;
 };
 
 export default function ForYouTab({
   navigation,
-  onViewAllPress,
-  onJoinMorePress,
 }: ForYouTabProps) {
   const [groups, setGroups] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const fetchData = async () => {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      const [groupRes, postRes] = await Promise.all([
-        axios.get(`${path}/groups/latest`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${path}/groups/my/group-posts?limit=4`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+      const res = await axios.get(`${path}/groups/public`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      setGroups(groupRes.data);
-      setPosts(postRes.data);
+      setGroups(res.data);
     } catch (err) {
-      console.log("❌ Lỗi khi lấy dữ liệu:", err);
+      console.log("❌ Lỗi khi lấy nhóm công khai:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -77,17 +65,12 @@ export default function ForYouTab({
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
-      {/* Nhóm mới nhất */}
-      <View className="mb-4 mt-6">
+      {/* Tất cả các nhóm công khai */}
+      <View className="mb-20 mt-6">
         <View className="flex-row justify-between items-center mb-4">
-          <Text className="text-xl font-bold text-gray-900">Nhóm của bạn</Text>
-          {groups.length >= 5 ? (
-            <TouchableOpacity onPress={onViewAllPress}>
-              <Text className="text-blue-600 text-sm font-semibold">
-                Xem tất cả
-              </Text>
-            </TouchableOpacity>
-          ) : null}
+          <Text className="text-xl font-bold text-gray-900">
+            Tất cả các nhóm TDC
+          </Text>
         </View>
 
         {groups.map((g) => (
@@ -95,7 +78,7 @@ export default function ForYouTab({
             key={g.id}
             className="flex-row items-center mb-4 bg-white p-3 rounded-xl border border-gray-100 shadow-sm"
             onPress={() =>
-              navigation.navigate("GroupDetailScreen", { group: g })
+              navigation.navigate("GroupDetailScreen", { groupId: g.id })
             }
           >
             <Image
@@ -111,87 +94,15 @@ export default function ForYouTab({
               >
                 {g.name}
               </Text>
-              <Text className="text-gray-500 text-sm mt-0.5">{g.members}</Text>
-              <Text className="text-gray-500 text-sm mt-0.5">{g.posts}</Text>
+              <Text className="text-gray-500 text-sm mt-0.5">
+                {g.memberCount} thành viên
+              </Text>
+              <Text className="text-gray-500 text-sm mt-0.5" numberOfLines={2}>
+                {g.description}
+              </Text>
             </View>
           </TouchableOpacity>
         ))}
-
-        {groups.length < 5 ? (
-          // Thay đổi: Tạo kiểu cho nút này thành 1 "ghost button" để dễ nhấn hơn
-          <TouchableOpacity
-            onPress={onJoinMorePress}
-            className="mt-4 mb-3 bg-blue-50 rounded-lg p-3"
-          >
-            <Text className="text-blue-600 text-sm font-semibold text-center">
-              Xem các nhóm có thể bạn thích
-            </Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      {/* Bài viết mới nhất từ nhóm */}
-      <View className="mb-24">
-        <Text className="text-base font-semibold mb-3">Từ nhóm của bạn</Text>
-
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-            marginBottom: 16,
-          }}
-          scrollEnabled={false}
-          renderItem={({ item }) => {
-            const priceFormat =
-              item.price === 0
-                ? "Miễn phí"
-                : item.price == null
-                  ? "Trao đổi"
-                  : item.price;
-            return (
-              <View className="w-[48%] bg-white rounded-lg shadow p-2">
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate("ProductDetail", { product: item })
-                  }
-                >
-                  {/* Ảnh bài viết */}
-                  <Image
-                    source={{ uri: item.thumbnail_url }}
-                    className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
-                    resizeMode="contain"
-                  />
-                </TouchableOpacity>
-
-                {/* Tên người đnăg */}
-                <Text className="font-semibold text-sm mt-2" numberOfLines={1}>
-                  {item.author_name}
-                </Text>
-
-                {/* Tiêu đề */}
-                <Text className="font-semibold text-sm mt-2" numberOfLines={1}>
-                  {item.name}
-                </Text>
-
-                {/* Giá + vị trí */}
-                <Text className="text-red-500 text-xs">{priceFormat}</Text>
-                <Text className="text-gray-400 text-xs">{item.location}</Text>
-              </View>
-            );
-          }}
-        />
-        <View className="items-center my-4">
-          {/* <TouchableOpacity
-            onPress={() => navigation.navigate("PostsTab")}
-            className="bg-blue-600 px-6 py-3 rounded-full"
-          >
-            <Text className="text-white font-semibold text-base">
-              Xem bài viết khac
-            </Text>
-          </TouchableOpacity> */}
-        </View>
       </View>
     </ScrollView>
   );

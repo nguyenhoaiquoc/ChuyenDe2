@@ -30,55 +30,41 @@ export default function GroupDetailScreen({
   navigation,
   route,
 }: GroupDetailScreenProps) {
-  const { group } = route.params;
+  const { groupId } = route.params;
 
+  const [groupDetail, setGroupDetail] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isMenuVisible, setMenuVisible] = useState(false);
-  const [isApprovalEnabled, setIsApprovalEnabled] = useState(
-    group.mustApprovePosts || false
-  );
-  const [role, setRole] = useState<"leader" | "member" | "none" | null>(null);
-  const [joinStatus, setJoinStatus] = useState<"none" | "pending" | "joined">(
-    "none"
-  );
+  const [isApprovalEnabled, setIsApprovalEnabled] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
-  const isMember = role === "leader" || role === "member";
+  const role = groupDetail?.userRole || "none";
   const isLeader = role === "leader";
+  const isMember = groupDetail?.isMember || false;
 
   const fetchData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
 
-      const [productsRes, roleRes, statusRes] = await Promise.all([
-        axios.get(`${path}/groups/${group.id}/products`, {
+      const [detailRes, productsRes] = await Promise.all([
+        axios.get(`${path}/groups/${groupId}/detail`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`${path}/groups/${group.id}/role`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${path}/groups/${group.id}/join-status`, {
+        axios.get(`${path}/groups/${groupId}/products`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
 
+      setGroupDetail(detailRes.data);
       setProducts(productsRes.data);
-
-      const r = roleRes.data.role;
-      setRole(r === "leader" || r === "member" || r === "none" ? r : "none");
-
-      const s = statusRes.data.status;
-      setJoinStatus(
-        s === "none" || s === "pending" || s === "joined" ? s : "none"
-      );
-    } catch (err) {
+      setIsApprovalEnabled(detailRes.data.mustApprovePosts || false);
+    } catch (err: any) {
       console.log("Lỗi khi tải dữ liệu nhóm:", err);
-      setRole("none");
-      setJoinStatus("none");
     }
-  }, [group?.id]);
+  }, [groupId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -96,62 +82,43 @@ export default function GroupDetailScreen({
   }, [fetchData]);
 
   const handleJoinGroup = async () => {
-    const token = await AsyncStorage.getItem("token");
+    if (isJoining) return; // Ngăn chặn double-click
+    setIsJoining(true);
     try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Lỗi", "Bạn cần đăng nhập để thực hiện hành động này.");
+        return;
+      }
+
       const res = await axios.post(
-        `${path}/groups/${group.id}/join`,
-        {},
+        `${path}/groups/${groupId}/join`,
+        {}, // Không cần body, chỉ cần token
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      Alert.alert("Thành công", res.data.message);
-
-      // Cập nhật trạng thái dựa trên response
-      if (res.data.joinStatus === "joined") {
-        setJoinStatus("joined");
-        setRole("member");
-      } else if (res.data.joinStatus === "pending") {
-        setJoinStatus("pending");
-      }
-
+      // Sau khi gửi yêu cầu, tải lại dữ liệu để cập nhật trạng thái
+      // (ví dụ: isMember có thể thành true nếu nhóm public,
+      // hoặc server có thể trả về trạng thái 'pending' mà bạn cần xử lý)
       await fetchData();
+
+      Alert.alert(
+        "Thành công",
+        res.data?.message || "Yêu cầu tham gia đã được gửi."
+      );
     } catch (error: any) {
       Alert.alert(
         "Lỗi",
-        error.response?.data?.message || "Không thể tham gia nhóm"
+        error.response?.data?.message || "Không thể gửi yêu cầu tham gia"
       );
+    } finally {
+      setIsJoining(false);
     }
-  };
-
-  const handleCancelRequest = async () => {
-    Alert.alert("Xác nhận hủy", "Bạn có chắc chắn muốn hủy yêu cầu tham gia?", [
-      { text: "Không", style: "cancel" },
-      {
-        text: "Hủy yêu cầu",
-        style: "destructive",
-        onPress: async () => {
-          const token = await AsyncStorage.getItem("token");
-          try {
-            await axios.delete(`${path}/groups/${group.id}/join-request`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            Alert.alert("Đã hủy", "Yêu cầu tham gia đã được hủy");
-            setJoinStatus("none");
-            await fetchData();
-          } catch (error: any) {
-            Alert.alert(
-              "Lỗi",
-              error.response?.data?.message || "Không thể hủy"
-            );
-          }
-        },
-      },
-    ]);
   };
 
   const handleCreatePost = () => {
     navigation.navigate("PostGroupFormScreen", {
-      group,
+      group: groupDetail,
       onPostSuccess: async () => {
         await fetchData();
       },
@@ -180,12 +147,10 @@ export default function GroupDetailScreen({
           onPress: async () => {
             try {
               const token = await AsyncStorage.getItem("token");
-              await axios.delete(`${path}/groups/${group.id}/leave`, {
+              await axios.delete(`${path}/groups/${groupId}/leave`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
               Alert.alert("Thành công", "Bạn đã rời nhóm");
-              setRole("none");
-              setJoinStatus("none");
               setMenuVisible(false);
               navigation.goBack();
             } catch (error: any) {
@@ -206,7 +171,7 @@ export default function GroupDetailScreen({
       icon: "file-text",
       action: () => {
         setMenuVisible(false);
-        navigation.navigate("MyGroupPostsScreen", { groupId: group.id });
+        navigation.navigate("MyGroupPostsScreen", { groupId });
       },
     },
     {
@@ -223,7 +188,7 @@ export default function GroupDetailScreen({
       icon: "edit",
       action: () => {
         setMenuVisible(false);
-        navigation.navigate("EditGroupScreen", { group });
+        navigation.navigate("EditGroupScreen", { group: groupDetail });
       },
     },
     {
@@ -231,7 +196,7 @@ export default function GroupDetailScreen({
       icon: "check-square",
       action: () => {
         setMenuVisible(false);
-        navigation.navigate("ApprovePostsScreen", { groupId: group.id });
+        navigation.navigate("ApprovePostsScreen", { groupId });
       },
     },
     {
@@ -240,7 +205,7 @@ export default function GroupDetailScreen({
       action: () => {
         setMenuVisible(false);
         navigation.navigate("GroupMembersScreen", {
-          groupId: group.id,
+          groupId,
           isLeader: true,
         });
       },
@@ -258,7 +223,7 @@ export default function GroupDetailScreen({
             onPress: async () => {
               try {
                 const token = await AsyncStorage.getItem("token");
-                await axios.delete(`${path}/groups/${group.id}`, {
+                await axios.delete(`${path}/groups/${groupId}`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 Alert.alert("Thành công", "Đã xóa nhóm");
@@ -279,15 +244,6 @@ export default function GroupDetailScreen({
     : userMenuItems;
 
   const renderStatusBadge = () => {
-    if (joinStatus === "pending") {
-      return (
-        <View className="mt-2 bg-yellow-500/80 px-3 py-1 rounded-full self-start">
-          <Text className="text-white text-xs font-semibold">
-            Chờ phê duyệt
-          </Text>
-        </View>
-      );
-    }
     if (isLeader) {
       return (
         <View className="mt-2 bg-green-500/80 px-3 py-1 rounded-full self-start">
@@ -295,7 +251,7 @@ export default function GroupDetailScreen({
         </View>
       );
     }
-    if (role === "member") {
+    if (isMember) {
       return (
         <View className="mt-2 bg-blue-500/80 px-3 py-1 rounded-full self-start">
           <Text className="text-white text-xs font-semibold">Thành viên</Text>
@@ -305,32 +261,9 @@ export default function GroupDetailScreen({
     return null;
   };
 
+  // ...
   const renderActionButton = () => {
-    if (joinStatus === "none") {
-      return (
-        <TouchableOpacity
-          onPress={handleJoinGroup}
-          className="bg-blue-600 px-4 py-2 rounded-full"
-        >
-          <Text className="text-white font-semibold">
-            {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
-          </Text>
-        </TouchableOpacity>
-      );
-    }
-
-    if (joinStatus === "pending") {
-      return (
-        <TouchableOpacity
-          onPress={handleCancelRequest}
-          className="bg-red-500 px-4 py-2 rounded-full"
-        >
-          <Text className="text-white font-semibold">Hủy yêu cầu</Text>
-        </TouchableOpacity>
-      );
-    }
-
-    if (joinStatus === "joined") {
+    if (isMember) {
       return (
         <View className="flex-row items-center space-x-3">
           <TouchableOpacity
@@ -350,13 +283,31 @@ export default function GroupDetailScreen({
       );
     }
 
-    return null;
+    return (
+      <TouchableOpacity
+        onPress={handleJoinGroup}
+        disabled={isJoining}
+        className={`px-4 py-2 rounded-full flex-row items-center ${
+          isJoining ? "bg-gray-500/90" : "bg-blue-600/90"
+        }`}
+      >
+        {isJoining ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Text className="text-white font-semibold ml-2">
+            {isJoining ? "Đang xử lý..." : "Gửi yêu cầu"}
+          </Text>
+        )}
+      </TouchableOpacity>
+    );
   };
 
   const renderHeader = () => (
     <ImageBackground
       source={
-        group.image ? { uri: group.image } : require("../../assets/khi.png")
+        groupDetail?.image
+          ? { uri: groupDetail.image }
+          : require("../../assets/khi.png")
       }
       className="h-52 w-full mb-4"
     >
@@ -373,22 +324,18 @@ export default function GroupDetailScreen({
         </View>
 
         <View>
-          <Text className="text-white text-2xl font-bold">{group.name}</Text>
+          <Text className="text-white text-2xl font-bold">
+            {groupDetail?.name}
+          </Text>
           <View className="flex-row items-center mt-1">
             <Feather name="users" size={14} color="white" />
             <Text className="text-white text-sm ml-1">
-              {group.memberCount} thành viên
+              {groupDetail?.memberCount} thành viên
             </Text>
           </View>
           <View className="flex-row items-center mt-1">
-            <Feather
-              name={group.isPublic ? "globe" : "lock"}
-              size={12}
-              color="#E5E7EB"
-            />
-            <Text className="text-xs text-gray-200 ml-1">
-              {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"}
-            </Text>
+            <Feather name="lock" size={12} color="#E5E7EB" />
+            <Text className="text-xs text-gray-200 ml-1">Nhóm Riêng tư</Text>
           </View>
           {renderStatusBadge()}
         </View>
@@ -443,7 +390,12 @@ export default function GroupDetailScreen({
                 : `${item.price.toLocaleString()} đ`;
 
           return (
-            <View className="mb-8 p-3 bg-white rounded-xl shadow-md">
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("ProductDetail", { product: item })
+              }
+              className="mb-8 p-3 bg-white rounded-xl shadow-md"
+            >
               <View className="flex-row items-center mb-3">
                 <Image
                   source={
@@ -487,29 +439,14 @@ export default function GroupDetailScreen({
                 </View>
               )}
 
-              <TouchableOpacity
-                onPress={() => {
-                  if (joinStatus !== "joined") {
-                    Alert.alert(
-                      "Thông báo",
-                      joinStatus === "pending"
-                        ? "Yêu cầu tham gia của bạn đang chờ phê duyệt."
-                        : "Bạn cần tham gia nhóm để xem chi tiết bài viết."
-                    );
-                    return;
-                  }
-                  navigation.navigate("ProductDetail", { product: item });
-                }}
-              >
-                {imageUrl && (
-                  <Image
-                    source={{ uri: imageUrl }}
-                    className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
-                    resizeMode="cover"
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
+              {imageUrl && (
+                <Image
+                  source={{ uri: imageUrl }}
+                  className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
+                  resizeMode="cover"
+                />
+              )}
+            </TouchableOpacity>
           );
         }}
         ListEmptyComponent={
@@ -518,7 +455,7 @@ export default function GroupDetailScreen({
             <Text className="text-gray-500 mt-4 text-center">
               Chưa có bài viết nào trong nhóm này.
             </Text>
-            {joinStatus === "joined" && (
+            {isMember && (
               <TouchableOpacity
                 onPress={handleCreatePost}
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
@@ -532,7 +469,7 @@ export default function GroupDetailScreen({
         }
       />
 
-      {joinStatus === "joined" && (
+      {isMember && (
         <Modal
           visible={isMenuVisible}
           transparent
@@ -571,7 +508,7 @@ export default function GroupDetailScreen({
                   </TouchableOpacity>
                 ))}
 
-                {isLeader && group.isPublic && (
+                {isLeader && (
                   <View className="flex-row items-center justify-between p-3 border-t border-gray-100">
                     <View className="flex-row items-center flex-1 pr-2">
                       <Feather name="check-circle" size={20} color="#333" />
@@ -583,21 +520,23 @@ export default function GroupDetailScreen({
                       trackColor={{ false: "#E5E7EB", true: "#3B82F6" }}
                       thumbColor={"#f4f3f4"}
                       onValueChange={async (v) => {
-                        if (!v) {
-                          Alert.alert(
-                            "Nếu tắt, bài viết sẽ được đăng tự động."
-                          );
-                        }
                         setIsApprovalEnabled(v);
                         try {
                           const token = await AsyncStorage.getItem("token");
                           await axios.patch(
-                            `${path}/groups/${group.id}`,
+                            `${path}/groups/${groupId}/post-approval`,
                             { mustApprovePosts: v },
                             { headers: { Authorization: `Bearer ${token}` } }
                           );
+                          Alert.alert(
+                            "Thành công",
+                            v
+                              ? "Đã bật chế độ duyệt bài viết"
+                              : "Đã tắt chế độ duyệt bài viết"
+                          );
                         } catch (err) {
                           setIsApprovalEnabled(!v);
+                          Alert.alert("Lỗi", "Không thể cập nhật cài đặt");
                         }
                       }}
                       value={isApprovalEnabled}

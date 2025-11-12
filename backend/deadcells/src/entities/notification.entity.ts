@@ -11,6 +11,7 @@ import { User } from './user.entity';
 import { NotificationAction } from './notification-action.entity';
 import { TargetType } from './target-type.entity';
 import { Product } from './product.entity';
+import { Group } from './group.entity';
 
 @Entity({ name: 'notifications' })
 export class Notification {
@@ -28,12 +29,17 @@ export class Notification {
   actor: User; // Quan hệ tới người gây ra hành động
 
   // Loại hành động (comment, message...)
-  @ManyToOne(() => NotificationAction, (action) => action.notifications, { nullable: false })
+  @ManyToOne(() => NotificationAction, (action) => action.notifications, {
+    nullable: false,
+  })
   @JoinColumn({ name: 'action_id' })
   action: NotificationAction;
 
   // Loại đối tượng (product, user_profile...)
-  @ManyToOne(() => TargetType, (type) => type.notifications, { nullable: false })
+  @ManyToOne(() => TargetType, (type) => type.notifications, {
+    nullable: false,
+  })
+  
   @JoinColumn({ name: 'target_type_id' })
   targetType: TargetType;
 
@@ -45,6 +51,10 @@ export class Notification {
   @ManyToOne(() => Product, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'product_id' })
   product: Product;
+
+  @ManyToOne(() => Group, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
 
   @Column({ type: 'boolean', default: false, nullable: false })
   is_read: boolean;

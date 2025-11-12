@@ -8,9 +8,27 @@ import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
 import { Product } from 'src/entities/product.entity';
 import { ProductStatus } from 'src/entities/product-status.entity';
+import { FavoritesModule } from 'src/favorites/favorites.module';
+import { GroupInvitation } from 'src/entities/group-invitation.entity';
+import { NotificationModule } from 'src/notification/notification.module';
+import { User } from 'src/entities/user.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Group, GroupMember, GroupRole, Product, ProductStatus])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Group,
+      GroupMember,
+      GroupRole,
+      Product,
+      ProductStatus,
+      GroupInvitation,
+      User,
+    ]),
+    forwardRef(() => FavoritesModule),
+    forwardRef(() => NotificationModule),
+    forwardRef(() => AuthModule),
+  ],
   providers: [GroupService],
   controllers: [GroupController],
   exports: [GroupService],

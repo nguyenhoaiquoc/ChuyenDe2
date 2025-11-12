@@ -20,7 +20,6 @@ import { useNavigation } from "@react-navigation/native";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-// local extended type includes joinStatus so TS ko complain
 type JoinStatus = "none" | "pending" | "joined";
 type GroupWithStatus = GroupType & {
   joinStatus: JoinStatus;
@@ -59,7 +58,9 @@ const GroupSuggestionCard = ({
   return (
     <View className="w-[48%] mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
       <TouchableOpacity
-        onPress={() => navigation.navigate("GroupDetailScreen", { group })}
+        onPress={() =>
+          navigation.navigate("GroupDetailScreen", { groupId: group.id })
+        }
       >
         <ImageBackground
           source={
@@ -104,41 +105,23 @@ export default function DiscoverTab() {
   const fetchSuggestedGroups = useCallback(async () => {
     setLoading(true);
     const token = await AsyncStorage.getItem("token");
+
     try {
       const res = await axios.get(`${path}/groups/suggestions`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      // map groups and fetch join status only if token exists
-      const mapped: GroupWithStatus[] = await Promise.all(
-        res.data.map(async (g: any) => {
-          let joinStatus: JoinStatus = "none";
-
-          if (token) {
-            try {
-              const statusRes = await axios.get(
-                `${path}/groups/${g.id}/join-status`,
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
-              const s = statusRes.data.status as JoinStatus;
-              joinStatus =
-                s === "none" || s === "pending" || s === "joined" ? s : "none";
-            } catch (err) {
-              // nếu thất bại khi check trạng thái, giữ 'none'
-              joinStatus = "none";
-            }
-          }
-
-          return {
-            ...g,
-            image: g.image || require("../../../assets/khi.png"),
-            memberCount: g.memberCount ?? 0,
-            joinStatus,
-          } as GroupWithStatus;
-        })
-      );
+      // BE đã trả về joinStatus, isPublic, memberCount... nên FE chỉ map lại
+      const mapped: GroupWithStatus[] = res.data.map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        image: g.image || require("../../../assets/khi.png"),
+        description: g.description || "",
+        memberCount: g.memberCount ?? 0,
+        joinStatus: g.joinStatus as JoinStatus,
+        isPublic: g.isPublic,
+        mustApprovePosts: g.mustApprovePosts ?? false,
+      }));
 
       setSuggestedGroups(mapped);
     } catch (err) {

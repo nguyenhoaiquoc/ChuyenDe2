@@ -175,10 +175,6 @@ export default function SellProductScreen({ navigation }: Props) {
             status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
             visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
             group_id: item.group_id || null,
-            is_approved:
-              typeof item.is_approved === "boolean"
-                ? item.is_approved
-                : undefined, // (optional '?' có thể là undefined)
           };
         });
 

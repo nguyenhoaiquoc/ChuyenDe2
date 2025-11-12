@@ -86,27 +86,28 @@ export default function ProductDetailScreen() {
   }, [product.id, currentUser, isApproved]);
 
   const handleToggleFavorite = async () => {
-    if (!currentUser?.id) {
-      Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
-      return;
-    }
+    if (!currentUser) return;
+
+    // Đổi local state trước
+    setIsFavorite((prev) => !prev);
+    setFavoriteCount((prev) => prev + (isFavorite ? -1 : 1));
 
     try {
-      await axios.post(`${path}/favorites/toggle/${product.id}`, {
-        userId: currentUser.id,
-      });
+      const token = await AsyncStorage.getItem("token");
+      await axios.post(
+        `${path}/favorites/toggle/${product.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const [countRes, statusRes] = await Promise.all([
-        axios.get(`${path}/favorites/${product.id}/count`),
-        axios.get(
-          `${path}/favorites/check/${product.id}?userId=${currentUser.id}`
-        ),
-      ]);
-
+      // Optionally fetch lại count chính xác từ server
+      const countRes = await axios.get(`${path}/favorites/${product.id}/count`);
       setFavoriteCount(countRes.data.count || 0);
-      setIsFavorite(statusRes.data.isFavorite || false);
     } catch (err) {
-      console.log("Lỗi toggle yêu thích detail:", err);
+      // Nếu có lỗi, rollback lại
+      setIsFavorite((prev) => !prev);
+      setFavoriteCount((prev) => prev + (isFavorite ? 1 : -1));
+      console.log("Lỗi toggle yêu thích:", err);
     }
   };
 
