@@ -43,7 +43,6 @@ export class GroupController {
       id: group.id,
       name: group.name,
       isPublic: group.isPublic,
-      members: group.count_member,
       posts: 'Chưa có dữ liệu bài viết',
       image: group.thumbnail_url,
       owner: group.owner_id,
@@ -238,11 +237,7 @@ export class GroupController {
     return this.groupService.getLatestGroups(userId);
   }
 
-  /** Lấy nhóm nổi bật (featured) */
-  @Get('featured')
-  async getFeaturedGroups() {
-    return this.groupService.getFeaturedGroups();
-  }
+
 
   // ==================== Group Role / Membership ====================
 

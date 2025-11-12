@@ -24,7 +24,6 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type JoinStatus = "none" | "pending" | "joined";
 type GroupWithStatus = GroupType & {
   joinStatus: JoinStatus;
-  memberCount: number | string;
 };
 
 const GroupSuggestionCard = ({
@@ -76,7 +75,6 @@ const GroupSuggestionCard = ({
         </Text>
         <Text className="text-xs text-gray-500 mt-1">
           {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"} ·{" "}
-          {group.memberCount} thành viên
         </Text>
 
         {renderBadge()}
@@ -134,7 +132,6 @@ export default function DiscoverTab() {
           return {
             ...g,
             image: g.image || require("../../../assets/khi.png"),
-            memberCount: g.memberCount ?? 0,
             joinStatus,
           } as GroupWithStatus;
         })

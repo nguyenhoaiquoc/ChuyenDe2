@@ -33,9 +33,6 @@ export class Group {
   @Column({ type: 'text', nullable: true })
   thumbnail_url?: string;
 
-  @Column({ type: 'int', default: 1 })
-  count_member: number;
-
   @Column({ type: 'bigint' })
   status_id: number;
 
