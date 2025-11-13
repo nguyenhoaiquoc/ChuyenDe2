@@ -94,11 +94,8 @@ export default function CreateGroupScreen() {
     setLoadingUsers(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      console.log("🪪 [DEBUG] token from AsyncStorage:", token);
-      console.log("🪪 [DEBUG] typeof token:", typeof token);
 
       const authHeader = `Bearer ${token}`;
-      console.log("🪪 [DEBUG] Authorization header will be:", authHeader);
 
       const res = await axios.get(
         `${path}/users/search?q=${encodeURIComponent(search)}`,
@@ -107,7 +104,6 @@ export default function CreateGroupScreen() {
         }
       );
 
-      console.log("✅ [DEBUG] users response status:", res.status);
       setAvailableUsers(res.data);
     } catch (error) {
       console.error("Lỗi tải danh sách users:", error);

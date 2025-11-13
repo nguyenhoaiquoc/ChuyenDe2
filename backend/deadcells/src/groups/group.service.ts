@@ -110,7 +110,6 @@ export class GroupService {
           status: 1,
         });
         const savedInvitation = await this.invitationRepo.save(invitation);
-        console.log(`[DEBUG] Chuẩn bị gửi thông báo. inviteeId: ${inviteeId}, inviterId: ${userId}, groupId: ${savedGroup.id}, invitationId: ${savedInvitation.id}`);
 
         // Gửi thông báo đúng với invitationId thật
         await this.notificationService?.notifyGroupInvitation?.(
@@ -305,75 +304,79 @@ export class GroupService {
       invited,
     };
   }
-
-  /** Chấp nhận lời mời */
-  async acceptInvitation(invitationId: number, userId: number) {
+  /** Chấp nhận lời mời vào nhóm */
+  async acceptGroupInvitation(invitationId: number, userId: number) {
     const invitation = await this.invitationRepo.findOne({
-      where: { id: invitationId, invitee_id: userId, status: 1 },
-      relations: ['group'],
+      where: { id: invitationId },
+      relations: ['group', 'invitee', 'inviter'],
     });
 
     if (!invitation) {
-      throw new NotFoundException('Không tìm thấy lời mời');
+      throw new NotFoundException('Không tìm thấy lời mời này');
     }
 
-    // Kiểm tra đã là thành viên chưa
+    // Chỉ invitee mới được accept
+    if (invitation.invitee_id !== userId) {
+      throw new ForbiddenException('Bạn không có quyền chấp nhận lời mời này');
+    }
+
+    // Chỉ xử lý khi đang pending (1)
+    if (invitation.status !== 1) {
+      throw new BadRequestException('Lời mời này đã được xử lý');
+    }
+
+    // Nếu đã là thành viên (phòng trường hợp bất đồng bộ), không thêm nữa
     const existingMember = await this.groupMemberRepo.findOne({
       where: { group_id: invitation.group_id, user_id: userId },
     });
 
-    if (existingMember) {
-      // Cập nhật status invitation
-      invitation.status = 2;
-      await this.invitationRepo.save(invitation);
-      throw new BadRequestException('Bạn đã là thành viên nhóm này');
+    if (!existingMember) {
+      const member = this.groupMemberRepo.create({
+        group_id: invitation.group_id,
+        user_id: userId,
+        group_role_id: 1, // member
+        pending: 3, // joined
+      });
+      await this.groupMemberRepo.save(member);
     }
 
-    // Thêm vào nhóm với pending = 3 (joined)
-    const member = this.groupMemberRepo.create({
-      group_id: invitation.group_id,
-      user_id: userId,
-      group_role_id: 1, // member
-      pending: 3, // joined
-    });
-    await this.groupMemberRepo.save(member);
-
-    // Tăng count_member
-    await this.groupRepo.increment(
-      { id: invitation.group_id },
-      'count_member',
-      1,
-    );
-
-    // Cập nhật status invitation
-    invitation.status = 2; // accepted
-    await this.invitationRepo.save(invitation);
+    await this.invitationRepo.delete({ id: invitationId });
 
     return {
       success: true,
       message: 'Đã tham gia nhóm thành công',
       groupId: invitation.group_id,
-      groupName: invitation.group.name,
+      groupName: invitation.group?.name || null,
     };
   }
 
-  /** Từ chối lời mời */
-  async rejectInvitation(invitationId: number, userId: number) {
+  /** Từ chối lời mời vào nhóm — XÓA HẲN bản ghi lời mời */
+  async rejectGroupInvitation(invitationId: number, userId: number) {
     const invitation = await this.invitationRepo.findOne({
-      where: { id: invitationId, invitee_id: userId, status: 1 },
+      where: { id: invitationId },
+      relations: ['group', 'invitee', 'inviter'],
     });
 
     if (!invitation) {
-      throw new NotFoundException('Không tìm thấy lời mời');
+      throw new NotFoundException('Không tìm thấy lời mời này');
     }
 
-    // Cập nhật status
-    invitation.status = 3; // rejected
-    await this.invitationRepo.save(invitation);
+    // Chỉ invitee mới được reject
+    if (invitation.invitee_id !== userId) {
+      throw new ForbiddenException('Bạn không có quyền từ chối lời mời này');
+    }
+
+    // Chỉ xử lý khi đang pending (1)
+    if (invitation.status !== 1) {
+      throw new BadRequestException('Lời mời này đã được xử lý');
+    }
+
+    // Xoá luôn bản ghi lời mời
+    await this.invitationRepo.delete({ id: invitationId });
 
     return {
       success: true,
-      message: 'Đã từ chối lời mời',
+      message: `Bạn đã từ chối lời mời vào nhóm ${invitation.group?.name || ''}`,
     };
   }
 
@@ -635,7 +638,6 @@ export class GroupService {
     if (approve) {
       member.pending = 3; // Chuyển sang joined
       await this.groupMemberRepo.save(member);
-      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
       console.log('✅ Approved successfully');
       return { success: true, message: 'Đã duyệt thành viên' };
     } else {
@@ -671,11 +673,6 @@ export class GroupService {
       group_id: groupId,
       user_id: targetUserId,
     });
-
-    // Chỉ giảm count nếu user đã joined (pending = 3)
-    if (member.pending === 3) {
-      await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
-    }
   }
 
   /** Chuyển quyền trưởng nhóm */
@@ -772,11 +769,6 @@ export class GroupService {
 
     await this.groupMemberRepo.save(member);
 
-    // Chỉ tăng count_member nếu là public (joined ngay)
-    if (group.isPublic) {
-      await this.groupRepo.increment({ id: groupId }, 'count_member', 1);
-    }
-
     return {
       success: true,
       message: group.isPublic
@@ -817,8 +809,6 @@ export class GroupService {
       group_id: groupId,
       user_id: userId,
     });
-
-    await this.groupRepo.decrement({ id: groupId }, 'count_member', 1);
   }
 
   // ==================== Get/List Groups ====================

@@ -38,6 +38,9 @@ export default function NotificationScreen({ navigation }: Props) {
   const [processingInvitation, setProcessingInvitation] = useState<
     number | null
   >(null);
+  const [invitationStatuses, setInvitationStatuses] = useState<
+    Record<number, "accepted" | "rejected">
+  >({});
 
   const fetchNotifications = async () => {
     try {
@@ -73,7 +76,7 @@ export default function NotificationScreen({ navigation }: Props) {
     fetchNotifications();
   }, [activeTab]);
 
-  // Xử lý chấp nhận lời mời
+  // ✅ Chấp nhận lời mời
   const handleAcceptInvitation = async (invitationId: number) => {
     setProcessingInvitation(invitationId);
     try {
@@ -84,9 +87,13 @@ export default function NotificationScreen({ navigation }: Props) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      Alert.alert("Thành công", res.data.message);
-      await fetchNotifications(); // Refresh danh sách
+      Alert.alert(
+        "Thành công",
+        res.data.message || "Đã tham gia nhóm thành công"
+      );
+      await fetchNotifications(); // Cập nhật lại danh sách
     } catch (error: any) {
+      console.error("Lỗi khi chấp nhận lời mời:", error);
       Alert.alert(
         "Lỗi",
         error.response?.data?.message || "Không thể chấp nhận lời mời"
@@ -96,7 +103,7 @@ export default function NotificationScreen({ navigation }: Props) {
     }
   };
 
-  // Xử lý từ chối lời mời
+  // ✅ Từ chối lời mời
   const handleRejectInvitation = async (invitationId: number) => {
     Alert.alert(
       "Xác nhận từ chối",
@@ -110,15 +117,19 @@ export default function NotificationScreen({ navigation }: Props) {
             setProcessingInvitation(invitationId);
             try {
               const token = await AsyncStorage.getItem("token");
-              await axios.post(
+              const res = await axios.post(
                 `${path}/groups/invitations/${invitationId}/reject`,
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
               );
 
-              Alert.alert("Đã hủy", "Đã từ chối lời mời thành công");
+              Alert.alert(
+                "Thành công",
+                res.data.message || "Đã từ chối lời mời"
+              );
               await fetchNotifications();
             } catch (error: any) {
+              console.error("Lỗi khi từ chối lời mời:", error);
               Alert.alert(
                 "Lỗi",
                 error.response?.data?.message || "Không thể từ chối lời mời"
@@ -210,6 +221,7 @@ export default function NotificationScreen({ navigation }: Props) {
   const renderNotificationItem = ({ item }: { item: Notification }) => {
     // Nếu là lời mời nhóm
     if (item.action?.name === "group_invitation") {
+      const status = invitationStatuses[item.id];
       return (
         <View
           className={`p-4 border-b border-gray-100 ${!item.is_read ? "bg-blue-50" : "bg-white"}`}
@@ -241,30 +253,56 @@ export default function NotificationScreen({ navigation }: Props) {
               </Text>
 
               {/* Nút hành động */}
-              <View className="flex-row space-x-2">
-                <TouchableOpacity
-                  onPress={() => handleAcceptInvitation(item.target_id)}
-                  disabled={processingInvitation === item.target_id}
-                  className="flex-1 bg-blue-500 py-2 rounded-lg mr-2"
-                >
-                  {processingInvitation === item.target_id ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <Text className="text-white text-center font-semibold text-sm">
-                      Chấp nhận
-                    </Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleRejectInvitation(item.target_id)}
-                  disabled={processingInvitation === item.target_id}
-                  className="flex-1 bg-gray-200 py-2 rounded-lg"
-                >
-                  <Text className="text-gray-700 text-center font-semibold text-sm">
-                    Từ chối
+              <View className="mt-2">
+                {invitationStatuses[item.id] === "accepted" ? (
+                  <Text className="text-green-600 text-sm font-medium">
+                    Bạn đã chấp nhận lời mời.
                   </Text>
-                </TouchableOpacity>
+                ) : invitationStatuses[item.id] === "rejected" ? (
+                  <Text className="text-red-500 text-sm font-medium">
+                    Bạn đã từ chối lời mời.
+                  </Text>
+                ) : (
+                  <View className="flex-row space-x-2">
+                    <TouchableOpacity
+                      onPress={async () => {
+                        await handleAcceptInvitation(item.target_id);
+                        // 🔹 Cập nhật trạng thái trong UI
+                        setInvitationStatuses((prev) => ({
+                          ...prev,
+                          [item.id]: "accepted",
+                        }));
+                      }}
+                      disabled={processingInvitation === item.target_id}
+                      className="flex-1 bg-blue-500 py-2 rounded-lg mr-2"
+                    >
+                      {processingInvitation === item.target_id ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <Text className="text-white text-center font-semibold text-sm">
+                          Chấp nhận
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={async () => {
+                        await handleRejectInvitation(item.target_id);
+                        // 🔹 Cập nhật trạng thái trong UI
+                        setInvitationStatuses((prev) => ({
+                          ...prev,
+                          [item.id]: "rejected",
+                        }));
+                      }}
+                      disabled={processingInvitation === item.target_id}
+                      className="flex-1 bg-gray-200 py-2 rounded-lg"
+                    >
+                      <Text className="text-gray-700 text-center font-semibold text-sm">
+                        Từ chối
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
 
               <Text className="text-xs text-gray-400 mt-2">

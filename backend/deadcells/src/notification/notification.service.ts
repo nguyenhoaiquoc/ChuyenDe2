@@ -28,7 +28,6 @@ export class NotificationService {
    * Hàm này được gọi bởi các service khác (CommentService, MessageService...)
    */
   async create(dto: CreateNotificationDto): Promise<Notification> {
-    this.logger.log(`[DEBUG] (create) DTO nhận được: ${JSON.stringify(dto)}`);
     const newNotification = this.notificationRepo.create({
       user: { id: dto.userId },
       actor: { id: dto.actorId },
@@ -39,9 +38,6 @@ export class NotificationService {
       group: dto.groupId ? { id: dto.groupId } : undefined,
       is_read: false,
     });
-    this.logger.log(
-      `[DEBUG] (create) Object chuẩn bị save: ${JSON.stringify(newNotification)}`,
-    );
     // LƯU LẦN 1
     const savedNotification = await this.notificationRepo.save(newNotification);
 
@@ -59,9 +55,7 @@ export class NotificationService {
     groupId: number,
     invitationId: number,
   ) {
-    this.logger.log(
-      `[DEBUG] (notifyGroupInvitation) Nhận được: groupId: ${groupId}`,
-    );
+   
     try {
       const action = await this.actionRepo.findOneByOrFail({
         name: 'group_invitation',

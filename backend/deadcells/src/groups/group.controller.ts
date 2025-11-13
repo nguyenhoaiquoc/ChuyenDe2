@@ -65,14 +65,6 @@ export class GroupController {
     return this.groupService.getPrivateGroups(userId);
   }
 
-  /** Lấy nhóm gợi ý cho user (chưa tham gia) */
-  @Get('suggestions')
-  @UseGuards(JwtAuthGuard)
-  async getSuggestedGroups(@Req() req) {
-    const userId = req.user.id;
-    return this.groupService.getGroupsUserNotJoined(userId);
-  }
-
   //Lấy chi tiết nhóm
   @Get(':groupId/detail')
   @UseGuards(JwtAuthGuard)
@@ -138,15 +130,26 @@ export class GroupController {
     return this.groupService.getPendingPosts(groupId, req.user.id);
   }
 
-  /** Duyệt / từ chối bài viết */
-  @Post('posts/:postId/approve')
+  /** Chấp nhận lời mời vào nhóm */
+  @Post('invitations/:invitationId/accept')
   @UseGuards(JwtAuthGuard)
-  async approvePost(
+  async acceptInvitation(
     @Req() req,
-    @Param('postId') postId: number,
-    @Body('approve') approve: boolean,
+    @Param('invitationId') invitationId: number,
   ) {
-    return this.groupService.approvePost(postId, approve, req.user.id);
+    const userId = req.user.id;
+    return this.groupService.acceptGroupInvitation(invitationId, userId);
+  }
+
+  /** Từ chối lời mời vào nhóm */
+  @Post('invitations/:invitationId/reject')
+  @UseGuards(JwtAuthGuard)
+  async rejectInvitation(
+    @Req() req,
+    @Param('invitationId') invitationId: number,
+  ) {
+    const userId = req.user.id;
+    return this.groupService.rejectGroupInvitation(invitationId, userId);
   }
 
   // ==================== Quản Lý Thành Viên ====================
