@@ -42,6 +42,11 @@ import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import { StatusBar } from 'expo-status-bar';
 import ManageProductsScreen from './screens/admin/ManageProductsScreen';
 import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
+import SearchProduct from './screens/products/SearchProduct';
+import SearchResultScreen from './screens/products/SearchResultScreen';
+import VerifyStudentScreen from './screens/profile/VerifyStudentScreen';
+
+// import TestApi from './screens/TestApi';
 import TrashScreen from './screens/products/TrashScreen';
 import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
 import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
@@ -91,6 +96,12 @@ export default function App() {
           <Stack.Screen name="PurchaseRequestScreen" component={PurchaseRequestScreen} />
           <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
+          <Stack.Screen name="SearchProduct" component={SearchProduct} />
+          <Stack.Screen name="SearchResultScreen" component={SearchResultScreen} />
+          <Stack.Screen name="VerifyStudentScreen" component={VerifyStudentScreen} />
+          {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
+          <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
+          />
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
            <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />

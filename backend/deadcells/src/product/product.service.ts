@@ -2,6 +2,7 @@ import { GroupService } from './../groups/group.service';
 import {
   BadRequestException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   NotFoundException,
   UnauthorizedException,
@@ -331,7 +332,7 @@ export class ProductService {
 
       productStatus: productStatusGr,
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
-      is_approved: isApproved,
+   
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
 
       visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
@@ -389,8 +390,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -428,8 +429,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -466,8 +467,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+       
+        
         'size',
         'brand',
         'color',
@@ -493,7 +494,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { is_approved: true, product_status_id: 2, is_deleted: false },
+      where: { product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -505,8 +506,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+        
         'size',
         'brand',
         'color',
@@ -686,7 +687,6 @@ export class ProductService {
         status_id: p.status_id,
         visibility_type: p.visibility_type,
         group_id: p.group_id,
-        is_approved: p.is_approved,
 
         // Thông tin phụ
         address_json: p.address_json,
@@ -771,7 +771,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -783,6 +783,7 @@ export class ProductService {
         'storageType',
         'graphicsCard',
         'engineCapacity',
+        'productStatus',
       ],
     });
 
@@ -790,115 +791,10 @@ export class ProductService {
 
     return await this.formatProduct(product);
   }
-
-  // 🟢 Lấy sản phẩm liên quan
-  async findRelatedProducts(
-    currentProductId: number,
-    categoryId: number,
-    subCategoryId: number,
-    limit: number = 8,
-  ): Promise<any[]> {
-    // Ưu tiên 1: Lấy theo subCategory (liên quan nhất)
-    let products = await this.productRepo.find({
-      where: {
-        sub_category_id: subCategoryId,
-        product_status_id: 2,
-        is_approved: true,
-        is_deleted: false,
-        id: Not(currentProductId),
-      },
-      relations: [
-        'images',
-        'user',
-        'dealType',
-        'condition',
-        'category',
-        'subCategory',
-        'category_change',
-        'sub_category_change',
-        'postType',
-        'productType',
-        'origin',
-        'material',
-        'size',
-        'brand',
-        'color',
-        'capacity',
-        'warranty',
-        'productModel',
-        'processor',
-        'ramOption',
-        'storageType',
-        'graphicsCard',
-        'breed',
-        'ageRange',
-        'gender',
-        'engineCapacity',
-        'productStatus',
-      ],
-      order: { created_at: 'DESC' },
-      take: limit,
-    });
-
-    const needed = limit - products.length;
-
-    // Nếu chưa đủ, lấy thêm ở category chính
-    if (needed > 0) {
-      const alreadyFoundIds = products.map((p) => p.id);
-      const idsToExclude = [currentProductId, ...alreadyFoundIds];
-
-      const categoryProducts = await this.productRepo.find({
-        where: {
-          category_id: categoryId,
-          sub_category_id: Not(subCategoryId), // Không lấy trùng subCategory đã lấy ở trên
-          product_status_id: 2,
-          is_approved: true,
-          is_deleted: false,
-          id: Not(In(idsToExclude)), // Loại trừ sản phẩm đang xem VÀ các sản phẩm đã tìm thấy
-        },
-        relations: [
-          'images',
-          'user',
-          'dealType',
-          'condition',
-          'category',
-          'subCategory',
-          'category_change',
-          'sub_category_change',
-          'postType',
-          'productType',
-          'origin',
-          'material',
-          'size',
-          'brand',
-          'color',
-          'capacity',
-          'warranty',
-          'productModel',
-          'processor',
-          'ramOption',
-          'storageType',
-          'graphicsCard',
-          'breed',
-          'ageRange',
-          'gender',
-          'engineCapacity',
-          'productStatus',
-        ],
-        order: { created_at: 'DESC' },
-        take: needed,
-      });
-
-      products = [...products, ...categoryProducts];
-    }
-
-    return this.formatProducts(products);
-  }
-
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: false }, // không lọc is_approved
+      where: { user: { id: userId } },
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -980,7 +876,6 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
     }
 
-    product.is_approved = dto.is_approved;
     product.product_status_id = dto.product_status_id;
 
     const updatedProduct = await this.productRepo.save(product);
@@ -991,92 +886,74 @@ export class ProductService {
     return updatedProduct;
   }
 
-  // xóa tạm thời (đưa vào thùng rác)
-  async softDeleteProduct(productId: number, userId: number): Promise<string> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
-    });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
+  // hàm tìm kiếm
+   async searchProducts(params: {
+  name?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  category?: string;
+  sort?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}) {
+  const {
+    name,
+    minPrice,
+    maxPrice,
+    category,
+    sort,
+    page = 1,
+    limit = 10,
+    
+  } = params;
 
-    if (product.user!.id !== userId)
-      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
+  const query = this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.category', 'category')
+    .leftJoinAndSelect('product.images', 'images')
+    .select([
+      'product.id',
+      'product.name',
+      'product.price',
+       'product.created_at',
+      'product.thumbnail_url',
+      'category.name',
+      'images.image_url', 
+    ]);
 
-    product.is_deleted = true;
-    product.deleted_at = new Date();
-
-    await this.productRepo.save(product);
-    console.log(`✅ Sản phẩm ${product.id} đã được chuyển vào thùng rác.`);
-
-    return `Sản phẩm ID=${productId} đã được chuyển vào thùng rác`;
+  if (name) {
+    query.andWhere('product.name ILIKE :name', { name: `%${name}%` });
   }
 
-  //khôi phục sản phẩm đã xóa tạm thời
-  async restoreProduct(productId: number, userId: number): Promise<string> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
-    });
-
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
-    }
-
-    if (!product.user || product.user.id !== userId) {
-      throw new UnauthorizedException(
-        'Bạn không có quyền khôi phục sản phẩm này.',
-      );
-    }
-
-    if (!product.is_deleted) {
-      throw new Error('Sản phẩm chưa bị xóa, không thể khôi phục.');
-    }
-
-    product.is_deleted = false;
-    product.deleted_at = null;
-    await this.productRepo.save(product);
-
-    this.logger.log(`♻️ Đã khôi phục sản phẩm ID=${productId}`);
-    return `Đã khôi phục sản phẩm ID=${productId}`;
+  if (minPrice !== undefined) {
+    query.andWhere('product.price >= :minPrice', { minPrice });
   }
 
-  //lấy danh sách “Thùng rác” (đã xóa tạm thời)
-  async findDeletedProducts(userId: number): Promise<any[]> {
-    const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: true },
-      relations: ['images', 'category', 'subCategory', 'dealType'],
-      order: { deleted_at: 'DESC' },
-    });
-
-    return this.formatProducts(products);
+  if (maxPrice !== undefined) {
+    query.andWhere('product.price <= :maxPrice', { maxPrice });
   }
 
-  //xóa vĩnh viễn
-  async hardDeleteProduct(productId: number, userId: number): Promise<string> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user', 'images'],
-    });
-
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
-    }
-
-    if (!product.user || product.user.id !== userId) {
-      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
-    }
-
-    await this.favoriteRepo.delete({ product: { id: productId } });
-
-    // Xóa ảnh liên quan trước
-    if (product.images && product.images.length > 0) {
-      await this.imageRepo.remove(product.images);
-    }
-
-    // Xóa sản phẩm vĩnh viễn
-    await this.productRepo.remove(product);
-
-    this.logger.log(`🧨 Đã xóa vĩnh viễn sản phẩm ID=${productId}`);
-    return `Đã xóa vĩnh viễn sản phẩm ID=${productId}`;
+  if (category) {
+    query.andWhere('category.name ILIKE :category', { category: `%${category}%` });
   }
+
+  query.orderBy(
+    sort ? 'product.price' : 'product.created_at',
+    (sort ? sort : 'DESC').toUpperCase() as 'ASC' | 'DESC'
+  );
+
+  query.skip((page - 1) * limit).take(limit);
+
+  const [data, total] = await query.getManyAndCount();
+
+  return {
+    data,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+    
+  };
+}
+
 }

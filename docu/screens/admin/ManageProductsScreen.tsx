@@ -98,8 +98,7 @@ export default function ManageProductsScreen() {
 
   const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
     const newStatus = {
-      is_approved: isApproved,
-      product_status_id: isApproved ? 2 : 3,
+      product_status_id: isApproved ? 2 : 3, // 2 = Đã duyệt, 3 = Bị từ chối
     };
     try {
       await axios.patch(

@@ -157,6 +157,7 @@ const mapProductData = (item: any): Product => {
     graphicsCard:
       item.graphicsCard && item.graphicsCard.name ? item.graphicsCard : null,
     breed: item.breed && item.breed.name ? item.breed : null,
+    productStatus: item.productStatus && item.productStatus.name ? item.productStatus : null,
     ageRange: item.ageRange && item.ageRange.name ? item.ageRange : null,
     gender: item.gender && item.gender.name ? item.gender : null,
     engineCapacity:
@@ -177,8 +178,6 @@ productStatus: item.productStatus || null,
     status_id: item.status_id?.toString() || undefined,
     visibility_type: item.visibility_type?.toString() || undefined,
     group_id: item.group_id || null,
-    is_approved:
-      typeof item.is_approved === "boolean" ? item.is_approved : undefined,
   };
 };
 

@@ -39,13 +39,22 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  VerifyStudentScreen: undefined;
+  
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
-  UserInforScreen: undefined;
-  EditProfileScreen: undefined;
+  ImageGalleryScreen?: {
+  onSelect?: (uri: string) => Promise<void>;
+};
+  UserInforScreen: {
+    onUpdate?: (updatedUser: any) => void; // cho phép truyền callback
+  } | undefined;
+   EditProfileScreen: {
+    onUpdate?: (updatedUser: any) => void;
+  } | undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
@@ -53,6 +62,10 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsScreen: undefined;
+SearchProduct: undefined;
+SearchResultScreen: {
+  query: string;
+};
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
   GroupMembersScreen: { groupId: number; isLeader: boolean };
@@ -269,7 +282,6 @@ export type Product = {
   status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
-  is_approved?: boolean;
   image?: any;
   location?: string;
   time?: string;

@@ -28,6 +28,8 @@ export class GroupMember {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;
+  @Column({ type: 'smallint', default: 3 })
+  pending: number;
 
   @Column({ type: 'smallint', default: 3 })
   pending: number;

@@ -59,10 +59,8 @@ export class SubCategory {
 
   @OneToMany(() => Product, (product) => product.subCategory)
   products: Product[];
-
   @OneToMany(() => ProductType, (productType) => productType.subCategory)
   productTypes: ProductType[];
-
   @OneToMany(() => Origin, (origin) => origin.subCategory)
   origins: Origin[];
 
@@ -102,6 +100,7 @@ export class SubCategory {
   @OneToMany(() => AgeRange, (ageRange) => ageRange.subCategory)
   ageRanges: AgeRange[];
 
+  
   @OneToMany(() => Gender, (gender) => gender.subCategory)
   genders: Gender[];
 
@@ -113,4 +112,5 @@ export class SubCategory {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
+
 }

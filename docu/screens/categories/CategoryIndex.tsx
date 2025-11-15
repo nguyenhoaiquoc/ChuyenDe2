@@ -216,7 +216,6 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             status_id: item.status_id?.toString() || undefined, // (optional '?' có thể là undefined)
             visibility_type: item.visibility_type?.toString() || undefined, // (optional '?' có thể là undefined)
             group_id: item.group_id || null,
-            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
 

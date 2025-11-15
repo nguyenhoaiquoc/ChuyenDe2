@@ -14,7 +14,7 @@ import { FavoritesService } from './favorites.service';
 
 @Controller('favorites')
 export class FavoritesController {
-  constructor(private readonly favoritesService: FavoritesService) {}
+    constructor(private readonly favoritesService: FavoritesService) {}
 
   @Post('toggle/:productId')
   toggleFavorite(
