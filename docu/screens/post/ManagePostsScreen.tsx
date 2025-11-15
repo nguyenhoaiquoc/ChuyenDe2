@@ -417,7 +417,6 @@ export default function ManagePostsScreen({
               onPress={() =>
                 navigation.navigate("ProductDetail", {
                   product: item,
-                  isApproved: item.is_approved,
                 })
               }
             >

@@ -145,7 +145,6 @@ export class GroupService {
     if (approve) {
       const status = await this.productStatusRepo.findOne({ where: { id: 2 } });
       post.productStatus = status;
-      post.is_approved = true;
       await this.productRepo.save(post);
       return { success: true, message: 'Đã duyệt bài viết' };
     } else {

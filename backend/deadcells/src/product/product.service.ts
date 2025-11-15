@@ -417,7 +417,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, product_status_id: 2, is_approved: true, is_deleted: false}],
+      where: [{ category_id: categoryId, product_status_id: 2}],
       relations: [
         'images',
         'user',

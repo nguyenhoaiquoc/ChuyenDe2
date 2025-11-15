@@ -45,8 +45,6 @@ export class Group {
 
   @Column({ type: 'boolean', default: true })
   isPublic: boolean;
-  @Column({ default: false })
-  mustApprovePosts: boolean;
 
   @Column({ default: false })
   mustApprovePosts: boolean;

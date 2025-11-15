@@ -51,13 +51,6 @@ export class User {
   gender: string;
 
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
-
-  @Column({ type: 'text', nullable: true })
-  bio: string; // Giới thiệu
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  nickname: string; // Tên gợi nhớ
-
   @Column({ type: 'varchar', length: 20, nullable: true })
   citizenId: string; // CCCD / CMND
 
@@ -126,20 +119,9 @@ export class User {
   @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt?: Date | null;
 
-  // Thon tin can cuoc cong dan
-  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
-  citizenId: string;
-
-  @Column({ nullable: true })
-  gender: string;
-
-  @Column({ type: 'date',nullable: true })
-  dob: Date;
-
-  @Column({ nullable: true })
-  hometown: string;
   @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;// ✅ họ và tên
+  
   @Column({ default: false })
   is_verified: boolean;
 }

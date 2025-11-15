@@ -16,7 +16,6 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState } from "react";
 import SearchProduct from "../products/SearchProduct";
 import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
 import axios from "axios";
