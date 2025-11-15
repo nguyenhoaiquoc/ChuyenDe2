@@ -90,6 +90,7 @@ export type RootStackParamList = {
     productId: string;
     product: Product;
   };
+  SuggestionScreen: undefined;
   // TestApi: undefined;
 };
 

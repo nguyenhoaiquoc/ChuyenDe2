@@ -23,6 +23,7 @@ import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
 import { UpdateProductStatusDto } from './dto/update-status.dto';
+import { Product } from 'src/entities/product.entity';
 
 @Controller('products')
 export class ProductController {
@@ -57,6 +58,51 @@ export class ProductController {
     return this.productService.findByUserId(userId);
   }
 
+  // API này sẽ xử lý logic cho toàn bộ trang Gợi ý
+  @Get('suggestions/my-feed')
+  @UseGuards(JwtAuthGuard) // Bắt buộc người dùng phải đăng nhập
+  async getSuggestionFeed(@Req() req) {
+    // Lấy userId từ token (đã được JwtAuthGuard giải mã)
+    const userId = req.user.id;
+
+    // Gọi hàm logic mới trong Service
+    return this.productService.getSuggestionFeed(userId);
+  }
+
+  // Gợi ý khi đăng bán
+  @Get('suggest/selling/:subCategoryId')
+  async suggestForSelling(
+    @Param('subCategoryId') subCategoryId: number,
+    @Query('userId') userId: number,
+  ) {
+    return this.productService.suggestForSelling(subCategoryId, userId);
+  }
+
+  // Gợi ý khi đăng mua
+  @Get('suggest/buying/:subCategoryId')
+  async suggestForBuying(
+    @Param('subCategoryId') subCategoryId: number,
+    @Query('userId') userId: number,
+  ) {
+    return this.productService.suggestForBuying(subCategoryId, userId);
+  }
+
+  // 🟢 Lấy danh sách sản phẩm "Miễn phí" (loại trừ sản phẩm của user hiện tại)
+  @Get('free')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getFreeProducts(@Req() req) {
+    const userId = req.user?.id || 0;
+    return this.productService.findFreeProductsExcludeUser(userId);
+  }
+
+  // 🟢 Lấy danh sách sản phẩm "Trao đổi" (loại trừ sản phẩm của user hiện tại)
+  @Get('exchange')
+  @UseGuards(OptionalJwtAuthGuard)
+  async getExchangeProducts(@Req() req) {
+    const userId = req.user?.id || 0;
+    return this.productService.findExchangeProductsExcludeUser(userId);
+  }
+
   // 🟣 Admin xem tất cả bài (bỏ lọc duyệt)
   @Get('admin/all')
   async findAllForAdmin() {
@@ -72,17 +118,17 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
- /**
+  /**
    * (Người dùng) Cập nhật chi tiết tin đăng
    */
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter)) 
+  @UseInterceptors(FilesInterceptor('files', 4, CloudinaryMulter))
   async updateProduct(
     @Param('id', ParseIntPipe) id: number,
     @Request() req,
     @Body() updateDto: Partial<CreateProductDto>,
-    @UploadedFiles() files: Express.Multer.File[], 
+    @UploadedFiles() files: Express.Multer.File[],
   ) {
     const userId = req.user.id;
     // 👇 Truyền 'files' vào service
