@@ -273,7 +273,6 @@ export type Product = {
   status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
-  is_approved?: boolean;
   image?: any;
   location?: string;
   time?: string;

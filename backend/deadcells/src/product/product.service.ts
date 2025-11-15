@@ -313,7 +313,7 @@ export class ProductService {
 
       productStatus: { id: 1 },
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
-      is_approved: false,
+   
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
 
       visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
@@ -475,7 +475,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { is_approved: true, product_status_id: 2 },
+      where: { product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -669,7 +669,6 @@ export class ProductService {
         status_id: p.status_id,
         visibility_type: p.visibility_type,
         group_id: p.group_id,
-        is_approved: p.is_approved,
 
         // Thông tin phụ
         address_json: p.address_json,
@@ -777,7 +776,7 @@ export class ProductService {
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId } }, // không lọc is_approved
+      where: { user: { id: userId } },
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -859,7 +858,6 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
     }
 
-    product.is_approved = dto.is_approved;
     product.product_status_id = dto.product_status_id;
 
     const updatedProduct = await this.productRepo.save(product);
@@ -888,6 +886,7 @@ export class ProductService {
     sort,
     page = 1,
     limit = 10,
+    
   } = params;
 
   const query = this.productRepo
@@ -901,7 +900,7 @@ export class ProductService {
        'product.created_at',
       'product.thumbnail_url',
       'category.name',
-      'images.image_url', // sửa lại đúng tên cột thật
+      'images.image_url', 
     ]);
 
   if (name) {

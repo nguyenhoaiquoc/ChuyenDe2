@@ -35,11 +35,6 @@ export class User {
   statusId: number;
 
   /** --------- Hồ sơ cơ bản --------- */
-  @Column({ type: 'varchar', length: 191 })
-  fullName: string;
-  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
-  gender: string;
-
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })
@@ -47,13 +42,6 @@ export class User {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   nickname: string; // Tên gợi nhớ
-
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  citizenId: string; // CCCD / CMND
-
-  @Column({ type: 'date', nullable: true })
-  dob: Date; // Ngày sinh
-
 
   // Khuyến nghị: dùng CITEXT để unique không phân biệt hoa/thường (Postgres cần EXTENSION citext)
   @Column({ type: 'citext', unique: true })
@@ -72,34 +60,12 @@ export class User {
   @Column({ type: 'varchar', length: 191, nullable: true })
   coverImage: string | null; // ảnh bìa
 
+
+
   @Column({ type: 'json', nullable: true })
   address_json: object;
-
-
-  /** --------- Trạng thái xác minh --------- */
-  @Column({ type: 'boolean', default: false })
-  is_verified: boolean;
-
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
-  // ---- Thêm các trường xác thực sinh viên ----
-  // @Column({ nullable: true })
-  // studentId: string;
-
-  // @Column({ nullable: true })
-  // studentName: string;
-
-  // @Column({ nullable: true })
-  // faculty: string;
-
-  // @Column({ nullable: true })
-  // course: string;
-  // @Column({ type: 'boolean', default: false, name: 'is_verified_student' })
-  // isVerifiedStudent: boolean;
-  // @Column({ nullable: true })
-  // schoolName: string;
-
-
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
@@ -139,4 +105,21 @@ export class User {
   // Soft delete (tiện cho “deactivate” hoặc xóa mềm tài khoản)
   @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt?: Date | null;
+
+  // Thon tin can cuoc cong dan
+  @Column({ type: 'varchar', length: 20, nullable: true, unique: true })
+  citizenId: string;
+
+  @Column({ nullable: true })
+  gender: string;
+
+  @Column({ type: 'date',nullable: true })
+  dob: Date;
+
+  @Column({ nullable: true })
+  hometown: string;
+  @Column({ type: 'varchar', length: 191, nullable: true })
+  fullName: string;// ✅ họ và tên
+  @Column({ default: false })
+  is_verified: boolean;
 }

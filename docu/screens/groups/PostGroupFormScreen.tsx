@@ -287,7 +287,6 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
       formData.append("category_id", String((finalCategory as any)?.id));
       formData.append("sub_category_id", String(finalSubCategory?.id));
       formData.append("condition_id", String(conditionId));
-      formData.append("is_approved", "false");
       if (productTypeId)
         formData.append("product_type_id", String(productTypeId));
       if (author) formData.append("author", author);

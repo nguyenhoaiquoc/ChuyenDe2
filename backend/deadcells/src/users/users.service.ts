@@ -1,81 +1,104 @@
-import { Injectable, NotFoundException,BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
-  ) {}
+  constructor(
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
+  ) {}
 
-  /**
-   * Tìm 1 user theo ID
-   */
-  async findOne(id: number): Promise<User> {
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) {
-      throw new NotFoundException(`Người dùng với id ${id} không tồn tại`);
-    }
-    return user;
-  }
-// user.service.ts
-  
+  async findOne(id: number): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Người dùng với id ${id} không tồn tại`);
+    }
+    return user;
+  }
 
-  /**
-   * ✅ HÀM CẬP NHẬT ĐÃ SỬA LỖI
-   * Hàm này gán thủ công từng trường để đảm bảo mọi thứ được lưu.
-   */
-  async updateUser(id: number, data: any): Promise<User> { 
-    // Dùng data: any để chấp nhận mọi trường từ frontend
-    
-    // 1. Lấy user từ DB
-    const user = await this.findOne(id); // Dùng hàm findOne đã có sẵn
-    if (data.fullName !== undefined) user.fullName = data.fullName;
-    if (data.phone !== undefined) user.phone = data.phone;
-    if (data.address_json !== undefined) user.address_json = data.address_json;
-    
-    // (Frontend gửi 'citizenId', khớp với DB 'citizenId')
-    if (data.citizenId !== undefined) {
-      user.citizenId = data.citizenId;
-    }
-    
-    // ✅ BỔ SUNG CÁC TRƯỜNG BỊ THIẾU MÀ BẠN PHÁT HIỆN:
-    if (data.bio !== undefined) {
-      user.bio = data.bio;
-    }
-    if (data.nickname !== undefined) {
-      user.nickname = data.nickname;
-    }
-    if (data.gender !== undefined) {
-      user.gender = data.gender; // (Frontend đã gửi 1, 2, 3)
-    }
-    if (data.dob !== undefined) {
-      user.dob = data.dob; // (Frontend đã gửi YYYY-MM-DD)
-    }
-    // if (data.allowContact !== undefined) {
-    //   user.allowContact = data.allowContact;
-    // }
+  async findAll(): Promise<User[]> {
+    return this.userRepo.find();
+  }
 
-    // === CÁC TRƯỜNG TỪ UserInforScreen (Upload/Xóa ảnh) ===
-    // (Dùng hasOwnProperty để nhận cả giá trị null khi xóa)
-    if (data.hasOwnProperty('image')) {
-      user.image = data.image; // Gán 'http://...' hoặc null
-    }
-    if (data.hasOwnProperty('coverImage')) {
-      user.coverImage = data.coverImage; // Gán 'http://...' hoặc null
-    }
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const user = await this.findOne(id);
 
-    // 3. Lưu và trả về
-    return this.userRepo.save(user);
-  }
+    const allowedFields = [
+      'fullName',
+      'phone',
+      'address_json',
+      'citizenId',
+      'bio',
+      'nickname',
+      'gender',
+      'dob',
+      'hometown',
+      'is_verified',
+      'verifiedAt',
+      'image',
+      'coverImage',
+    ] as const;
 
-  /**
-   * Lấy tất cả user
-   */
-  async findAll(): Promise<User[]> {
-    return this.userRepo.find();
-  }
+    if (data.citizenId && data.citizenId !== user.citizenId) {
+      const existingUser = await this.userRepo.findOne({
+        where: { citizenId: data.citizenId },
+      });
+      if (existingUser && existingUser.id !== id) {
+        throw new BadRequestException('Số CCCD này đã được đăng ký bởi người khác');
+      }
+    }
 
+    allowedFields.forEach((field) => {
+      if (data[field] !== undefined) {
+        (user as any)[field] = data[field];
+      }
+    });
+
+    if (data.is_verified === true && !user.is_verified) {
+      user.is_verified = true;
+      user.verifiedAt = new Date();
+    }
+
+    return this.userRepo.save(user);
+  }
+
+  async verifyCCCD(
+    userId: number,
+    cccdData: {
+      fullName?: string;
+      citizenId?: string;
+      gender?: string;
+      dob?: string;
+      hometown?: string;
+      address?: string;
+      imageUrl?: string;
+    },
+  ): Promise<User> {
+    const updateData: Partial<User> = {
+      is_verified: true,
+      verifiedAt: new Date(),
+    };
+
+    if (cccdData.fullName) updateData.fullName = cccdData.fullName;
+    if (cccdData.citizenId) updateData.citizenId = cccdData.citizenId;
+    if (cccdData.gender) updateData.gender = cccdData.gender;
+    if (cccdData.dob) updateData.dob = new Date(cccdData.dob);
+    if (cccdData.hometown) updateData.hometown = cccdData.hometown;
+
+    if (cccdData.address) {
+      updateData.address_json = {
+        full: cccdData.address,
+        source: 'cccd_scan',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    if (cccdData.imageUrl) {
+      updateData.image = cccdData.imageUrl;
+    }
+
+    return this.updateUser(userId, updateData);
+  }
 }

@@ -42,6 +42,12 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [dob, setDob] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [allowContact, setAllowContact] = useState(true);
+// Hàm kiểm tra số điện thoại Việt Nam
+const isValidPhone = (phone: string) => {
+  // Bắt đầu bằng 0 hoặc +84, đủ 10 số (không tính +)
+  const regex = /^(0|\+84)[0-9]{9}$/;
+  return regex.test(phone);
+};
 
   // --- Lấy dữ liệu người dùng ---
   useEffect(() => {
@@ -81,8 +87,8 @@ export default function EditProfileScreen({ navigation }: Props) {
           user.gender === 1
             ? "Nam"
             : user.gender === 2
-            ? "Nữ"
-            : "Khác"
+              ? "Nữ"
+              : "Khác"
         );
         setDob(user.dob ? new Date(user.dob) : new Date());
         setAllowContact(user.allowContact ?? true);
@@ -106,7 +112,7 @@ export default function EditProfileScreen({ navigation }: Props) {
   // --- Lưu thông tin ---
   const handleSave = async () => {
     if (!name.trim()) return Alert.alert("Lỗi", "Họ và tên không được để trống!");
-    if (!phone.trim()) return Alert.alert("Lỗi", "Số điện thoại không được để trống!");
+     if (!isValidPhone(phone.trim())) return Alert.alert("Lỗi", "Số điện thoại không hợp lệ!"); // ✅
 
     setLoading(true);
     try {
@@ -188,10 +194,15 @@ export default function EditProfileScreen({ navigation }: Props) {
       <FormInput
         label="Số điện thoại *"
         value={phone}
-        onChangeText={setPhone}
+        onChangeText={(text) => {
+          // Loại bỏ ký tự không phải số
+          const cleaned = text.replace(/[^0-9+]/g, "");
+          setPhone(cleaned);
+        }}
         placeholder="Nhập số điện thoại"
         keyboardType="phone-pad"
       />
+
       {/* Cho phép liên lạc */}
       <View className="flex flex-row justify-between items-center mb-2">
         <Text className="text-sm text-gray-800">Cho phép người mua liên lạc</Text>
@@ -292,9 +303,8 @@ const FormInput = ({
   <View className="mb-4">
     <Text className="text-xs text-gray-500 mb-1">{label}</Text>
     <TextInput
-      className={`border border-gray-300 rounded-md px-3 py-2 text-sm ${
-        multiline ? "h-20" : ""
-      }`}
+      className={`border border-gray-300 rounded-md px-3 py-2 text-sm ${multiline ? "h-20" : ""
+        }`}
       placeholder={placeholder}
       value={value}
       onChangeText={onChangeText}

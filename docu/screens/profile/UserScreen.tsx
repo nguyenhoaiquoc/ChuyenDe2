@@ -133,10 +133,10 @@ export default function UserScreen() {
           </Text>
           <View style={{ flexDirection: "row", marginTop: 4 }}>
             <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 6 }}>
-              Người theo dõi 1
+              Người theo dõi 0
             </Text>
             <Text style={{ color: "#6b7280", fontSize: 14 }}>
-              Đang theo dõi 1
+              Đang theo dõi 0
             </Text>
           </View>
 

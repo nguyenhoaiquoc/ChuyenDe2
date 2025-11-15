@@ -97,7 +97,6 @@ export default function ManageProductsScreen() {
   // === SỬA LỖI LOGIC CẬP NHẬT ===
   const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
     const newStatus = {
-      is_approved: isApproved, // true nếu duyệt, false nếu từ chối
       product_status_id: isApproved ? 2 : 3, // 2 = Đã duyệt, 3 = Bị từ chối
     };
 

@@ -94,10 +94,11 @@ export default function SearchResultScreen({ route }: Props) {
         const data: Product[] = res.data.data || [];
         if (refresh) setProducts(data);
         else setProducts((prev) => [...prev, ...data]);
-        setHasMore(data.length === limit);
+        setHasMore(data.length === limit);                                  
         setPage(pageNumber);
         setError("");
         animateList();
+        
       } catch (err) {
         console.error(err);
         setError("Không thể tải dữ liệu, vui lòng thử lại.");

@@ -52,6 +52,9 @@ export class Product {
   @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
   productType: ProductType | null;
 
+  @Column({ name: 'origin_id', type: 'bigint', nullable: true })
+  origin_id: number | null;
+
   @ManyToOne(() => Origin, { nullable: true })
   @JoinColumn({ name: 'origin_id', referencedColumnName: 'id' })
   origin: Origin | null;
@@ -104,6 +107,13 @@ export class Product {
   @ManyToOne(() => ProductModel, { nullable: true })
   @JoinColumn({ name: 'product_model_id', referencedColumnName: 'id' })
   productModel: ProductModel | null;
+
+  @Column({ name: 'product_status_id', type: 'bigint', nullable: true })
+  product_status_id: number | null;
+
+  @ManyToOne(() => ProductStatus, { nullable: true })
+  @JoinColumn({ name: 'product_status_id', referencedColumnName: 'id' })
+  productStatus: ProductStatus | null;
 
   @Column({ name: 'processor_id', type: 'bigint', nullable: true })
   processor_id: number | null;
@@ -160,13 +170,6 @@ export class Product {
   @ManyToOne(() => EngineCapacity, { nullable: true })
   @JoinColumn({ name: 'engine_capacity_id', referencedColumnName: 'id' })
   engineCapacity: EngineCapacity | null;
-
-  @Column({ name: 'product_status_id', type: 'bigint', nullable: true })
-  product_status_id: number | null;
-
-  @ManyToOne(() => ProductStatus, { nullable: true })
- @JoinColumn({ name: 'product_status_id', referencedColumnName: 'id' })
-  productStatus: ProductStatus | null;
 
   @Column({ name: 'mileage', type: 'bigint', nullable: true })
   mileage: number | null;
@@ -240,7 +243,7 @@ export class Product {
 
   @ManyToOne(() => Condition)
   @JoinColumn({ name: 'condition_id' })
-  condition: Condition;
+  condition: Condition | null;
 
   // ===== Địa chỉ =====
   @Column({ type: 'json', nullable: true })
@@ -266,9 +269,6 @@ export class Product {
   @JoinColumn({ name: 'group_id' })
   group: Group;
 
-  @Column({ type: 'boolean', default: false })
-  is_approved: boolean;
-
   // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })
   author: string | null;
@@ -276,14 +276,17 @@ export class Product {
   @Column({ type: 'int', nullable: true })
   year: number | null;
 
+  @Column({
+    name: 'expires_at',
+    type: 'timestamp',
+    nullable: true,
+    comment: 'Ngày sản phẩm sẽ hết hạn',
+  })
+  expires_at: Date | null;
+  
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
-  @Column({ default: false })
-  is_deleted: boolean;
-
-  @Column({ type: 'timestamp', nullable: true })
-  deleted_at: Date | null;
 }
