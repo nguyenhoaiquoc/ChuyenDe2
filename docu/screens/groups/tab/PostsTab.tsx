@@ -78,38 +78,60 @@ export default function PostsTab({ limit, navigation }: PostsTabProps) {
           renderItem={({ item }) => (
             <View className="mb-6 p-3 bg-white rounded-lg shadow">
               {/* Nhóm */}
-              <View className="flex-row items-center mb-2">
+              <View className="flex-row items-center ">
                 <Image
                   source={
-                    item.groupImage && item.groupImage !== ""
-                      ? { uri: item.groupImage }
+                    item.group?.image
+                      ? { uri: item.group.image }
                       : require("../../../assets/meo.jpg")
                   }
-                  className="w-8 h-8 rounded-full"
+                  className="w-12 h-12 rounded-full"
                 />
                 <Text className="text-xl ml-2 font-semibold">
-                  {item.groupName}
+                  {item.group.name || "Nhóm ẩn danh"}
                 </Text>
               </View>
 
-              {/* User + Title */}
-              <Text className="text-gray-600 text-xs">
-                Đăng bởi {item.authorName}
-              </Text>
-              <Text className="font-bold text-base mt-1">{item.name}</Text>
-
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("ProductDetail", { product: item })
-                }
-              >
-                {/* Ảnh bài viết */}
+              {/* User */}
+              <View className="flex-row items-center ml-7">
                 <Image
-                  source={{ uri: item.image }}
-                  className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
-                  resizeMode="contain"
+                  source={
+                    item.user?.avatar
+                      ? { uri: item.user.avatar }
+                      : require("../../../assets/meo.jpg")
+                  }
+                  className="w-7 h-5 rounded-full"
                 />
-              </TouchableOpacity>
+                <Text className="text-gray-600 text-xs ml-2">
+                  Đăng bởi {item.user?.name || "Ẩn danh"}
+                </Text>
+              </View>
+
+              <Text className="font-bold text-base mt-3">{item.name}</Text>
+
+              {/* Giá */}
+              <Text className="text-red-500 text-sm mt-1">
+                {item.price === 0
+                  ? "Miễn phí"
+                  : item.price == null
+                    ? "Trao đổi"
+                    : item.price}
+              </Text>
+
+              {/* Ảnh bài viết */}
+              {item.thumbnail_url && (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: item })
+                  }
+                >
+                  <Image
+                    source={{ uri: item.thumbnail_url }}
+                    className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         />

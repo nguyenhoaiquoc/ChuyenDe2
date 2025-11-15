@@ -170,7 +170,7 @@ const mapProductData = (item: any): Product => {
     phone: item.user?.phone || null,
     author: item.author || null,
     year: item.year || null,
-
+productStatus: item.productStatus || null,
     created_at: item.created_at || new Date().toISOString(),
     updated_at: item.updated_at || undefined,
 

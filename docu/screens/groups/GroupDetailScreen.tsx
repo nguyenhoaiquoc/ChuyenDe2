@@ -36,43 +36,47 @@ export default function GroupDetailScreen({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isMenuVisible, setMenuVisible] = useState(false);
-
   const [isApprovalEnabled, setIsApprovalEnabled] = useState(
     group.mustApprovePosts || false
   );
-
   const [role, setRole] = useState<"leader" | "member" | "none" | null>(null);
+  const [joinStatus, setJoinStatus] = useState<"none" | "pending" | "joined">(
+    "none"
+  );
 
   const isMember = role === "leader" || role === "member";
   const isLeader = role === "leader";
-  const isGroupPublic = group.isPublic || true;
 
-  // 🔹 Fetch dữ liệu nhóm + role
   const fetchData = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
+      if (!token) return;
 
-      // 1️⃣ Lấy danh sách sản phẩm trong nhóm
-      const res = await axios.get(`${path}/groups/${group.id}/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProducts(res.data);
+      const [productsRes, roleRes, statusRes] = await Promise.all([
+        axios.get(`${path}/groups/${group.id}/products`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${path}/groups/${group.id}/role`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get(`${path}/groups/${group.id}/join-status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      // 2️⃣ Kiểm tra role của user trong nhóm
-      const roleRes = await axios.get(`${path}/groups/${group.id}/role`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      setProducts(productsRes.data);
 
       const r = roleRes.data.role;
-      console.log("User role:", r);
-      if (r === "leader" || r === "member" || r === "none") {
-        setRole(r);
-      } else {
-        setRole("none");
-      }
+      setRole(r === "leader" || r === "member" || r === "none" ? r : "none");
+
+      const s = statusRes.data.status;
+      setJoinStatus(
+        s === "none" || s === "pending" || s === "joined" ? s : "none"
+      );
     } catch (err) {
       console.log("Lỗi khi tải dữ liệu nhóm:", err);
       setRole("none");
+      setJoinStatus("none");
     }
   }, [group?.id]);
 
@@ -85,43 +89,80 @@ export default function GroupDetailScreen({
     loadData();
   }, [fetchData]);
 
-  // 🔹 Pull to refresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
   }, [fetchData]);
 
-  // 🔹 Tham gia nhóm
   const handleJoinGroup = async () => {
+    const token = await AsyncStorage.getItem("token");
     try {
-      const token = await AsyncStorage.getItem("token");
-      await axios.post(
+      const res = await axios.post(
         `${path}/groups/${group.id}/join`,
         {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      Alert.alert("Thành công", "Bạn đã tham gia nhóm");
-      setRole("member");
-      await fetchData(); // Reload data
+
+      Alert.alert("Thành công", res.data.message);
+
+      // Cập nhật trạng thái dựa trên response
+      if (res.data.joinStatus === "joined") {
+        setJoinStatus("joined");
+        setRole("member");
+      } else if (res.data.joinStatus === "pending") {
+        setJoinStatus("pending");
+      }
+
+      await fetchData();
     } catch (error: any) {
-      console.log("Lỗi tham gia nhóm:", error);
-      const errorMsg =
-        error.response?.data?.message ||
-        "Không thể tham gia nhóm, vui lòng thử lại.";
-      Alert.alert("Lỗi", errorMsg);
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Không thể tham gia nhóm"
+      );
     }
   };
 
-  // 🔹 Rời nhóm
+  const handleCancelRequest = async () => {
+    Alert.alert("Xác nhận hủy", "Bạn có chắc chắn muốn hủy yêu cầu tham gia?", [
+      { text: "Không", style: "cancel" },
+      {
+        text: "Hủy yêu cầu",
+        style: "destructive",
+        onPress: async () => {
+          const token = await AsyncStorage.getItem("token");
+          try {
+            await axios.delete(`${path}/groups/${group.id}/join-request`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            Alert.alert("Đã hủy", "Yêu cầu tham gia đã được hủy");
+            setJoinStatus("none");
+            await fetchData();
+          } catch (error: any) {
+            Alert.alert(
+              "Lỗi",
+              error.response?.data?.message || "Không thể hủy"
+            );
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleCreatePost = () => {
+    navigation.navigate("PostGroupFormScreen", {
+      group,
+      onPostSuccess: async () => {
+        await fetchData();
+      },
+    });
+  };
+
   const handleLeaveGroup = async () => {
-    // Kiểm tra nếu là leader
     if (isLeader) {
       Alert.alert(
         "Không thể rời nhóm",
-        "Bạn là trưởng nhóm. Vui lòng chuyển quyền trưởng nhóm cho thành viên khác trước khi rời nhóm.",
+        "Bạn là trưởng nhóm. Vui lòng chuyển quyền trước khi rời nhóm.",
         [{ text: "Đã hiểu" }]
       );
       setMenuVisible(false);
@@ -144,14 +185,14 @@ export default function GroupDetailScreen({
               });
               Alert.alert("Thành công", "Bạn đã rời nhóm");
               setRole("none");
+              setJoinStatus("none");
               setMenuVisible(false);
-              await fetchData(); // Reload data
+              navigation.goBack();
             } catch (error: any) {
-              console.log("Lỗi rời nhóm:", error);
-              const errorMsg =
-                error.response?.data?.message ||
-                "Không thể rời nhóm, vui lòng thử lại.";
-              Alert.alert("Lỗi", errorMsg);
+              Alert.alert(
+                "Lỗi",
+                error.response?.data?.message || "Không thể rời nhóm"
+              );
             }
           },
         },
@@ -159,15 +200,13 @@ export default function GroupDetailScreen({
     );
   };
 
-  // 🔹 Menu cơ bản cho member
   const userMenuItems = [
     {
       name: "Quản lí nội dung của bạn",
       icon: "file-text",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to user's posts in this group
-        console.log("Xem bài viết của tôi");
+        navigation.navigate("MyGroupPostsScreen", { groupId: group.id });
       },
     },
     {
@@ -178,15 +217,13 @@ export default function GroupDetailScreen({
     },
   ];
 
-  // 🔹 Menu riêng cho leader
   const leaderMenuItems = [
     {
       name: "Sửa thông tin nhóm",
       icon: "edit",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to edit group screen
-        console.log("Sửa nhóm");
+        navigation.navigate("EditGroupScreen", { group });
       },
     },
     {
@@ -194,17 +231,7 @@ export default function GroupDetailScreen({
       icon: "check-square",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to pending posts screen
-        console.log("Duyệt bài viết");
-      },
-    },
-    {
-      name: "Duyệt thành viên",
-      icon: "user-check",
-      action: () => {
-        setMenuVisible(false);
-        // TODO: Navigate to pending members screen
-        console.log("Duyệt thành viên");
+        navigation.navigate("ApprovePostsScreen", { groupId: group.id });
       },
     },
     {
@@ -212,17 +239,10 @@ export default function GroupDetailScreen({
       icon: "users",
       action: () => {
         setMenuVisible(false);
-        // TODO: Navigate to members list screen
-        console.log("Xem thành viên");
-      },
-    },
-    {
-      name: "Chuyển quyền trưởng nhóm",
-      icon: "shield",
-      action: () => {
-        setMenuVisible(false);
-        // TODO: Navigate to transfer leadership screen
-        console.log("Chuyển quyền trưởng nhóm");
+        navigation.navigate("GroupMembersScreen", {
+          groupId: group.id,
+          isLeader: true,
+        });
       },
     },
     {
@@ -230,21 +250,25 @@ export default function GroupDetailScreen({
       icon: "trash-2",
       action: () => {
         setMenuVisible(false);
-        Alert.alert(
-          "Xác nhận xóa nhóm",
-          "Bạn có chắc chắn muốn xóa nhóm này? Hành động này không thể hoàn tác.",
-          [
-            { text: "Hủy", style: "cancel" },
-            {
-              text: "Xóa nhóm",
-              style: "destructive",
-              onPress: () => {
-                // TODO: Implement delete group API
-                console.log("Xoá nhóm");
-              },
+        Alert.alert("Xác nhận xóa nhóm", "Hành động này không thể hoàn tác.", [
+          { text: "Hủy", style: "cancel" },
+          {
+            text: "Xóa nhóm",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                const token = await AsyncStorage.getItem("token");
+                await axios.delete(`${path}/groups/${group.id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                Alert.alert("Thành công", "Đã xóa nhóm");
+                navigation.goBack();
+              } catch (err) {
+                Alert.alert("Lỗi", "Không thể xóa nhóm");
+              }
             },
-          ]
-        );
+          },
+        ]);
       },
       isDestructive: true,
     },
@@ -254,7 +278,81 @@ export default function GroupDetailScreen({
     ? [...leaderMenuItems, ...userMenuItems]
     : userMenuItems;
 
-  // 🔹 Header hiển thị ảnh & nút menu
+  const renderStatusBadge = () => {
+    if (joinStatus === "pending") {
+      return (
+        <View className="mt-2 bg-yellow-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">
+            Chờ phê duyệt
+          </Text>
+        </View>
+      );
+    }
+    if (isLeader) {
+      return (
+        <View className="mt-2 bg-green-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">Trưởng nhóm</Text>
+        </View>
+      );
+    }
+    if (role === "member") {
+      return (
+        <View className="mt-2 bg-blue-500/80 px-3 py-1 rounded-full self-start">
+          <Text className="text-white text-xs font-semibold">Thành viên</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  const renderActionButton = () => {
+    if (joinStatus === "none") {
+      return (
+        <TouchableOpacity
+          onPress={handleJoinGroup}
+          className="bg-blue-600 px-4 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">
+            {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (joinStatus === "pending") {
+      return (
+        <TouchableOpacity
+          onPress={handleCancelRequest}
+          className="bg-red-500 px-4 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">Hủy yêu cầu</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (joinStatus === "joined") {
+      return (
+        <View className="flex-row items-center space-x-3">
+          <TouchableOpacity
+            onPress={handleCreatePost}
+            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+          >
+            <Feather name="edit" size={20} color="black" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+          >
+            <Feather name="more-vertical" size={20} color="black" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   const renderHeader = () => (
     <ImageBackground
       source={
@@ -263,7 +361,6 @@ export default function GroupDetailScreen({
       className="h-52 w-full mb-4"
     >
       <View className="flex-1 justify-between p-4 bg-black/40">
-        {/* Thanh top */}
         <View className="flex-row justify-between items-center mt-2">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -272,36 +369,9 @@ export default function GroupDetailScreen({
             <Feather name="arrow-left" size={20} color="#000" />
           </TouchableOpacity>
 
-          {/* Nếu là thành viên → có menu, nếu chưa → nút tham gia */}
-          {isMember ? (
-            <View className="flex-row items-center space-x-3">
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("PostGroupFormScreen", { group })
-                }
-                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
-              >
-                <Feather name="edit" size={20} color="black" />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
-              >
-                <Feather name="more-vertical" size={20} color="black" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={handleJoinGroup}
-              className="bg-blue-600 px-4 py-2 rounded-full"
-            >
-              <Text className="text-white font-semibold">Tham gia nhóm</Text>
-            </TouchableOpacity>
-          )}
+          {renderActionButton()}
         </View>
 
-        {/* Thông tin nhóm */}
         <View>
           <Text className="text-white text-2xl font-bold">{group.name}</Text>
           <View className="flex-row items-center mt-1">
@@ -320,20 +390,7 @@ export default function GroupDetailScreen({
               {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"}
             </Text>
           </View>
-          {isLeader && (
-            <View className="mt-2 bg-green-500/80 px-3 py-1 rounded-full self-start">
-              <Text className="text-white text-xs font-semibold">
-                Trưởng nhóm
-              </Text>
-            </View>
-          )}
-          {role === "member" && (
-            <View className="mt-2 bg-blue-500/80 px-3 py-1 rounded-full self-start">
-              <Text className="text-white text-xs font-semibold">
-                Thành viên
-              </Text>
-            </View>
-          )}
+          {renderStatusBadge()}
         </View>
       </View>
     </ImageBackground>
@@ -353,12 +410,18 @@ export default function GroupDetailScreen({
       <FlatList
         data={products}
         keyExtractor={(item: any) => String(item.id)}
-        numColumns={2}
-        ListHeaderComponent={renderHeader}
-        columnWrapperStyle={{
-          justifyContent: "space-between",
-          paddingHorizontal: 16,
-        }}
+        numColumns={1}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            <View className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <Text className="text-lg font-semibold text-gray-800">
+                Các bài viết nhóm
+              </Text>
+            </View>
+          </>
+        }
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 20 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -367,55 +430,101 @@ export default function GroupDetailScreen({
             tintColor="#3B82F6"
           />
         }
-        renderItem={({ item }) => (
-          <View className="mb-6 p-3 bg-white rounded-lg shadow flex-1 mx-2">
-            <View className="flex-row items-center mb-2">
-              <Image
-                source={
-                  item.groupImage
-                    ? { uri: item.groupImage }
-                    : require("../../assets/meo.jpg")
-                }
-                className="w-8 h-8 rounded-full"
-              />
-              <Text className="text-sm ml-2 font-semibold" numberOfLines={1}>
-                {item.groupName}
+        renderItem={({ item }) => {
+          const imageUrl =
+            item.thumbnail_url ||
+            (item.images?.length > 0 ? item.images[0].image_url : null);
+
+          const priceFormat =
+            item.price === 0
+              ? "Miễn phí"
+              : item.price == null
+                ? "Trao đổi"
+                : `${item.price.toLocaleString()} đ`;
+
+          return (
+            <View className="mb-8 p-3 bg-white rounded-xl shadow-md">
+              <View className="flex-row items-center mb-3">
+                <Image
+                  source={
+                    item.user?.avatar
+                      ? { uri: item.user.avatar }
+                      : require("../../assets/khi.png")
+                  }
+                  className="w-10 h-10 rounded-full border border-gray-300"
+                />
+                <View className="ml-3 flex-1">
+                  <Text className="text-gray-800 font-semibold">
+                    {item.user?.name || "Người dùng"}
+                  </Text>
+                  <TouchableOpacity
+                    className={`mb-1.5 px-2 py-1 rounded-full self-start ${
+                      item?.postType?.name === "Đăng bán"
+                        ? "bg-green-500"
+                        : "bg-blue-500"
+                    }`}
+                  >
+                    <Text className="text-[10px] text-white font-semibold">
+                      {item?.postType?.name || "Không rõ"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text className="text-red-400 font-semibold text-lg mt-2 pr-5">
+                  {priceFormat}
+                </Text>
+              </View>
+
+              <Text className="font-bold text-base text-gray-900 mb-2">
+                {item.name}
               </Text>
+
+              {item.location && (
+                <View className="flex-row items-center my-2">
+                  <Feather name="map-pin" size={14} color="#6b7280" />
+                  <Text className="text-gray-500 text-sm ml-1">
+                    {item.location}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => {
+                  if (joinStatus !== "joined") {
+                    Alert.alert(
+                      "Thông báo",
+                      joinStatus === "pending"
+                        ? "Yêu cầu tham gia của bạn đang chờ phê duyệt."
+                        : "Bạn cần tham gia nhóm để xem chi tiết bài viết."
+                    );
+                    return;
+                  }
+                  navigation.navigate("ProductDetail", { product: item });
+                }}
+              >
+                {imageUrl && (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    className="w-full aspect-[4/3] rounded-lg border border-gray-200 bg-gray-100"
+                    resizeMode="cover"
+                  />
+                )}
+              </TouchableOpacity>
             </View>
-            <Text className="text-gray-600 text-xs">
-              Đăng bởi {item.authorName}
-            </Text>
-            <Text className="font-bold text-base mt-1" numberOfLines={2}>
-              {item.name}
-            </Text>
-            <TouchableOpacity
-              onPress={() =>
-                navigation.navigate("ProductDetail", { product: item })
-              }
-            >
-              <Image
-                source={{ uri: item.image }}
-                className="w-full aspect-[3/2] mt-2 rounded-xl border border-gray-200 shadow-sm bg-gray-100"
-                resizeMode="cover"
-              />
-            </TouchableOpacity>
-          </View>
-        )}
+          );
+        }}
         ListEmptyComponent={
           <View className="items-center justify-center mt-10 px-4">
             <Feather name="package" size={48} color="#9CA3AF" />
             <Text className="text-gray-500 mt-4 text-center">
-              Chưa có sản phẩm nào trong nhóm này.
+              Chưa có bài viết nào trong nhóm này.
             </Text>
-            {isMember && (
+            {joinStatus === "joined" && (
               <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("PostGroupFormScreen", { group })
-                }
+                onPress={handleCreatePost}
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
               >
                 <Text className="text-white font-semibold">
-                  Đăng sản phẩm đầu tiên
+                  Đăng bài viết đầu tiên
                 </Text>
               </TouchableOpacity>
             )}
@@ -423,8 +532,7 @@ export default function GroupDetailScreen({
         }
       />
 
-      {/* Menu */}
-      {isMember && (
+      {joinStatus === "joined" && (
         <Modal
           visible={isMenuVisible}
           transparent
@@ -443,9 +551,7 @@ export default function GroupDetailScreen({
                 {menuItems.map((item, index) => (
                   <TouchableOpacity
                     key={item.name}
-                    onPress={() => {
-                      item.action();
-                    }}
+                    onPress={item.action}
                     className={`flex-row items-center p-3 ${
                       item.isDestructive ? "border-t border-gray-100" : ""
                     } ${index > 0 ? "border-t border-gray-50" : ""}`}
@@ -465,8 +571,7 @@ export default function GroupDetailScreen({
                   </TouchableOpacity>
                 ))}
 
-                {/* Chỉ leader có switch */}
-                {isLeader && (
+                {isLeader && group.isPublic && (
                   <View className="flex-row items-center justify-between p-3 border-t border-gray-100">
                     <View className="flex-row items-center flex-1 pr-2">
                       <Feather name="check-circle" size={20} color="#333" />
@@ -478,12 +583,24 @@ export default function GroupDetailScreen({
                       trackColor={{ false: "#E5E7EB", true: "#3B82F6" }}
                       thumbColor={"#f4f3f4"}
                       onValueChange={async (v) => {
+                        if (!v) {
+                          Alert.alert(
+                            "Nếu tắt, bài viết sẽ được đăng tự động."
+                          );
+                        }
                         setIsApprovalEnabled(v);
-                        // TODO: Call API to update group settings
-                        console.log("Toggle approval mode:", v);
+                        try {
+                          const token = await AsyncStorage.getItem("token");
+                          await axios.patch(
+                            `${path}/groups/${group.id}`,
+                            { mustApprovePosts: v },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                        } catch (err) {
+                          setIsApprovalEnabled(!v);
+                        }
                       }}
-                      value={!isGroupPublic ? true : isApprovalEnabled}
-                      disabled={!isGroupPublic}
+                      value={isApprovalEnabled}
                     />
                   </View>
                 )}

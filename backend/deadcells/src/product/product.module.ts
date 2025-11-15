@@ -55,6 +55,8 @@ import { EngineCapacityModule } from 'src/engine-capacities/engine-capacity.modu
 import { ProductTypeModule } from 'src/product-types/product-type.module';
 import { ProductStatusModule } from 'src/product-statuses/product-status.module';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { AuthModule } from 'src/auth/auth.module';
+import { Favorite } from 'src/entities/favorite.entity';
 
 @Module({
   imports: [
@@ -75,6 +77,7 @@ import { GroupMember } from 'src/entities/group-member.entity';
       VehicleCategory,
       PostType,
       GroupMember,
+      Favorite
     ]),
 
     NotificationModule,
@@ -97,6 +100,7 @@ import { GroupMember } from 'src/entities/group-member.entity';
     EngineCapacityModule,
     ProductTypeModule,
     ProductStatusModule,
+    AuthModule,
   ],
   providers: [ProductService],
   controllers: [ProductController],

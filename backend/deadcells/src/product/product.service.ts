@@ -1,5 +1,6 @@
 import { GroupService } from './../groups/group.service';
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -7,7 +8,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { ProductImage } from 'src/entities/product-image.entity';
 import { DealType } from 'src/entities/deal-type.entity';
 import { Condition } from 'src/entities/condition.entity';
@@ -46,6 +47,7 @@ import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { ProductStatusService } from 'src/product-statuses/product-status.service';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
+import { Favorite } from 'src/entities/favorite.entity';
 
 @Injectable()
 export class ProductService {
@@ -54,7 +56,10 @@ export class ProductService {
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImage)
-    private readonly imageRepo: Repository<ProductImage>, 
+    private readonly imageRepo: Repository<ProductImage>,
+
+    @InjectRepository(Favorite) // 👈 THÊM DÒNG NÀY
+    private readonly favoriteRepo: Repository<Favorite>,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -253,29 +258,43 @@ export class ProductService {
       );
     }
 
-    // 3. Tạo sản phẩm
-    // 1.1. Kiểm tra xem đây có phải là bài đăng nhóm không
+    // 3. Set default productStatus + isApproved
+    let productStatusGr;
+    let isApproved;
+
+    // 4. Nếu là bài đăng nhóm
     if (data.visibility_type && Number(data.visibility_type) === 1) {
-      // 1.2. Nếu là bài đăng nhóm, PHẢI có group_id và user_id
       if (!data.group_id || !data.user_id) {
         throw new NotFoundException(
           'Bài đăng nhóm phải có group_id và user_id hợp lệ.',
         );
       }
 
-      // 1.3. (Bảo mật) Kiểm tra xem user này có phải là thành viên của nhóm không
       const isMember = await this.groupMemberRepo.findOne({
-        where: {
-          user_id: data.user_id,
-          group_id: Number(data.group_id),
-        },
+        where: { user_id: data.user_id, group_id: Number(data.group_id) },
       });
-
-      if (!isMember) {
+      if (!isMember)
         throw new UnauthorizedException(
           'Bạn không phải là thành viên của nhóm này để đăng bài.',
         );
+
+      const group = await this.groupService.findOneById(Number(data.group_id));
+      if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+      // optional field mustApprovePosts
+      const mustApprove = (group as any).mustApprovePosts ?? false;
+
+      if (!group.isPublic || mustApprove) {
+        productStatusGr = await this.productStatusService.findOne(1); // cần duyệt
+        isApproved = false;
+      } else {
+        productStatusGr = await this.productStatusService.findOne(2); // approved
+        isApproved = true;
       }
+    } else {
+      // Công khai (không nhóm) → luôn cần duyệt
+      productStatusGr = await this.productStatusService.findOne(1);
+      isApproved = false;
     }
 
     const product = this.productRepo.create({
@@ -311,7 +330,7 @@ export class ProductService {
       category_change: category_change || undefined,
       sub_category_change: sub_category_change || undefined,
 
-      productStatus: { id: 1 },
+      productStatus: productStatusGr,
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
    
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
@@ -398,7 +417,7 @@ export class ProductService {
 
   async findByCategoryId(categoryId: number): Promise<Product[]> {
     const products = await this.productRepo.find({
-      where: [{ category_id: categoryId, product_status_id: 2 }],
+      where: [{ category_id: categoryId, product_status_id: 2, is_approved: true, is_deleted: false}],
       relations: [
         'images',
         'user',
@@ -544,7 +563,7 @@ export class ProductService {
         price: Number(p.price),
         thumbnail_url: p.images?.[0]?.image_url || null,
         phone: p.user?.phone || null,
-        user_id: p.user?.id, // Sửa: Lấy từ p.user.id
+        user_id: p.user?.id,
         user: p.user
           ? {
               id: p.user.id,
@@ -556,8 +575,7 @@ export class ProductService {
         author_name: p.user?.fullName || 'Người bán',
         author: p.author || null,
         year: p.year || null,
-        mileage: p.mileage ?? null, // Sửa: Dùng ??
-        // ===== SỬA LỖI FORMAT (p.FIELD.id) TỪ ĐÂY =====
+        mileage: p.mileage ?? null,
 
         postType: p.postType
           ? { id: p.postType.id, name: p.postType.name }
@@ -740,7 +758,7 @@ export class ProductService {
   }
   async findById(id: number): Promise<any> {
     const product = await this.productRepo.findOne({
-      where: { id },
+      where: { id},
       relations: [
         'images',
         'user',

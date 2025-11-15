@@ -1,6 +1,20 @@
 import {
-  Controller, Get, Post, Patch, Param, Body, Query, Req,
-  UploadedFiles, UseGuards, UseInterceptors, ParseIntPipe,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  Query,
+  Req,
+  UploadedFiles,
+  UseGuards,
+  UseInterceptors,
+  ParseIntPipe,
+  Delete,
+  Request,
+  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -12,6 +26,8 @@ import { UpdateProductStatusDto } from './dto/update-status.dto';
 
 @Controller('products')
 export class ProductController {
+  private readonly logger = new Logger(ProductController.name);
+
   constructor(private readonly productService: ProductService) {}
 
   // 🟢 Tạo bài đăng (đăng sản phẩm mới)

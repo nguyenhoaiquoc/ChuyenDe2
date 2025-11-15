@@ -15,7 +15,7 @@ import ChatListScreen from './screens/chat/ChatListScreen';
 import SearchScreen from './screens/chat/SearchScreen';
 import OTPVerifyScreen from './screens/auth/OTPVerifyScreen';
 import ChatRoomScreen from './screens/chat/ChatRoomScreen';
-import UnreadMessageScreen from './screens/auth/UnreadMessageScreen';
+import UnreadMessageScreen from './screens/chat/UnreadMessageScreen';
 import ManagePostsScreen from './screens/post/ManagePostsScreen';
 import ChooseCategoryScreen from './screens/post/ChooseCategoryScreen';
 import ChooseSubCategoryScreen from './screens/post/ChooseSubCategoryScreen';
@@ -47,6 +47,11 @@ import SearchResultScreen from './screens/products/SearchResultScreen';
 import VerifyStudentScreen from './screens/profile/VerifyStudentScreen';
 
 // import TestApi from './screens/TestApi';
+import TrashScreen from './screens/products/TrashScreen';
+import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
+import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
+import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
+import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -97,6 +102,14 @@ export default function App() {
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
           <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
           />
+          <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
+           <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+        <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
+        <Stack.Screen name="TrashScreen" component={TrashScreen} />
+        <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
+        <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
+        <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
+        <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

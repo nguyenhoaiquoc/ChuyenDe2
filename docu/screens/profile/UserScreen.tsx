@@ -18,12 +18,14 @@ import axios from "axios";
 import { path } from "../../config";
 import { io } from "socket.io-client";
 import { disconnectSocket, getSocket } from "../../src/libs/socket";
+import React from "react";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
+  const [roleId, setRoleId] = useState<string | null>(null); 
 
  
   useFocusEffect(
@@ -77,7 +79,6 @@ export default function UserScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
       <StatusBar barStyle="dark-content" />
       <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
-        {/* --- Phần thông tin cá nhân --- */}
         <View
           style={{ alignItems: "center", paddingTop: 32, paddingBottom: 24 }}
         >
@@ -120,7 +121,7 @@ export default function UserScreen() {
               />
             </View>
           </TouchableOpacity>
-          {/* Tên và thông tin theo dõi */}
+          {/* Tên và thông tin*/}
           <Text
             style={{
               fontSize: 20,
@@ -210,12 +211,13 @@ export default function UserScreen() {
                   console.log(" Lỗi khi gửi sự kiện logout:", err);
                 }
 
-                // Xoá thông tin người dùng và chuyển hướng
+                // ✨ 3. CẬP NHẬT LOGIC ĐĂNG XUẤT (THÊM "role_id") ✨
                 await AsyncStorage.multiRemove([
                   "token",
                   "userId",
                   "userName",
                   "userAvatar",
+                  "role_id", // 👈 PHẢI THÊM CÁI NÀY
                 ]);
                 navigation.reset({
                   index: 0,
@@ -230,24 +232,24 @@ export default function UserScreen() {
     </SafeAreaView>
   );
 }
-// Component UtilityItem - Đảm bảo không có raw strings
 function UtilityItem({
   icon,
   title,
   isLast = false,
   onPress,
-  textStyle, // thêm prop
+  textStyle,
   color,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   isLast?: boolean;
   onPress?: () => void;
-  textStyle?: object; // kiểu style cho text
-  color?: string; // màu tùy chọn
+  textStyle?: object;
+  color?: string;
 }) {
-  const textColor = color || "#1f2937"; // default text
-  const iconColor = color || "#6b7280"; // default icon
+  const textColor = color || "#1f2937";
+  const iconColor = color || "#6b7280";
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -265,7 +267,7 @@ function UtilityItem({
         <Ionicons name={icon} size={24} color={iconColor} />
         <Text
           style={[
-            { marginLeft: 16, fontSize: 16, color: "#1f2937" },
+            { marginLeft: 16, fontSize: 16, color: textColor }, 
             textStyle,
           ]}
         >
