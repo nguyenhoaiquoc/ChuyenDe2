@@ -324,9 +324,11 @@ export type Comment = {
   content: string;
   created_at: string;
   user?: {
+    id: string | number;
     fullName?: string;
     image?: string;
   };
+  children: Comment[];
 };
 
 export type User = {
