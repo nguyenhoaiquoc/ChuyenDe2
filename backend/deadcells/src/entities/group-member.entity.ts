@@ -21,7 +21,7 @@ export class GroupMember {
   @Column({ type: 'bigint' })
   group_role_id: number;
 
-  @Column({ type: 'smallint', default: 3 })
+  @Column({ type: 'smallint', default: 1 })
   pending: number;
 
   @ManyToOne(() => Group)

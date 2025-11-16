@@ -588,9 +588,6 @@ const PostFormScreen = ({
         formData.append("condition_id", String(conditionId));
       }
 
-      // 3. Trường bắt buộc (Boolean)
-      formData.append("is_approved", "false");
-
       // 4. Các trường tùy chọn (Optional)
       if (productTypeId)
         formData.append("product_type_id", String(productTypeId));

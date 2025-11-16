@@ -43,7 +43,7 @@ export default function HomeScreen({ navigation }: Props) {
   const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  
+
   // 3. Thêm state cho RefreshControl
   const [refreshing, setRefreshing] = useState(false);
 
@@ -135,13 +135,6 @@ export default function HomeScreen({ navigation }: Props) {
             tagText = subCategoryName;
           }
           const authorName = item.user?.name || "Ẩn danh";
-          console.log(
-            "Product ID:",
-            item.id,
-            "is_approved:",
-            item.is_approved,
-            typeof item.is_approved
-          );
 
           return {
             id: item.id.toString(),
@@ -183,7 +176,7 @@ export default function HomeScreen({ navigation }: Props) {
             dealType: item.dealType || null,
 
             productStatus: item.productStatus || null,
-            
+
             productType:
               item.productType && item.productType.name
                 ? item.productType
@@ -236,7 +229,6 @@ export default function HomeScreen({ navigation }: Props) {
             status_id: item.status_id?.toString() || undefined,
             visibility_type: item.visibility_type?.toString() || undefined,
             group_id: item.group_id || null,
-            is_approved: item.is_approved == 1 || item.is_approved === true,
           };
         });
 
@@ -300,17 +292,34 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleToggleFavorite = async (productId: string) => {
     try {
-      const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
         Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
         return;
       }
-      const userId = parseInt(userIdStr, 10);
-      await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
-      const res = await axios.get(`${path}/favorites/user/${userId}`);
-      setFavoriteIds(res.data.productIds || []);
-    } catch (err) {
-      console.log("Lỗi toggle yêu thích screen:", err);
+
+      // Gửi token để BE tự nhận diện user
+      await axios.post(
+        `${path}/favorites/toggle/${productId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Sau khi toggle, lấy lại danh sách favorites
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (userIdStr) {
+        const res = await axios.get(
+          `${path}/favorites/user/${parseInt(userIdStr, 10)}`
+        );
+        setFavoriteIds(res.data.productIds || []);
+      }
+    } catch (err: any) {
+      console.log("Lỗi toggle yêu thích:", err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        Alert.alert("Phiên đăng nhập hết hạn", "Vui lòng đăng nhập lại.");
+      }
     }
   };
 
@@ -342,7 +351,7 @@ export default function HomeScreen({ navigation }: Props) {
     interval = seconds / 60;
     return Math.floor(interval) + " phút trước";
   };
-  
+
   const handleBellPress = async () => {
     const userId = await AsyncStorage.getItem("userId");
     if (!userId) {
@@ -375,10 +384,10 @@ export default function HomeScreen({ navigation }: Props) {
     } finally {
       setRefreshing(false);
     }
-  }, [fetchUnreadCount]); // fetchUnreadCount là dependency ổn định từ context
+  }, [fetchUnreadCount]);
 
   return (
-    <View className="flex-1 bg-[#f5f6fa]">
+    <View className="flex-1 bg-[#f5f6fa] mt-8">
       <StatusBar hidden={true} />
 
       {/* Header */}
@@ -517,7 +526,7 @@ export default function HomeScreen({ navigation }: Props) {
         <View className="px-4 mt-4">
           <FlatList
             data={(selectedFilter ? filteredProducts : products).filter(
-              (p) => p.is_approved === true
+              (p) => p.productStatus?.id === 2
             )}
             numColumns={2}
             keyExtractor={(item) => item.id}

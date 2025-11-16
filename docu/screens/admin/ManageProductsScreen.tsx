@@ -98,7 +98,6 @@ export default function ManageProductsScreen() {
 
   const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
     const newStatus = {
-      is_approved: isApproved,
       product_status_id: isApproved ? 2 : 3,
     };
     try {

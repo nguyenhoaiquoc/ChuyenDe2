@@ -24,4 +24,8 @@ export class CreateNotificationDto {
   @IsNumber()
   @IsOptional()
   productId?: number; // ID của sản phẩm (nếu có)
+
+  @IsNumber()
+  @IsOptional()
+  groupId?: number;
 }

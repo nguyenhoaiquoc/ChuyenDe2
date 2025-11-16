@@ -177,8 +177,6 @@ productStatus: item.productStatus || null,
     status_id: item.status_id?.toString() || undefined,
     visibility_type: item.visibility_type?.toString() || undefined,
     group_id: item.group_id || null,
-    is_approved:
-      typeof item.is_approved === "boolean" ? item.is_approved : undefined,
   };
 };
 

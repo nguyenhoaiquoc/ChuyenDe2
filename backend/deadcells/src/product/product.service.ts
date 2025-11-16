@@ -58,7 +58,7 @@ export class ProductService {
     private readonly imageRepo: Repository<ProductImage>,
 
     @InjectRepository(Favorite) // 👈 THÊM DÒNG NÀY
-    private readonly favoriteRepo: Repository<Favorite>,
+    private readonly favoriteRepo: Repository<Favorite>,
 
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
@@ -269,29 +269,40 @@ export class ProductService {
         );
       }
 
-      const isMember = await this.groupMemberRepo.findOne({
-        where: { user_id: data.user_id, group_id: Number(data.group_id) },
-      });
-      if (!isMember)
+      // 1. Lấy role từ groupService
+      const role = await this.groupService.getUserRole(
+        Number(data.group_id),
+        data.user_id,
+      );
+
+      if (role === 'none') {
         throw new UnauthorizedException(
           'Bạn không phải là thành viên của nhóm này để đăng bài.',
         );
+      }
 
+      // 2. Lấy group
       const group = await this.groupService.findOneById(Number(data.group_id));
       if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
-      // optional field mustApprovePosts
-      const mustApprove = (group as any).mustApprovePosts ?? false;
-
-      if (!group.isPublic || mustApprove) {
-        productStatusGr = await this.productStatusService.findOne(1); // cần duyệt
-        isApproved = false;
-      } else {
+      // 3. Nếu leader → auto duyệt luôn
+      if (role === 'leader') {
         productStatusGr = await this.productStatusService.findOne(2); // approved
         isApproved = true;
+      } else {
+        // member → kiểm tra mustApprovePosts
+        const mustApprove = group.mustApprovePosts === true;
+
+        if (mustApprove) {
+          productStatusGr = await this.productStatusService.findOne(1); // pending
+          isApproved = false;
+        } else {
+          productStatusGr = await this.productStatusService.findOne(2); // approved
+          isApproved = true;
+        }
       }
     } else {
-      // Công khai (không nhóm) → luôn cần duyệt
+      // Post không thuộc nhóm → luôn pending
       productStatusGr = await this.productStatusService.findOne(1);
       isApproved = false;
     }
@@ -331,7 +342,6 @@ export class ProductService {
 
       productStatus: productStatusGr,
       address_json: data.address_json ? JSON.parse(data.address_json) : {},
-      is_approved: isApproved,
       thumbnail_url: files && files.length > 0 ? files[0].path : null,
 
       visibility_type: data.visibility_type ? Number(data.visibility_type) : 0,
@@ -493,7 +503,7 @@ export class ProductService {
   // Format dữ liệu cho client (React Native)
   async findAllFormatted(userId?: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { is_approved: true, product_status_id: 2 },
+      where: { product_status_id: 2 },
       relations: [
         'images',
         'user',
@@ -687,7 +697,6 @@ export class ProductService {
         status_id: p.status_id,
         visibility_type: p.visibility_type,
         group_id: p.group_id,
-        is_approved: p.is_approved,
 
         // Thông tin phụ
         address_json: p.address_json,
@@ -795,7 +804,7 @@ export class ProductService {
   // 🟢 Người dùng xem tất cả sản phẩm của chính họ
   async findByUserId(userId: number): Promise<any[]> {
     const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: false, }, // không lọc is_approved
+      where: { user: { id: userId } }, // không lọc
       order: { created_at: 'DESC' },
       relations: [
         'images',
@@ -877,7 +886,6 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
     }
 
-    product.is_approved = dto.is_approved;
     product.product_status_id = dto.product_status_id;
 
     const updatedProduct = await this.productRepo.save(product);
@@ -886,67 +894,6 @@ export class ProductService {
     // this.notificationService.notifyUserOfApproval(updatedProduct);
 
     return updatedProduct;
-  }
-
-  // xóa tạm thời (đưa vào thùng rác)
-  async softDeleteProduct(productId: number, userId: number): Promise<string> {
-
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
-    });
-    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-
-    if (product.user!.id !== userId)
-      throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
-
-    product.is_deleted = true;
-    product.deleted_at = new Date();
-
-    await this.productRepo.save(product);
-    console.log(`✅ Sản phẩm ${product.id} đã được chuyển vào thùng rác.`);
-
-    return `Sản phẩm ID=${productId} đã được chuyển vào thùng rác`;
-  }
-
-  //khôi phục sản phẩm đã xóa tạm thời
-  async restoreProduct(productId: number, userId: number): Promise<string> {
-    const product = await this.productRepo.findOne({
-      where: { id: productId },
-      relations: ['user'],
-    });
-
-    if (!product) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
-    }
-
-    if (!product.user || product.user.id !== userId) {
-      throw new UnauthorizedException(
-        'Bạn không có quyền khôi phục sản phẩm này.',
-      );
-    }
-
-    if (!product.is_deleted) {
-      throw new Error('Sản phẩm chưa bị xóa, không thể khôi phục.');
-    }
-
-    product.is_deleted = false;
-    product.deleted_at = null;
-    await this.productRepo.save(product);
-
-    this.logger.log(`♻️ Đã khôi phục sản phẩm ID=${productId}`);
-    return `Đã khôi phục sản phẩm ID=${productId}`;
-  }
-
-  //lấy danh sách “Thùng rác” (đã xóa tạm thời)
-  async findDeletedProducts(userId: number): Promise<any[]> {
-    const products = await this.productRepo.find({
-      where: { user: { id: userId }, is_deleted: true },
-      relations: ['images', 'category', 'subCategory', 'dealType'],
-      order: { deleted_at: 'DESC' },
-    });
-
-    return this.formatProducts(products);
   }
 
   //xóa vĩnh viễn
@@ -965,7 +912,7 @@ export class ProductService {
     }
 
     await this.favoriteRepo.delete({ product: { id: productId } });
-    
+
     // Xóa ảnh liên quan trước
     if (product.images && product.images.length > 0) {
       await this.imageRepo.remove(product.images);

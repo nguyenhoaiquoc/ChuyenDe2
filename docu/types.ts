@@ -11,7 +11,7 @@ export type RootStackParamList = {
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product?: Product; isApproved?: boolean } | undefined;
+  ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
     | {
@@ -58,8 +58,10 @@ export type RootStackParamList = {
   GroupMembersScreen: { groupId: number; isLeader: boolean };
   ApprovePostsScreen: { groupId: number };
   EditGroupScreen: { group: any };
-
-  GroupDetailScreen: { group: GroupType };
+  InviteMembersScreen: { groupId: number };
+  QRInviteScreen: { groupId: number };
+  DeepLinkHandler: undefined;
+  GroupDetailScreen: { groupId: number };
   PostGroupFormScreen: {
     group: GroupType;
     category?: Category;
@@ -310,6 +312,8 @@ export type Comment = {
 export type User = {
   id: number;
   name: string;
+  email?: string;
+  avatar?: string | null;
 };
 
 export type FileResult = {
@@ -323,6 +327,7 @@ export type Notification = {
   is_read: boolean;
   createdAt: string; // Hoặc Date nếu ông parse
   target_id: number;
+  group?: Partial<GroupType>;
 
   // Quan hệ: Người gây ra hành động
   actor: {
@@ -349,6 +354,16 @@ export type Notification = {
     name: string;
     // Thêm các trường khác của Product nếu ông cần
   };
+
+  invitationStatus?: "accepted" | "rejected" | "pending";
+};
+
+// Join status types
+export type JoinStatus = "none" | "pending" | "joined";
+
+export type GroupWithStatus = GroupType & {
+  joinStatus: JoinStatus;
+  memberCount: number | string;
 };
 
 export type GroupType = {
@@ -358,5 +373,5 @@ export type GroupType = {
   memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
-  
+  joinStatus: "none" | "pending" | "joined";
 };

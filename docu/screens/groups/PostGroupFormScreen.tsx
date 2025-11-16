@@ -13,9 +13,9 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import * as ImagePicker from "expo-image-picker";
-import AddressPicker from "../../components/AddressPicker"; // (Sửa lại đường dẫn nếu cần)
+import AddressPicker from "../../components/AddressPicker";
 import axios from "axios";
-import { path } from "../../config"; // (Sửa lại đường dẫn nếu cần)
+import { path } from "../../config"; 
 import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
@@ -25,7 +25,6 @@ import {
   RootStackParamList,
   Category,
   SubCategory,
-  GroupType,
 } from "../../types";
 
 // 1. Định nghĩa props cho màn hình này
@@ -287,7 +286,6 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
       formData.append("category_id", String((finalCategory as any)?.id));
       formData.append("sub_category_id", String(finalSubCategory?.id));
       formData.append("condition_id", String(conditionId));
-      formData.append("is_approved", "false");
       if (productTypeId)
         formData.append("product_type_id", String(productTypeId));
       if (author) formData.append("author", author);
@@ -332,9 +330,8 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
           {
             text: "OK",
             onPress: () => {
-              // ✅ Navigate về GroupDetailScreen
               navigation.navigate("GroupDetailScreen", {
-                group: group,
+                groupId: group.id,
               });
             },
           },
