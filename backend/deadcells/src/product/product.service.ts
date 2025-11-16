@@ -58,7 +58,7 @@ export class ProductService {
     @InjectRepository(ProductImage)
     private readonly imageRepo: Repository<ProductImage>,
 
-    @InjectRepository(Favorite) 
+    @InjectRepository(Favorite)
     private readonly favoriteRepo: Repository<Favorite>,
 
     @InjectRepository(User)
