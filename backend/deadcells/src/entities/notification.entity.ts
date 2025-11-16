@@ -59,10 +59,6 @@ export class Notification {
   @Column({ type: 'boolean', default: false, nullable: false })
   is_read: boolean;
 
-  @ManyToOne(() => Group, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'group_id' })
-  group: Group;
-
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
