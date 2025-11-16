@@ -38,7 +38,7 @@ export default function GuestViewSreen({ onLogin }: { onLogin?: () => void }) {
                 source={
                   group.image
                     ? { uri: group.image }
-                    : require("../../assets/khi.png")
+                    : require("../../assets/defaultgroup.png")
                 }
                 className="w-14 h-14 rounded-full"
               />

@@ -115,7 +115,7 @@ export default function YourGroupsTab({
                 source={
                   g.image
                     ? { uri: g.image }
-                    : require("../../../assets/khi.png")
+                    : require("../../../assets/defaultgroup.png")
                 }
                 className="w-16 h-16 rounded-full"
               />

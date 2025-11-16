@@ -38,9 +38,9 @@ export default function GroupDetailScreen({
   const [refreshing, setRefreshing] = useState(false);
   const [isMenuVisible, setMenuVisible] = useState(false);
   const [isApprovalEnabled, setIsApprovalEnabled] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
 
   const role = groupDetail?.userRole || "none";
+  const joinStatus = groupDetail?.isMember ? "joined" : "none";
   const isLeader = role === "leader";
   const isMember = groupDetail?.isMember || false;
 
@@ -63,6 +63,10 @@ export default function GroupDetailScreen({
       setIsApprovalEnabled(detailRes.data.mustApprovePosts || false);
     } catch (err: any) {
       console.log("Lỗi khi tải dữ liệu nhóm:", err);
+      if (err.response?.status === 403) {
+        Alert.alert("Thông báo", "Bạn cần tham gia nhóm để xem chi tiết");
+        navigation.goBack();
+      }
     }
   }, [groupId]);
 
@@ -80,41 +84,6 @@ export default function GroupDetailScreen({
     await fetchData();
     setRefreshing(false);
   }, [fetchData]);
-
-  const handleJoinGroup = async () => {
-    if (isJoining) return; // Ngăn chặn double-click
-    setIsJoining(true);
-    try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Lỗi", "Bạn cần đăng nhập để thực hiện hành động này.");
-        return;
-      }
-
-      const res = await axios.post(
-        `${path}/groups/${groupId}/join`,
-        {}, // Không cần body, chỉ cần token
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      // Sau khi gửi yêu cầu, tải lại dữ liệu để cập nhật trạng thái
-      // (ví dụ: isMember có thể thành true nếu nhóm public,
-      // hoặc server có thể trả về trạng thái 'pending' mà bạn cần xử lý)
-      await fetchData();
-
-      Alert.alert(
-        "Thành công",
-        res.data?.message || "Yêu cầu tham gia đã được gửi."
-      );
-    } catch (error: any) {
-      Alert.alert(
-        "Lỗi",
-        error.response?.data?.message || "Không thể gửi yêu cầu tham gia"
-      );
-    } finally {
-      setIsJoining(false);
-    }
-  };
 
   const handleCreatePost = () => {
     navigation.navigate("PostGroupFormScreen", {
@@ -165,6 +134,11 @@ export default function GroupDetailScreen({
     );
   };
 
+  const handleInviteMembers = () => {
+    setMenuVisible(false);
+    navigation.navigate("InviteMembersScreen", { groupId });
+  };
+
   const userMenuItems = [
     {
       name: "Quản lí nội dung của bạn",
@@ -175,6 +149,12 @@ export default function GroupDetailScreen({
       },
     },
     {
+      name: "Mời thành viên",
+      icon: "user-plus",
+      action: handleInviteMembers,
+    },
+
+    {
       name: "Rời nhóm",
       icon: "log-out",
       action: handleLeaveGroup,
@@ -183,6 +163,14 @@ export default function GroupDetailScreen({
   ];
 
   const leaderMenuItems = [
+    {
+      name: "QR nhóm",
+      icon: "share-2",
+      action: () => {
+        setMenuVisible(false);
+        navigation.navigate("QRInviteScreen", { groupId });
+      },
+    },
     {
       name: "Sửa thông tin nhóm",
       icon: "edit",
@@ -261,7 +249,32 @@ export default function GroupDetailScreen({
     return null;
   };
 
-  // ...
+  const renderGroupTypeLabel = () => {
+    if (!groupDetail) return null;
+
+    const isPublic = groupDetail?.isPublic === true;
+    const mustApprove = groupDetail?.mustApprovePosts === true;
+
+    if (isPublic) {
+      return (
+        <View className="flex-row items-center mt-1">
+          <Feather name="globe" size={12} color="#E5E7EB" />
+          <Text className="text-xs text-gray-200 ml-1">Nhóm công khai</Text>
+        </View>
+      );
+    }
+
+    // Nhóm riêng tư
+    return (
+      <View className="flex-row items-center mt-1">
+        <Feather name="lock" size={12} color="#E5E7EB" />
+        <Text className="text-xs text-gray-200 ml-1">
+          Nhóm riêng tư ({mustApprove ? "Duyệt bài viết" : "Không phê duyệt"})
+        </Text>
+      </View>
+    );
+  };
+
   const renderActionButton = () => {
     if (isMember) {
       return (
@@ -283,23 +296,7 @@ export default function GroupDetailScreen({
       );
     }
 
-    return (
-      <TouchableOpacity
-        onPress={handleJoinGroup}
-        disabled={isJoining}
-        className={`px-4 py-2 rounded-full flex-row items-center ${
-          isJoining ? "bg-gray-500/90" : "bg-blue-600/90"
-        }`}
-      >
-        {isJoining ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : (
-          <Text className="text-white font-semibold ml-2">
-            {isJoining ? "Đang xử lý..." : "Gửi yêu cầu"}
-          </Text>
-        )}
-      </TouchableOpacity>
-    );
+    return null;
   };
 
   const renderHeader = () => (
@@ -307,11 +304,13 @@ export default function GroupDetailScreen({
       source={
         groupDetail?.image
           ? { uri: groupDetail.image }
-          : require("../../assets/khi.png")
+          : require("../../assets/defaultgroup.png")
       }
       className="h-52 w-full mb-4"
+      resizeMode="cover"
     >
-      <View className="flex-1 justify-between p-4 bg-black/40">
+      <View className="flex-1 justify-between p-4 bg-black/30">
+        {/* Nút back và hành động */}
         <View className="flex-row justify-between items-center mt-2">
           <TouchableOpacity
             onPress={() => navigation.goBack()}
@@ -322,26 +321,73 @@ export default function GroupDetailScreen({
 
           {renderActionButton()}
         </View>
-
-        <View>
-          <Text className="text-white text-2xl font-bold">
-            {groupDetail?.name}
-          </Text>
-          <View className="flex-row items-center mt-1">
-            <Feather name="users" size={14} color="white" />
-            <Text className="text-white text-sm ml-1">
-              {groupDetail?.memberCount} thành viên
-            </Text>
-          </View>
-          <View className="flex-row items-center mt-1">
-            <Feather name="lock" size={12} color="#E5E7EB" />
-            <Text className="text-xs text-gray-200 ml-1">Nhóm Riêng tư</Text>
-          </View>
-          {renderStatusBadge()}
-        </View>
       </View>
     </ImageBackground>
   );
+
+  // Chi tiết nhóm xuống dưới ảnh
+  const [showFullDescription, setShowFullDescription] = useState(false);
+
+  const renderGroupDetail = () => {
+    if (!groupDetail) return null;
+
+    const isPublic = groupDetail.isPublic === true;
+    const mustApprove = groupDetail.mustApprovePosts === true;
+
+    return (
+      <View className="px-4 py-3 bg-gray-50 rounded-xl shadow-md mb-4">
+        <Text className="text-2xl font-bold text-gray-900">
+          {groupDetail.name}
+        </Text>
+
+        <View className="flex-row items-center mt-2">
+          <Feather name="users" size={14} color="#6b7280" />
+          <Text className="text-gray-700 text-sm ml-1">
+            {groupDetail.memberCount} thành viên
+          </Text>
+        </View>
+
+        <View className="flex-row items-center mt-1">
+          {isPublic ? (
+            <>
+              <Feather name="globe" size={12} color="#6b7280" />
+              <Text className="text-xs text-gray-500 ml-1">Nhóm công khai</Text>
+            </>
+          ) : (
+            <>
+              <Feather name="lock" size={12} color="#6b7280" />
+              <Text className="text-xs text-gray-500 ml-1">
+                Nhóm riêng tư (
+                {mustApprove ? "Duyệt bài viết" : "Không phê duyệt"})
+              </Text>
+            </>
+          )}
+        </View>
+
+        {renderStatusBadge()}
+
+        {groupDetail.description ? (
+          <View className="mt-2">
+            <Text
+              className="text-gray-700 text-sm"
+              numberOfLines={showFullDescription ? undefined : 1}
+              ellipsizeMode="tail"
+            >
+              {groupDetail.description}
+            </Text>
+            {groupDetail.description.length > 50 && (
+              <Text
+                className="text-blue-600 text-sm mt-1"
+                onPress={() => setShowFullDescription(!showFullDescription)}
+              >
+                {showFullDescription ? "Thu gọn" : "Xem thêm"}
+              </Text>
+            )}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -361,6 +407,7 @@ export default function GroupDetailScreen({
         ListHeaderComponent={
           <>
             {renderHeader()}
+            {renderGroupDetail()}
             <View className="px-4 py-3 bg-gray-50 border-b border-gray-200">
               <Text className="text-lg font-semibold text-gray-800">
                 Các bài viết nhóm
@@ -401,7 +448,7 @@ export default function GroupDetailScreen({
                   source={
                     item.user?.avatar
                       ? { uri: item.user.avatar }
-                      : require("../../assets/khi.png")
+                      : require("../../assets/defaultgroup.png")
                   }
                   className="w-10 h-10 rounded-full border border-gray-300"
                 />
@@ -519,24 +566,72 @@ export default function GroupDetailScreen({
                     <Switch
                       trackColor={{ false: "#E5E7EB", true: "#3B82F6" }}
                       thumbColor={"#f4f3f4"}
-                      onValueChange={async (v) => {
-                        setIsApprovalEnabled(v);
-                        try {
-                          const token = await AsyncStorage.getItem("token");
-                          await axios.patch(
-                            `${path}/groups/${groupId}/post-approval`,
-                            { mustApprovePosts: v },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                          );
+                      onValueChange={async (newValue) => {
+                        // Nếu đang BẬT → TẮT (và có bài chờ duyệt)
+                        if (!newValue && isApprovalEnabled) {
                           Alert.alert(
-                            "Thành công",
-                            v
-                              ? "Đã bật chế độ duyệt bài viết"
-                              : "Đã tắt chế độ duyệt bài viết"
+                            "Xác nhận tắt duyệt bài viết",
+                            "Nếu tắt, tất cả bài viết đang chờ duyệt sẽ được duyệt tự động. Bạn có chắc chắn?",
+                            [
+                              { text: "Hủy", style: "cancel" },
+                              {
+                                text: "Tắt duyệt",
+                                style: "destructive",
+                                onPress: async () => {
+                                  setIsApprovalEnabled(false);
+                                  try {
+                                    const token =
+                                      await AsyncStorage.getItem("token");
+                                    const res = await axios.patch(
+                                      `${path}/groups/${groupId}/post-approval`,
+                                      { mustApprovePosts: false },
+                                      {
+                                        headers: {
+                                          Authorization: `Bearer ${token}`,
+                                        },
+                                      }
+                                    );
+
+                                    const count =
+                                      res.data?.autoApprovedCount || 0;
+                                    Alert.alert(
+                                      "Thành công",
+                                      count > 0
+                                        ? `Đã tắt duyệt bài viết và tự động duyệt ${count} bài viết`
+                                        : "Đã tắt chế độ duyệt bài viết"
+                                    );
+                                    await fetchData(); // Reload để cập nhật danh sách bài viết
+                                  } catch (err) {
+                                    setIsApprovalEnabled(true);
+                                    Alert.alert(
+                                      "Lỗi",
+                                      "Không thể cập nhật cài đặt"
+                                    );
+                                  }
+                                },
+                              },
+                            ]
                           );
-                        } catch (err) {
-                          setIsApprovalEnabled(!v);
-                          Alert.alert("Lỗi", "Không thể cập nhật cài đặt");
+                        } else {
+                          // TẮT → BẬT (không cần confirm)
+                          setIsApprovalEnabled(newValue);
+                          try {
+                            const token = await AsyncStorage.getItem("token");
+                            await axios.patch(
+                              `${path}/groups/${groupId}/post-approval`,
+                              { mustApprovePosts: newValue },
+                              { headers: { Authorization: `Bearer ${token}` } }
+                            );
+                            Alert.alert(
+                              "Thành công",
+                              newValue
+                                ? "Đã bật chế độ duyệt bài viết. Các bài viết mới sẽ cần được duyệt."
+                                : "Đã tắt chế độ duyệt bài viết"
+                            );
+                          } catch (err) {
+                            setIsApprovalEnabled(!newValue);
+                            Alert.alert("Lỗi", "Không thể cập nhật cài đặt");
+                          }
                         }
                       }}
                       value={isApprovalEnabled}

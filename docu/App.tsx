@@ -47,6 +47,9 @@ import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
 import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
 import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
 import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
+import InviteMembersScreen from './screens/groups/crud/InviteMembersScreen';
+import QRInviteScreen from './screens/groups/crud/QRInviteScreen';
+import DeepLinkHandlerScreen from './screens/groups/crud/DeepLinkHandlerScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -99,7 +102,13 @@ export default function App() {
         <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
         <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
         <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
-
+        <Stack.Screen name="InviteMembersScreen" component={InviteMembersScreen} />
+        <Stack.Screen name="QRInviteScreen" component={QRInviteScreen} />
+        <Stack.Screen 
+  name="DeepLinkHandler" 
+  component={DeepLinkHandlerScreen} 
+  options={{ headerShown: false }} 
+/>
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

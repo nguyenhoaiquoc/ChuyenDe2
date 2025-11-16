@@ -269,29 +269,40 @@ export class ProductService {
         );
       }
 
-      const isMember = await this.groupMemberRepo.findOne({
-        where: { user_id: data.user_id, group_id: Number(data.group_id) },
-      });
-      if (!isMember)
+      // 1. Lấy role từ groupService
+      const role = await this.groupService.getUserRole(
+        Number(data.group_id),
+        data.user_id,
+      );
+
+      if (role === 'none') {
         throw new UnauthorizedException(
           'Bạn không phải là thành viên của nhóm này để đăng bài.',
         );
+      }
 
+      // 2. Lấy group
       const group = await this.groupService.findOneById(Number(data.group_id));
       if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
-      // optional field mustApprovePosts
-      const mustApprove = (group as any).mustApprovePosts ?? false;
-
-      if (!group.isPublic || mustApprove) {
-        productStatusGr = await this.productStatusService.findOne(1); // cần duyệt
-        isApproved = false;
-      } else {
+      // 3. Nếu leader → auto duyệt luôn
+      if (role === 'leader') {
         productStatusGr = await this.productStatusService.findOne(2); // approved
         isApproved = true;
+      } else {
+        // member → kiểm tra mustApprovePosts
+        const mustApprove = group.mustApprovePosts === true;
+
+        if (mustApprove) {
+          productStatusGr = await this.productStatusService.findOne(1); // pending
+          isApproved = false;
+        } else {
+          productStatusGr = await this.productStatusService.findOne(2); // approved
+          isApproved = true;
+        }
       }
     } else {
-      // Công khai (không nhóm) → luôn cần duyệt
+      // Post không thuộc nhóm → luôn pending
       productStatusGr = await this.productStatusService.findOne(1);
       isApproved = false;
     }

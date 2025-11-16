@@ -294,7 +294,7 @@ export default function CreateGroupScreen() {
                         source={
                           user.avatar
                             ? { uri: user.avatar }
-                            : require("../../assets/khi.png")
+                            : require("../../assets/defaultgroup.png")
                         }
                         className="w-10 h-10 rounded-full"
                       />
@@ -394,7 +394,7 @@ export default function CreateGroupScreen() {
                         source={
                           item.avatar
                             ? { uri: item.avatar }
-                            : require("../../assets/khi.png")
+                            : require("../../assets/defaultgroup.png")
                         }
                         className="w-12 h-12 rounded-full"
                       />

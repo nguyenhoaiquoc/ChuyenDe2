@@ -83,7 +83,7 @@ export default function ForYouTab({
           >
             <Image
               source={
-                g.image ? { uri: g.image } : require("../../../assets/khi.png")
+                g.image ? { uri: g.image } : require("../../../assets/defaultgroup.png")
               }
               className="w-14 h-14 rounded-full"
             />

@@ -5,7 +5,6 @@ import {
   ScrollView,
   ImageBackground,
   TouchableOpacity,
-  Image,
   Alert,
   RefreshControl,
   ActivityIndicator,
@@ -19,18 +18,13 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
 type JoinStatus = "none" | "pending" | "joined";
-type GroupWithStatus = GroupType & {
-  joinStatus: JoinStatus;
-  memberCount: number | string;
-};
 
 const GroupSuggestionCard = ({
   group,
   onJoin,
 }: {
-  group: GroupWithStatus;
+  group: GroupType;
   onJoin: (groupId: number) => void;
 }) => {
   const navigation = useNavigation<NavigationProp>();
@@ -85,7 +79,7 @@ const GroupSuggestionCard = ({
         {group.joinStatus === "none" && (
           <TouchableOpacity
             className="bg-blue-100 mt-3 py-2 rounded-md"
-            onPress={() => onJoin(Number(group.id))}
+            onPress={() => onJoin(group.id)}
           >
             <Text className="text-blue-600 font-semibold text-center text-sm">
               {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
@@ -98,7 +92,7 @@ const GroupSuggestionCard = ({
 };
 
 export default function DiscoverTab() {
-  const [suggestedGroups, setSuggestedGroups] = useState<GroupWithStatus[]>([]);
+  const [suggestedGroups, setSuggestedGroups] = useState<GroupType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -111,11 +105,10 @@ export default function DiscoverTab() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      // BE đã trả về joinStatus, isPublic, memberCount... nên FE chỉ map lại
-      const mapped: GroupWithStatus[] = res.data.map((g: any) => ({
+      const mapped: GroupType[] = res.data.map((g: any) => ({
         id: g.id,
         name: g.name,
-        image: g.image || require("../../../assets/khi.png"),
+        image: g.image || require("../../../assets/defaultgroup.png"),
         description: g.description || "",
         memberCount: g.memberCount ?? 0,
         joinStatus: g.joinStatus as JoinStatus,
@@ -150,7 +143,6 @@ export default function DiscoverTab() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // backend nên trả về { joinStatus: 'joined' | 'pending', message }
       const joinStatus = res.data.joinStatus as JoinStatus | undefined;
       const message =
         res.data.message ||

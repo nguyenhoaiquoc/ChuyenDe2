@@ -8,6 +8,7 @@ import { NotificationAction } from 'src/entities/notification-action.entity';
 import { TargetType } from 'src/entities/target-type.entity';
 import { NotificationGateway } from './notification.gateway';
 import { User } from 'src/entities/user.entity';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Injectable()
 export class NotificationService {
@@ -19,6 +20,8 @@ export class NotificationService {
     private readonly actionRepo: Repository<NotificationAction>,
     @InjectRepository(TargetType)
     private readonly targetTypeRepo: Repository<TargetType>,
+    @InjectRepository(GroupMember)
+    private readonly groupMemberRepo: Repository<GroupMember>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     private readonly notificationGateway: NotificationGateway,
@@ -55,7 +58,6 @@ export class NotificationService {
     groupId: number,
     invitationId: number,
   ) {
-   
     try {
       const action = await this.actionRepo.findOneByOrFail({
         name: 'group_invitation',
@@ -326,7 +328,42 @@ export class NotificationService {
     }
 
     // 4. Tìm và trả về
-    return this.notificationRepo.find(queryOptions);
+    const rawNotifications = await this.notificationRepo.find(queryOptions);
+
+    return Promise.all(
+      rawNotifications.map(async (n) => {
+        const base: any = {
+          id: n.id,
+          is_read: n.is_read,
+          createdAt: n.createdAt,
+          actor: n.actor,
+          action: n.action,
+          group: n.group,
+          product: n.product,
+          targetType: n.targetType,
+          target_id: n.target_id,
+        };
+
+        if (n.action?.name === 'group_invitation' && n.group?.id) {
+          const membership = await this.groupMemberRepo.findOne({
+            where: {
+              user_id: userId,
+              group_id: n.group.id,
+            },
+            select: ['pending'],
+          });
+
+          base.invitationStatus =
+            membership?.pending === 3
+              ? 'accepted'
+              : membership?.pending === 1
+                ? 'rejected'
+                : 'pending';
+        }
+
+        return base;
+      }),
+    );
   }
 
   // HÀM: Đánh dấu một thông báo là đã đọc

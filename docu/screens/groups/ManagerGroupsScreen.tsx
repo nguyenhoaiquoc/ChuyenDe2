@@ -45,11 +45,11 @@ export default function ManagerGroupsScreen() {
     checkToken();
   }, []);
 
-  const handleViewAllGroups = () => {
-    setSelectedTab("Nhóm của bạn");
-  };
+  // const handleViewAllGroups = () => {
+  //   setSelectedTab("Nhóm của bạn");
+  // };
 
-  //  Tìm kiếm bài viết trong tất cả nhóm
+  // Hàm loại bỏ dấu tiếng Việt
   const regax = (str: string): string => {
     if (!str) return "";
     return str
@@ -59,7 +59,7 @@ export default function ManagerGroupsScreen() {
       .replace(/Đ/g, "D");
   };
 
-  //  Tìm kiếm bài viết + user trong tất cả nhóm
+  // Tìm kiếm nhóm
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
@@ -72,26 +72,39 @@ export default function ManagerGroupsScreen() {
     try {
       const token = await AsyncStorage.getItem("token");
 
-      const res = await axios.get(`${path}/groups/my/group-posts`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 20 },
-      });
+      // Lấy tất cả nhóm (public + private đã tham gia)
+      const [publicRes, privateRes] = await Promise.all([
+        axios.get(`${path}/groups/public`),
+        axios.get(`${path}/groups`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
+      // Gộp 2 danh sách và đánh dấu trạng thái
+      const allGroups = [
+        ...publicRes.data.map((g: any) => ({ ...g, isMember: false })),
+        ...privateRes.data.map((g: any) => ({ ...g, isMember: true })),
+      ];
+
+      // Loại bỏ trùng lặp (nếu có)
+      const uniqueGroups = allGroups.reduce((acc: any[], current: any) => {
+        const exists = acc.find((item) => item.id === current.id);
+        if (!exists) {
+          acc.push(current);
+        } else if (current.isMember) {
+          // Nếu trùng, ưu tiên cái đã tham gia
+          const index = acc.findIndex((item) => item.id === current.id);
+          acc[index] = current;
+        }
+        return acc;
+      }, []);
+
+      // Lọc theo từ khóa
       const q = regax(query.toLowerCase());
-      const filtered = res.data.filter((post: any) => {
-        const name = regax(post.name?.toLowerCase() || "");
-        const author = regax(
-          post.authorName?.toLowerCase() || post.user?.name?.toLowerCase() || ""
-        );
-        const groupName = regax(post.groupName?.toLowerCase() || "");
-        const tag = regax(post.tag?.toLowerCase() || "");
-
-        return (
-          name.includes(q) ||
-          author.includes(q) ||
-          groupName.includes(q) ||
-          tag.includes(q)
-        );
+      const filtered = uniqueGroups.filter((group: any) => {
+        const name = regax(group.name?.toLowerCase() || "");
+        const description = regax(group.description?.toLowerCase() || "");
+        return name.includes(q) || description.includes(q);
       });
 
       setSearchResults(filtered);
@@ -182,7 +195,7 @@ export default function ManagerGroupsScreen() {
           {/* Menu dưới cùng */}
           <Menu />
 
-          {/* Modal Tìm Kiếm */}
+          {/* Modal Tìm Kiếm Nhóm */}
           <Modal
             visible={isSearchModalVisible}
             animationType="slide"
@@ -198,7 +211,7 @@ export default function ManagerGroupsScreen() {
                 <View className="flex-1 flex-row items-center bg-gray-100 rounded-lg px-3 ml-3">
                   <Feather name="search" size={20} color="#9CA3AF" />
                   <TextInput
-                    placeholder="Tìm kiếm bài viết trong nhóm..."
+                    placeholder="Tìm kiếm nhóm theo tên..."
                     value={searchQuery}
                     onChangeText={handleSearch}
                     className="flex-1 h-10 ml-2 text-base"
@@ -227,7 +240,7 @@ export default function ManagerGroupsScreen() {
                 <View className="flex-1">
                   <View className="px-4 py-2 bg-gray-50">
                     <Text className="text-sm text-gray-600">
-                      Tìm thấy {searchResults.length} kết quả
+                      Tìm thấy {searchResults.length} nhóm
                     </Text>
                   </View>
                   <FlatList
@@ -238,64 +251,66 @@ export default function ManagerGroupsScreen() {
                       <TouchableOpacity
                         onPress={() => {
                           closeSearchModal();
-                          navigation.navigate("ProductDetail", {
-                            product: item,
+                          navigation.navigate("GroupDetailScreen", {
+                            groupId: item.id,
                           });
                         }}
-                        className="mb-4 p-3 bg-white rounded-lg shadow-sm border border-gray-100"
+                        className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                       >
                         <View className="flex-row">
+                          {/* Ảnh nhóm */}
                           <Image
-                            source={{
-                              uri:
-                                item.thumbnail_url ||
-                                (item.images?.length > 0
-                                  ? item.images[0].image_url
-                                  : null),
-                            }}
-                            className="w-24 h-24 rounded-lg bg-gray-100"
+                            source={
+                              item.image
+                                ? { uri: item.image }
+                                : require("../../assets/defaultgroup.png")
+                            }
+                            className="w-24 h-24 bg-gray-100"
                             resizeMode="cover"
                           />
-                          <View className="flex-1 ml-3">
-                            <View className="flex-row items-center mb-1">
-                              <Image
-                                source={
-                                  item.group.image
-                                    ? { uri: item.group.image }
-                                    : require("../../assets/meo.jpg")
-                                }
-                                className="w-5 h-5 rounded-full"
-                              />
-                              <Text
-                                className="text-xs text-gray-600 ml-1"
-                                numberOfLines={1}
-                              >
-                                {item.group.name}
-                              </Text>
-                            </View>
+
+                          {/* Thông tin nhóm */}
+                          <View className="flex-1 p-3">
                             <Text
-                              className="font-bold text-base"
+                              className="font-bold text-base text-gray-900"
                               numberOfLines={2}
                             >
                               {item.name}
                             </Text>
-                            <Text className="text-xs text-gray-500 mt-1">
-                              Đăng bởi {item.user.name}
-                            </Text>
-                            {item.price ? (
-                              <Text className="text-blue-600 font-semibold mt-1">
-                                {String(item.price)}
+
+                            {item.description && (
+                              <Text
+                                className="text-xs text-gray-500 mt-1"
+                                numberOfLines={2}
+                              >
+                                {item.description}
                               </Text>
-                            ) : null}
+                            )}
+
+                            <View className="flex-row items-center mt-2">
+                              <Feather name="users" size={12} color="#6b7280" />
+                              <Text className="text-xs text-gray-600 ml-1">
+                                {item.memberCount} thành viên
+                              </Text>
+                              <Feather
+                                name="lock"
+                                size={12}
+                                color="#6b7280"
+                                style={{ marginLeft: 8 }}
+                              />
+                              <Text className="text-xs text-gray-600 ml-1">
+                                Riêng tư
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </TouchableOpacity>
                     )}
                     ListEmptyComponent={
                       <View className="items-center justify-center mt-20">
-                        <Feather name="inbox" size={48} color="#9CA3AF" />
+                        <Feather name="users" size={48} color="#9CA3AF" />
                         <Text className="text-gray-500 mt-4 text-center">
-                          Không tìm thấy bài viết nào phù hợp với từ khóa "
+                          Không tìm thấy nhóm nào phù hợp với từ khóa "
                           {searchQuery}"
                         </Text>
                       </View>
@@ -306,11 +321,10 @@ export default function ManagerGroupsScreen() {
                 <View className="flex-1 justify-center items-center px-8">
                   <Feather name="search" size={64} color="#D1D5DB" />
                   <Text className="text-gray-600 mt-4 text-center text-base">
-                    Nhập từ khóa để tìm kiếm bài viết trong các nhóm bạn đã tham
-                    gia
+                    Nhập từ khóa để tìm kiếm nhóm
                   </Text>
                   <Text className="text-gray-400 mt-2 text-center text-sm">
-                    Bạn có thể tìm theo tên sản phẩm, người đăng, hoặc tên nhóm
+                    Tìm kiếm theo tên hoặc mô tả nhóm
                   </Text>
                 </View>
               )}

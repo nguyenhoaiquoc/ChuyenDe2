@@ -58,7 +58,9 @@ export type RootStackParamList = {
   GroupMembersScreen: { groupId: number; isLeader: boolean };
   ApprovePostsScreen: { groupId: number };
   EditGroupScreen: { group: any };
-
+  InviteMembersScreen: { groupId: number };
+  QRInviteScreen: { groupId: number };
+  DeepLinkHandler: undefined;
   GroupDetailScreen: { groupId: number };
   PostGroupFormScreen: {
     group: GroupType;
@@ -352,6 +354,16 @@ export type Notification = {
     name: string;
     // Thêm các trường khác của Product nếu ông cần
   };
+
+  invitationStatus?: "accepted" | "rejected" | "pending";
+};
+
+// Join status types
+export type JoinStatus = "none" | "pending" | "joined";
+
+export type GroupWithStatus = GroupType & {
+  joinStatus: JoinStatus;
+  memberCount: number | string;
 };
 
 export type GroupType = {
@@ -361,4 +373,5 @@ export type GroupType = {
   memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
+  joinStatus: "none" | "pending" | "joined";
 };

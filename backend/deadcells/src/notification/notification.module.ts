@@ -4,10 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Notification } from 'src/entities/notification.entity';
 import { NotificationAction } from 'src/entities/notification-action.entity';
 import { TargetType } from 'src/entities/target-type.entity';
-import { User } from 'src/entities/user.entity'; 
+import { User } from 'src/entities/user.entity';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
 import { NotificationGateway } from './notification.gateway';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Module({
   imports: [
@@ -16,9 +17,10 @@ import { NotificationGateway } from './notification.gateway';
       NotificationAction,
       TargetType,
       User,
+      GroupMember
     ]),
   ],
-  providers: [NotificationService , NotificationGateway],
+  providers: [NotificationService, NotificationGateway],
   controllers: [NotificationController],
   exports: [NotificationService],
 })

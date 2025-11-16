@@ -13,6 +13,7 @@ import { GroupInvitation } from 'src/entities/group-invitation.entity';
 import { NotificationModule } from 'src/notification/notification.module';
 import { User } from 'src/entities/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { GroupSeedService } from './seed/groups.seed';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { AuthModule } from 'src/auth/auth.module';
     forwardRef(() => NotificationModule),
     forwardRef(() => AuthModule),
   ],
-  providers: [GroupService],
+  providers: [GroupService, GroupSeedService],
   controllers: [GroupController],
   exports: [GroupService],
 })
