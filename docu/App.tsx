@@ -40,9 +40,8 @@ import NotificationScreen from './screens/Notification/NotificationScreen';
 import { NotificationProvider } from './screens/Notification/NotificationContext';
 import SavedPostsScreen from './screens/profile/SavedPostsScreen';
 import { StatusBar } from 'expo-status-bar';
-import ManageProductsScreen from './screens/admin/ManageProductsScreen';
+import ManageProductsUserScreen from './screens/admin/ManageProductsUserScreen';
 import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
-import TrashScreen from './screens/products/TrashScreen';
 import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
 import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
 import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
@@ -50,6 +49,11 @@ import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
 import InviteMembersScreen from './screens/groups/crud/InviteMembersScreen';
 import QRInviteScreen from './screens/groups/crud/QRInviteScreen';
 import DeepLinkHandlerScreen from './screens/groups/crud/DeepLinkHandlerScreen';
+import React from 'react';
+import ManageGroupPostsScreen from './screens/admin/ManageProductsUserScreen';
+import EditProductScreen from './screens/products/EditProductScreen';
+import SuggestionScreen from './screens/products/SuggestionScreen';
+import ManageCategoriesScreen from './screens/admin/category/ManageCategoriesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -85,7 +89,9 @@ export default function App() {
           <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
           <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
           <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
-          <Stack.Screen name="ManageProductsScreen" component={ManageProductsScreen} />
+          <Stack.Screen name="ManageProductsUserScreen" component={ManageProductsUserScreen} />
+          <Stack.Screen name="ManageGroupPostsScreen" component={ManageGroupPostsScreen} />
+          <Stack.Screen name="EditProductScreen" component={EditProductScreen} />
           <Stack.Screen name="UserDetail" component={UserDetail} />
           <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
           <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
@@ -97,7 +103,6 @@ export default function App() {
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
            <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
-        <Stack.Screen name="TrashScreen" component={TrashScreen} />
         <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
         <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
         <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
@@ -109,6 +114,8 @@ export default function App() {
   component={DeepLinkHandlerScreen} 
   options={{ headerShown: false }} 
 />
+        <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
+        <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

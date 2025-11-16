@@ -11,7 +11,7 @@ export type RootStackParamList = {
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product?: Product } | undefined;
+  ProductDetail: { product?: Product} | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
     | {
@@ -52,7 +52,11 @@ export type RootStackParamList = {
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
-  ManageProductsScreen: undefined;
+  ManageProductsUserScreen: undefined;
+  ManageCategoriesScreen: undefined;  
+  // 👇 THÊM DÒNG NÀY
+  ManageGroupPostsScreen: undefined; 
+
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
   GroupMembersScreen: { groupId: number; isLeader: boolean };
@@ -68,6 +72,9 @@ export type RootStackParamList = {
     subCategory?: SubCategory;
     onPostSuccess?: () => void;
   };
+
+  EditProductScreen: { product: Product };
+
   // Trong types.ts, thêm vào cuối RootStackParamList:
   ChatRoomScreen: {
     roomId: string | number;
@@ -85,7 +92,7 @@ export type RootStackParamList = {
     productId: string;
     product: Product;
   };
-  TrashScreen: undefined;
+  SuggestionScreen: undefined;
   // TestApi: undefined;
 };
 
@@ -93,6 +100,11 @@ export type CategoryType = {
   id: string;
   name: string;
 };
+
+export type ManageCategoriesScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageCategoriesScreen"
+>;
 
 export type ProductDetailScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -125,10 +137,18 @@ export type HomeAdminScreenNavigationProp = NativeStackNavigationProp<
   "HomeAdminScreen"
 >;
 
-export type ManageProductsScreenNavigationProp = NativeStackNavigationProp<
+// 👇 TÔI ĐÃ SỬA LẠI KHỐI NÀY (ĐỔI TÊN VÀ SỬA LỖI)
+export type ManageProductsUserScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "ManageProductsScreen"
+  "ManageProductsUserScreen" // 👈 Sửa lỗi (trước đây nó trỏ sai)
 >;
+
+// 👇 VÀ THÊM KHỐI NÀY
+export type ManageGroupPostsScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageGroupPostsScreen"
+>;
+
 
 export type ProductImage = {
   id: string;
@@ -229,6 +249,8 @@ export type AddressJson = {
   village?: string;
 };
 
+
+
 export type Product = {
   id: string;
   authorName: string;
@@ -271,7 +293,6 @@ export type Product = {
   status_id?: number;
   visibility_type?: string;
   group_id?: string | null;
-  is_approved?: boolean;
   image?: any;
   location?: string;
   time?: string;
@@ -283,6 +304,7 @@ export type Product = {
   year: number | null;
   created_at: string;
   updated_at?: string;
+  expires_at?: string | null ;
   user_id: string | number;
 
   user?: {
@@ -297,6 +319,11 @@ export type Product = {
     avatar?: string;
     image?: string;
   };
+
+  group?: {
+    id: number;
+    name: string;
+  } | null;
 };
 
 export type Comment = {
@@ -304,9 +331,11 @@ export type Comment = {
   content: string;
   created_at: string;
   user?: {
+    id: string | number;
     fullName?: string;
     image?: string;
   };
+  children: Comment[];
 };
 
 export type User = {
@@ -325,7 +354,7 @@ export type FileResult = {
 export type Notification = {
   id: number;
   is_read: boolean;
-  createdAt: string; // Hoặc Date nếu ông parse
+  createdAt: string; 
   target_id: number;
   group?: Partial<GroupType>;
 
@@ -348,11 +377,9 @@ export type Notification = {
     name: string; // 'product', 'user', v.v.
   };
 
-  // Quan hệ: Sản phẩm liên quan (có thể có hoặc không)
   product?: {
     id: number;
     name: string;
-    // Thêm các trường khác của Product nếu ông cần
   };
 
   invitationStatus?: "accepted" | "rejected" | "pending";
@@ -370,8 +397,14 @@ export type GroupType = {
   id: number;
   name: string;
   image: string | number;
-  memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
   joinStatus: "none" | "pending" | "joined";
 };
+
+export interface Group {
+  id: number;
+  name: string;
+  isPublic: boolean;
+}
+

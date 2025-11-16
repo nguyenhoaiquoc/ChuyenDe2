@@ -1,6 +1,7 @@
 import { useState, forwardRef } from "react";
 import { TextInput, View, Text, TouchableOpacity, TextInputProps } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
+import React from "react";
 
 // Kế thừa toàn bộ TextInputProps để nhận đúng union type của RN
 type FloatingInputProps = {

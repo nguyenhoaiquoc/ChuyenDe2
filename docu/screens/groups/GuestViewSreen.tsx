@@ -45,7 +45,6 @@ export default function GuestViewSreen({ onLogin }: { onLogin?: () => void }) {
               <View className="ml-3 flex-1">
                 <Text className="font-semibold text-sm">{group.name}</Text>
                 <Text className="text-xs text-gray-500">
-                  {group.memberCount} ·{" "}
                   {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"}
                 </Text>
               </View>

@@ -43,6 +43,9 @@ export class Group {
   @Column({ type: 'boolean', default: true })
   isPublic: boolean;
 
+  @Column({ default: false })
+  mustApprovePosts: boolean;
+
   @OneToMany(() => GroupMember, (member) => member.group)
   members: GroupMember[];
 

@@ -7,7 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-} from 'typeorm'; // ✅ nhớ import
+} from 'typeorm'; 
 import { Category } from './category.entity';
 import { Product } from './product.entity';
 import { ProductType } from './product_types.entity';

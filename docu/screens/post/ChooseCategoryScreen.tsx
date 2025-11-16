@@ -95,7 +95,7 @@ export default function ChooseCategoryScreen({ navigation, route }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff"},
   header: {
     height: 40,
     backgroundColor: "#9D7BFF",

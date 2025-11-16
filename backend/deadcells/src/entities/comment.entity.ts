@@ -5,7 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
-  OneToMany,
+  OneToMany, 
 } from 'typeorm';
 import { Product } from './product.entity';
 import { User } from './user.entity';
@@ -46,4 +46,5 @@ export class Comment {
   // Quan hệ: Nhiều bình luận con (children/replies)
   @OneToMany(() => Comment, (comment) => comment.parent)
   children: Comment[];
+
 }

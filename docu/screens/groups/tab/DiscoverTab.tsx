@@ -71,7 +71,6 @@ const GroupSuggestionCard = ({
         </Text>
         <Text className="text-xs text-gray-500 mt-1">
           {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"} ·{" "}
-          {group.memberCount} thành viên
         </Text>
 
         {renderBadge()}

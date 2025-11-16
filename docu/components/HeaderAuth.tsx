@@ -1,3 +1,4 @@
+import React from 'react';
 import '../global.css';
 import { Text, View, TouchableOpacity } from 'react-native';
 import { Image } from 'react-native';
