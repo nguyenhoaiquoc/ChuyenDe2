@@ -11,6 +11,7 @@ import { User } from './user.entity';
 import { NotificationAction } from './notification-action.entity';
 import { TargetType } from './target-type.entity';
 import { Product } from './product.entity';
+import { Group } from './group.entity';
 
 @Entity({ name: 'notifications' })
 export class Notification {
@@ -48,6 +49,10 @@ export class Notification {
 
   @Column({ type: 'boolean', default: false, nullable: false })
   is_read: boolean;
+
+  @ManyToOne(() => Group, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

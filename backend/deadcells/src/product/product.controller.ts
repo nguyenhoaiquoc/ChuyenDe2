@@ -174,6 +174,7 @@ export class ProductController {
     return this.productService.hideProduct(id, req.user.id);
   }
 
+
   // === HIỆN LẠI BÀI ĐÃ ẨN ===
   @UseGuards(JwtAuthGuard)
   @Patch(':id/unhide')
@@ -181,6 +182,17 @@ export class ProductController {
     return this.productService.unhideProduct(id, req.user.id);
   }
 
+  // === ĐÁNH DẤU ĐÃ BÁN ===
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/sold')
+  async markAsSold(
+    @Param('id', ParseIntPipe) id: number, 
+    @Request() req
+  ) {
+    const userId = req.user.id;
+    return this.productService.markAsSold(id, userId);
+  }
+  
   // === YÊU CẦU GIA HẠN ===
   @UseGuards(JwtAuthGuard)
   @Post(':id/extension')

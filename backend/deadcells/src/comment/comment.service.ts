@@ -133,10 +133,9 @@ export class CommentService {
     }
 
     // Chỉ chủ bình luận mới được xóa
-    if (comment.user.id !== parsedUserId) {
-      // Bạn cũng có thể thêm logic cho phép chủ sản phẩm xóa
-      throw new ForbiddenException('Bạn không có quyền xóa bình luận này');
-    }
+  if (Number(comment.user.id) !== parsedUserId) {
+  throw new ForbiddenException('Bạn không có quyền xóa bình luận này');
+}
 
     await this.commentRepo.remove(comment);
     return { message: 'Đã xóa bình luận', deleted: true, id: parsedCommentId };
@@ -165,7 +164,7 @@ export class CommentService {
     }
 
     // Chỉ chủ bình luận mới được sửa
-    if (comment.user.id !== parsedUserId) {
+    if (Number(comment.user.id) !== parsedUserId) {
       throw new ForbiddenException('Bạn không có quyền sửa bình luận này');
     }
 

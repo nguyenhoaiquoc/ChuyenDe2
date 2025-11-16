@@ -25,7 +25,14 @@ import { path } from "../../config";
 import "../../global.css";
 import { useNotification } from "../Notification/NotificationContext";
 
-const statusTabs = ["Đã duyệt", "Chờ duyệt", "Từ chối", "Đã ẩn", "Hết hạn"];
+const statusTabs = [
+  "Đã duyệt",
+  "Chờ duyệt",
+  "Từ chối",
+  "Đã ẩn",
+  "Hết hạn",
+  "Đã bán",
+];
 
 // Danh sách lý do gia hạn
 const EXTENSION_REASONS = [
@@ -44,7 +51,7 @@ const getExpiryMessage = (
   if (statusId === 3) return { text: "Đã bị từ chối", color: "text-red-600" };
   if (statusId === 4) return { text: "Đang ẩn", color: "text-gray-600" };
   if (statusId === 5) return { text: "Đã hết hạn", color: "text-red-600" };
-
+if (statusId === 6) return { text: "Đã bán", color: "text-green-600" };
   // Logic mới: Ưu tiên 'expires_at'
   if (statusId === 2 && product.expires_at) {
     const expiryDate = new Date(product.expires_at);
@@ -271,6 +278,7 @@ export default function ManagePostsScreen({
       if (selectedTabName === "Từ chối") return p.productStatus?.id === 3;
       if (selectedTabName === "Đã ẩn") return p.productStatus?.id === 4;
       if (selectedTabName === "Hết hạn") return p.productStatus?.id === 5;
+      if (selectedTabName === "Đã bán") return p.productStatus?.id === 6;
       return false;
     }); // Bước 2: Lọc tiếp theo tên (từ kết quả Bước 1)
 
@@ -336,7 +344,34 @@ export default function ManagePostsScreen({
     }
   };
 
-  /** HÀM MỚI: Xử lý Hiện lại tin (Status 4 -> 2) */
+  /** Xử lý Đánh dấu đã bán (chuyển status 2 -> 6) */
+  const handleMarkAsSold = async () => {
+    if (!selectedProduct || !userId) return;
+    const productId = selectedProduct.id;
+    handleCloseMenu(); // Đóng menu
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập lại");
+
+      await axios.patch(
+        `${path}/products/${productId}/sold`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Alert.alert("Thành công", "Sản phẩm đã được đánh dấu 'Đã bán'.");
+      fetchMyPosts(userId); // Tải lại toàn bộ danh sách
+    } catch (err: any) {
+      console.error(
+        "Lỗi khi đánh dấu đã bán:",
+        err.response?.data || err.message
+      );
+      Alert.alert("Lỗi", "Không thể đánh dấu đã bán, vui lòng thử lại.");
+    }
+  };
+
+  /** Xử lý Hiện lại tin (Status 4 -> 2) */
   const handleUnhideProduct = async () => {
     if (!selectedProduct || !userId) return;
     const productId = selectedProduct.id;
@@ -360,7 +395,7 @@ export default function ManagePostsScreen({
     }
   };
 
-  /** HÀM MỚI: Mở Modal chọn lý do Gia hạn */
+  /** Mở Modal chọn lý do Gia hạn */
   const handleOpenReasonModal = () => {
     if (!selectedProduct) return;
     setIsMenuVisible(false); // Đóng menu 3 chấm
@@ -368,7 +403,7 @@ export default function ManagePostsScreen({
     // selectedProduct vẫn được giữ
   };
 
-  /** HÀM MỚI: Gửi yêu cầu gia hạn (Status 5) */
+  /** Gửi yêu cầu gia hạn (Status 5) */
   const handleSendExtensionRequest = async (reason: string) => {
     if (!selectedProduct || !userId) return;
     const productId = selectedProduct.id;
@@ -668,7 +703,18 @@ export default function ManagePostsScreen({
                     <Text className="ml-2 text-base text-gray-700">Ẩn tin</Text>
                   </TouchableOpacity>
                 )}
-
+                {/* Mark as Sold */}
+                {selectedProduct.productStatus?.id === 2 && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleMarkAsSold}
+                  >
+                    <Feather name="check-circle" size={18} color="#16a34a" />
+                    <Text className="ml-2 text-base text-green-700">
+                      Đánh dấu đã bán
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 {/* Unhide */}
                 {selectedProduct.productStatus?.id === 4 && (
                   <TouchableOpacity

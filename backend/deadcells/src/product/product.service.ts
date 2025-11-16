@@ -1105,6 +1105,10 @@ export class ProductService {
     if (product.user?.id !== userId)
       throw new UnauthorizedException('Bạn không có quyền ẩn tin này'); // Chỉ cho phép ẩn tin đang "Đã duyệt"
 
+    if (product.product_status_id === 6) {
+      throw new BadRequestException('Không thể ẩn sản phẩm đã bán.');
+    }
+
     if (product.product_status_id !== 2) {
       throw new BadRequestException('Chỉ có thể ẩn tin đang hiển thị');
     }
@@ -1147,6 +1151,41 @@ export class ProductService {
     // Mở comment này khi sẵn sàng
     // this.notifyMatchingPosts(savedProduct.id);
     return savedProduct;
+  }
+
+  /**
+   * (Người dùng) Đánh dấu đã bán
+   * Chuyển Status 2 (Đã duyệt) -> 6 (Đã bán)
+   */
+  async markAsSold(productId: number, userId: number): Promise<Product> {
+    const product = await this.productRepo.findOne({
+      where: { id: productId },
+      relations: ['user', 'productStatus'], // Thêm 'productStatus'
+    });
+
+    if (!product) {
+      throw new NotFoundException('Không tìm thấy sản phẩm');
+    }
+    if (product.user?.id !== userId) {
+      throw new UnauthorizedException('Bạn không có quyền đánh dấu tin này');
+    }
+
+    // Chỉ cho phép đánh dấu bán tin đang "Đã duyệt"
+    if (product.product_status_id !== 2) {
+      throw new BadRequestException(
+        'Chỉ có thể đánh dấu đã bán cho tin đang hiển thị',
+      );
+    }
+
+    const soldStatus = await this.productStatusService.findOne(6); // ID 6 = "Đã bán"
+    if (!soldStatus) {
+      throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã bán"');
+    }
+
+    product.productStatus = soldStatus;
+    // Hoặc bạn có thể dùng: product.product_status_id = 6;
+
+    return this.productRepo.save(product);
   }
 
   //(Người dùng) Gửi yêu cầu gia hạn cho tin đã hết hạn (Status 5)
@@ -1284,7 +1323,9 @@ export class ProductService {
     if (product.user?.id !== userId) {
       throw new UnauthorizedException('Bạn không có quyền sửa sản phẩm này.');
     }
-
+    if (product.product_status_id === 6) {
+      throw new BadRequestException('Không thể chỉnh sửa sản phẩm đã bán.');
+    }
     // === 1. XỬ LÝ XÓA ẢNH ===
     if (data.imageIdsToDelete) {
       try {

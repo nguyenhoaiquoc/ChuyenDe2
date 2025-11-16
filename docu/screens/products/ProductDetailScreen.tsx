@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
@@ -27,6 +28,7 @@ import {
   ProductImage,
   User,
 } from "../../types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -59,6 +61,8 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
+  const { bottom } = useSafeAreaInsets();
+
   const { product: routeProduct } = route.params || {};
   const product: Product = routeProduct || ({} as Product);
 
@@ -75,6 +79,16 @@ export default function ProductDetailScreen() {
 
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+
+  const [showMenuFor, setShowMenuFor] = useState<number | null>(null);
+
+  const openMenu = (commentId: number) => {
+    setShowMenuFor(commentId);
+  };
+
+  const closeMenu = () => {
+    setShowMenuFor(null);
+  };
 
   useEffect(() => {
     const fetchFavoriteData = async () => {
@@ -144,9 +158,9 @@ export default function ProductDetailScreen() {
       }
 
       try {
-        await axios.delete(`${path}/comments/${commentId}`, {
-          data: { user_id: String(currentUser.id) },
-        });
+        await axios.delete(
+          `${path}/comments/${commentId}?user_id=${currentUser.id}`
+        );
         Alert.alert("Thành công", "Đã xóa bình luận.");
         fetchComments(); // 👈 GỌI HÀM (BÂY GIỜ ĐÃ HỢP LỆ)
       } catch (err: any) {
@@ -158,33 +172,6 @@ export default function ProductDetailScreen() {
       }
     },
     [currentUser, fetchComments] // Phụ thuộc vào currentUser và fetchComments
-  );
-
-  // Hàm hiện menu
-  const showCommentMenu = useCallback(
-    (comment: Comment) => {
-      Alert.alert(
-        "Tùy chọn", // Tiêu đề
-        "Bạn muốn làm gì với bình luận này?", // Nội dung
-        [
-          {
-            text: "Chỉnh sửa",
-            onPress: () => {
-              setEditingComment(comment); // 👈 Bật chế độ sửa
-              setComment(comment.content); // 👈 Đưa nội dung cũ vào ô input
-              setReplyingTo(null); // 👈 Tắt chế độ trả lời (nếu đang bật)
-            },
-          },
-          {
-            text: "Xóa",
-            style: "destructive",
-            onPress: () => handleDeleteComment(String(comment.id)),
-          },
-          { text: "Hủy", style: "cancel" },
-        ]
-      );
-    },
-    [handleDeleteComment] // 👈 (Hãy đảm bảo hàm này đã được bọc trong useCallback)
   );
 
   const handleToggleFavorite = async () => {
@@ -322,9 +309,26 @@ export default function ProductDetailScreen() {
     comment,
     product.id,
     replyingTo,
-    editingComment, // 👈 Thêm
-    fetchComments, // 👈 Thêm
+    editingComment,
+    fetchComments,
   ]);
+
+  const goToUserProfile = (userId?: number | string) => {
+    if (!userId) {
+      Alert.alert("Lỗi", "Không tìm thấy ID người dùng.");
+      return;
+    }
+    const numericId = Number(userId);
+    const isOwner = currentUser && Number(currentUser.id) === numericId;
+
+    // Dẫn tới màn hình UserDetail, kèm product và flag isOwner
+    navigation.navigate("UserDetail", {
+      userId: numericId,
+      productId: product.id,
+      product,
+      isOwner, // màn hình UserDetail có thể đọc flag này để cho phép chỉnh sửa nếu cần
+    } as any);
+  };
 
   const renderCommentTree = (comment: Comment, depth: number = 0) => {
     const canDelete =
@@ -339,32 +343,41 @@ export default function ProductDetailScreen() {
       <View key={comment.id}>
         {/* Render bình luận (cha hoặc con) */}
         <View className="flex-row items-start mb-4">
-          <Image
-            source={{ uri: userImage }}
-            className="w-10 h-10 rounded-full"
-          />
+          <TouchableOpacity
+            onPress={() => goToUserProfile(comment.user?.id)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={{ uri: userImage }}
+              className="w-10 h-10 rounded-full"
+            />
+          </TouchableOpacity>
+
           <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
-            <Text className="font-semibold text-sm">
-              {comment.user?.fullName || "Người dùng"}
-            </Text>
+            <TouchableOpacity
+              onPress={() => goToUserProfile(comment.user?.id)}
+              activeOpacity={0.7}
+            >
+              <Text className="font-semibold text-sm">
+                {comment.user?.fullName || "Người dùng"}
+              </Text>
+            </TouchableOpacity>
+
             <Text className="text-gray-600 text-sm mt-1">
               {comment.content}
             </Text>
             <Text className="text-gray-400 text-xs mt-1">
               {new Date(
                 new Date(comment.created_at).getTime() + 7 * 60 * 60 * 1000
-              ).toLocaleString("vi-VN", {
-                /* ... options ngày giờ ... */
-              })}
+              ).toLocaleString("vi-VN", {})}
             </Text>
 
-            {/* 🚀 LOGIC MỚI: CHỈ HIỆN "TRẢ LỜI" Ở BÌNH LUẬN GỐC (depth === 0) */}
             {depth === 0 && (
               <TouchableOpacity
                 onPress={() => {
                   setReplyingTo(comment);
-                  setEditingComment(null); // Tắt sửa nếu đang sửa
-                  setComment(""); // Xóa text input
+                  setEditingComment(null);
+                  setComment("");
                 }}
               >
                 <Text className="text-blue-500 text-xs font-semibold mt-1">
@@ -378,12 +391,71 @@ export default function ProductDetailScreen() {
           {canDelete && (
             <TouchableOpacity
               className="p-2 -ml-2"
-              onPress={() => showCommentMenu(comment)} // 👈 Gọi hàm menu mới
+              onPress={() => openMenu(Number(comment.id))}
             >
-              <Ionicons name="ellipsis-vertical" size={16} color="#666" />
+              <Ionicons name="ellipsis-vertical" size={18} color="#666" />
             </TouchableOpacity>
           )}
         </View>
+
+        {showMenuFor === Number(comment.id) && (
+          <Modal
+            transparent
+            animationType="slide"
+            visible={showMenuFor === Number(comment.id)}
+            onRequestClose={closeMenu}
+          >
+            {/* 1. Lớp mờ (Backdrop) */}
+            <TouchableOpacity
+              className="flex-1 bg-black/40"
+              onPress={closeMenu}
+              activeOpacity={1}
+            />
+
+            <View
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl"
+              style={{ paddingBottom: 16 + bottom }}
+            >
+              {/* Nút Chỉnh sửa */}
+              <TouchableOpacity
+                className="py-4 border-b border-gray-200"
+                onPress={() => {
+                  closeMenu();
+                  setEditingComment(comment);
+                  setComment(comment.content);
+                  setReplyingTo(null);
+                }}
+              >
+                <Text className="text-blue-600 font-semibold text-center text-lg">
+                  Chỉnh sửa
+                </Text>
+              </TouchableOpacity>
+
+              {/* Nút Xóa */}
+              <TouchableOpacity
+                className="py-4"
+                onPress={() => {
+                  closeMenu();
+                  handleDeleteComment(String(comment.id));
+                }}
+              >
+                <Text className="text-red-500 font-semibold text-center text-lg">
+                  Xóa
+                </Text>
+              </TouchableOpacity>
+
+              {/* 3. Nút Hủy (Tách biệt) */}
+              <TouchableOpacity
+                className="py-4 border-t-2 border-gray-200 mt-2"
+                onPress={closeMenu}
+              >
+                <Text className="text-gray-700 font-bold text-center text-lg">
+                  Hủy
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+        )}
 
         {/* Render các con (replies) - Tăng độ sâu (depth) lên 1 */}
         {comment.children && comment.children.length > 0 && (

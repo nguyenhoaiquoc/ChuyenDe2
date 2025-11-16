@@ -50,6 +50,7 @@ import React from 'react';
 import ManageGroupPostsScreen from './screens/admin/ManageProductsUserScreen';
 import EditProductScreen from './screens/products/EditProductScreen';
 import SuggestionScreen from './screens/products/SuggestionScreen';
+import ManageCategoriesScreen from './screens/admin/category/ManageCategoriesScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -104,6 +105,7 @@ export default function App() {
         <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
         <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
         <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
+        <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

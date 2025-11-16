@@ -9,7 +9,7 @@ import {
   FlatList,
   Alert,
   RefreshControl,
-  ActivityIndicator, // 1. Thêm RefreshControl
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
+import { useEffect, useState, useCallback } from "react"; 
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -42,13 +42,11 @@ export default function HomeScreen({ navigation }: Props) {
   const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
-  // 3. Thêm state cho RefreshControl
   const [refreshing, setRefreshing] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
-  // 4. Tách logic fetching ra các hàm riêng
   const fetchCategories = () => {
     return axios
       .get(`${path}/categories`)
@@ -72,7 +70,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   const fetchProducts = async (filterType?: string): Promise<void> => {
     try {
-      // 🔹 Xác định URL API
       let url = `${path}/products`; // mặc định: tất cả sản phẩm
 
       if (filterType === "Miễn phí") {
@@ -452,9 +449,8 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               className="w-20 items-center mr-4 bg-white rounded-lg p-2 shadow-sm"
               onPress={() => {
-                // Navigate sang CategoryIndex với categoryId (danh mục cha) để fetch sản phẩm theo cha
                 navigation.navigate("CategoryIndex", {
-                  categoryId: item.id.toString(), // ID danh mục cha để filter products
+                  categoryId: item.id.toString(), 
                   categoryName: item.name,
                 });
               }}
@@ -477,7 +473,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
+            data={filters} 
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}

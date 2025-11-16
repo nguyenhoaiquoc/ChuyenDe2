@@ -53,7 +53,7 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsUserScreen: undefined;
-  
+  ManageCategoriesScreen: undefined;  
   // 👇 THÊM DÒNG NÀY
   ManageGroupPostsScreen: undefined; 
 
@@ -98,6 +98,11 @@ export type CategoryType = {
   id: string;
   name: string;
 };
+
+export type ManageCategoriesScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageCategoriesScreen"
+>;
 
 export type ProductDetailScreenRouteProp = RouteProp<
   RootStackParamList,
