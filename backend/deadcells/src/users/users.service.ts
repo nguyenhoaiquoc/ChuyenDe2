@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
-import { Express } from 'express';
 
 @Injectable()
 export class UsersService {
@@ -11,42 +10,95 @@ export class UsersService {
     private readonly userRepo: Repository<User>,
   ) {}
 
-  // Cập nhật thông tin user + 1 ảnh avatar
-  async updateUser(id: number, data: Partial<User>, file?: Express.Multer.File) {
+  async findOne(id: number): Promise<User> {
     const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) throw new Error('User không tồn tại');
-
-    // Nếu có file upload, lưu URL vào image
-    if (file) {
-      user.image = file.path.startsWith('http')
-        ? file.path
-        : `${process.env.PATH}${file.path}`;
+    if (!user) {
+      throw new NotFoundException(`Người dùng với id ${id} không tồn tại`);
     }
-
-    // Cập nhật các trường còn lại
-    Object.assign(user, data);
-
-    const updatedUser = await this.userRepo.save(user);
-
-    return {
-      id: updatedUser.id,
-      name: updatedUser.fullName,
-      email: updatedUser.email,
-      phone: updatedUser.phone,
-      image: updatedUser.image,
-      updated_at: updatedUser.updatedAt,
-    };
+    return user;
   }
 
   async findAll(): Promise<User[]> {
-    return await this.userRepo.find();
+    return this.userRepo.find();
   }
 
-  
- async findOne(id: number): Promise<User> {
-  const user = await this.userRepo.findOne({ where: { id } });
-  if (!user) throw new Error('User không tồn tại');
-  return user;
-}
+  async updateUser(id: number, data: Partial<User>): Promise<User> {
+    const user = await this.findOne(id);
 
+    const allowedFields = [
+      'fullName',
+      'phone',
+      'address_json',
+      'citizenId',
+      'bio',
+      'nickname',
+      'gender',
+      'dob',
+      'hometown',
+      'is_verified',
+      'verifiedAt',
+      'image',
+      'coverImage',
+    ] as const;
+
+    if (data.citizenId && data.citizenId !== user.citizenId) {
+      const existingUser = await this.userRepo.findOne({
+        where: { citizenId: data.citizenId },
+      });
+      if (existingUser && existingUser.id !== id) {
+        throw new BadRequestException('Số CCCD này đã được đăng ký bởi người khác');
+      }
+    }
+
+    allowedFields.forEach((field) => {
+      if (data[field] !== undefined) {
+        (user as any)[field] = data[field];
+      }
+    });
+
+    if (data.is_verified === true && !user.is_verified) {
+      user.is_verified = true;
+      user.verifiedAt = new Date();
+    }
+
+    return this.userRepo.save(user);
+  }
+
+  async verifyCCCD(
+    userId: number,
+    cccdData: {
+      fullName?: string;
+      citizenId?: string;
+      gender?: string;
+      dob?: string;
+      hometown?: string;
+      address?: string;
+      imageUrl?: string;
+    },
+  ): Promise<User> {
+    const updateData: Partial<User> = {
+      is_verified: true,
+      verifiedAt: new Date(),
+    };
+
+    if (cccdData.fullName) updateData.fullName = cccdData.fullName;
+    if (cccdData.citizenId) updateData.citizenId = cccdData.citizenId;
+    if (cccdData.gender) updateData.gender = cccdData.gender;
+    if (cccdData.dob) updateData.dob = new Date(cccdData.dob);
+    if (cccdData.hometown) updateData.hometown = cccdData.hometown;
+
+    if (cccdData.address) {
+      updateData.address_json = {
+        full: cccdData.address,
+        source: 'cccd_scan',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+
+    if (cccdData.imageUrl) {
+      updateData.image = cccdData.imageUrl;
+    }
+
+    return this.updateUser(userId, updateData);
+  }
 }

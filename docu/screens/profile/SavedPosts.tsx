@@ -1,303 +1,150 @@
-// screens/ManagerHistory.tsx
-import React from "react";
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StatusBar,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import Menu from "../../components/Menu";
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import React, { useEffect, useState, useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, Image, ActivityIndicator, Alert } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { path } from "../../config";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
-const savedPosts = [
-  {
-    id: "1",
-    image: require("../../assets/hoa.png"),
-    title: "iPhone 12 promax128 Xanh biển-zin đẹp BH dài 6th",
-    price: "7.599.000 đ",
-    location: "TP Hồ Chí Minh",
-    time: "3 ngày trước",
-    tag: "Điện thoại",
-    isFavorite: true,
-  },
-  {
-    id: "2",
-    image: require("../../assets/hoa.png"),
-    title: "iPhone 13 promax128 Trắng",
-    price: "11.599.000 đ",
-    location: "TP Hồ Chí Minh",
-    time: "2 ngày trước",
-    tag: "Điện thoại",
-    isFavorite: true,
-  },
-  {
-    id: "3",
-    image: require("../../assets/hoa.png"),
-    title: "Giày nike real 100%",
-    price: "1.599.000 đ",
-    location: "Thủ Đức",
-    time: "2 ngày trước",
-    tag: "Giày dép",
-    isFavorite: true,
-  },
-];
+// Giả định cấu trúc Product cho FlatList
+interface Product {
+  id: string;
+  name: string;
+  price: string;
+  thumbnail_url?: string;
+  // Thêm các trường khác cần thiết
+}
 
-const recommendedPosts = [
-  {
-    id: "4",
-    image: require("../../assets/hoa.png"),
-    title: "iPhone 12 promax 128 Xanh biển zin đẹp BH dài 6th",
-    price: "7.599.000 đ",
-    location: "TP Hồ Chí Minh",
-    time: "7 ngày trước",
-    tag: "Điện thoại",
-    isFavorite: false,
-  },
-  {
-    id: "5",
-    image: require("../../assets/hoa.png"),
-    title: "iPhone 12 promax 128 Xanh biển zin đẹp BH dài 6th",
-    price: "7.599.000 đ",
-    location: "TP Hồ Chí Minh",
-    time: "7 ngày trước",
-    tag: "Điện thoại",
-    isFavorite: false,
-  },
-  {
-    id: "6",
-    image: require("../../assets/hoa.png"),
-    title: "iPhone 12 promax 128 Xanh biển zin đẹp BH dài 6th",
-    price: "7.599.000 đ",
-    location: "TP Hồ Chí Minh",
-    time: "7 ngày trước",
-    tag: "Điện thoại",
-    isFavorite: false,
-  },
-  {
-    id: "7",
-    image: require("../../assets/hoa.png"),
-    title: "Balo laptop chống nước 15inch",
-    price: "220.000 đ",
-    location: "Thủ Đức",
-    time: "1 ngày trước",
-    tag: "Đồ gia dụng",
-    isFavorite: false,
-  },
-];
+export default function SavePostScreen({ navigation }: { navigation: any }) {
+  const [savedProducts, setSavedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<number | null>(null);
 
-export default function SavedPosts() {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // 1. Lấy userId từ AsyncStorage khi component mount
+  useEffect(() => {
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem("userId");
+      setCurrentUser(id ? Number(id) : null);
+      // Giữ loading = true cho đến khi fetchFavorites được gọi
+    };
+    getUserId();
+  }, []);
 
-  const handleProductPress = (product: any) => {
-    navigation.navigate("ProductDetail", { product });
-  };
+  // 2. Hàm gọi API để lấy danh sách ID sản phẩm đã lưu
+  const fetchFavoriteIds = useCallback(async () => {
+    if (!currentUser) {
+      setLoading(false);
+      setSavedProducts([]);
+      return;
+    }
 
-  const handleBackPress = () => {
-    navigation.goBack();
-  };
+    setLoading(true);
+    try {
+      // ✅ CẬP NHẬT ENDPOINT: SỬ DỤNG ROUTE MỚI /favorites/by-user/:userId
+      const response = await axios.get(`${path}/favorites/by-user/${currentUser}`);
+      
+      // Giả sử response.data là MẢNG CÁC ID SẢN PHẨM (number[] hoặc string[])
+      const productIds: string[] = response.data.map((id: number | string) => id.toString());
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f6fa" }}>
-      <StatusBar barStyle="dark-content" />
+      if (productIds.length === 0) {
+        setSavedProducts([]);
+        setLoading(false);
+        return;
+      }
+      
+      // ⚠️ BƯỚC QUAN TRỌNG: Gọi API để lấy chi tiết từng sản phẩm
+      // Vì controller của bạn chỉ trả về ID, chúng ta cần fetch chi tiết
+      const productDetailsPromises = productIds.map(id => 
+        axios.get<Product>(`${path}/products/${id}`)
+      );
 
-      {/* Header */}
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: 8,
-          backgroundColor: "white",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <TouchableOpacity onPress={handleBackPress}>
-          <Ionicons name="arrow-back" size={24} color="#1f2937" />
-        </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: "bold", color: "#1f2937" }}>
-          Tin đăng đã lưu (3/100)
-        </Text>
-        <View style={{ width: 24 }} />
+      const productResponses = await Promise.all(productDetailsPromises);
+      setSavedProducts(productResponses.map(res => res.data));
+
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách đã lưu:", error);
+      Alert.alert("Lỗi", "Không thể tải danh sách sản phẩm đã lưu.");
+      setSavedProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
+
+  // 3. Sử dụng useFocusEffect để tải lại danh sách mỗi khi màn hình được focus
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUser !== null) {
+        fetchFavoriteIds();
+      }
+      return () => {};
+    }, [currentUser, fetchFavoriteIds])
+  );
+  
+  // 4. Component hiển thị trạng thái Loading
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-gray-100">
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text className="mt-3 text-gray-600">Đang tải sản phẩm đã lưu...</Text>
       </View>
+    );
+  }
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Saved Posts Section - Vertical List */}
-        <View style={{ backgroundColor: "white", paddingVertical: 12 }}>
-          {savedPosts.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              onPress={() => handleProductPress(item)}
-              style={{
-                flexDirection: "row",
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderBottomWidth: 1,
-                borderBottomColor: "#f3f4f6",
-              }}
-              activeOpacity={0.7}
-            >
-              <Image
-                source={item.image}
-                style={{
-                  width: 100,
-                  height: 100,
-                  borderRadius: 8,
-                }}
-                resizeMode="cover"
-              />
-              <View
-                style={{
-                  flex: 1,
-                  marginLeft: 12,
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: "#1f2937",
-                    marginBottom: 4,
-                  }}
-                  numberOfLines={2}
-                >
-                  {item.title}
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    color: "#ef4444",
-                    marginBottom: 4,
-                  }}
-                >
-                  {item.price}
-                </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Text style={{ fontSize: 12, color: "#6b7280" }}>
-                    {item.time}
-                  </Text>
-                  <TouchableOpacity>
-                    <Feather
-                      name="heart"
-                      size={20}
-                      color={item.isFavorite ? "#ef4444" : "#d1d5db"}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+  // 5. Render từng item sản phẩm
+  const renderItem = ({ item }: { item: Product }) => (
+    <TouchableOpacity
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+      className="flex-row mb-4 bg-white rounded-lg shadow-md overflow-hidden"
+    >
+      <Image
+        source={{
+          uri: item.thumbnail_url || "https://via.placeholder.com/150",
+        }}
+        className="w-24 h-24 object-cover"
+      />
+      <View className="flex-1 p-3 justify-center">
+        <Text className="text-lg font-semibold" numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text className="text-red-600 font-bold mt-1">
+          {parseFloat(item.price).toLocaleString()} đ
+        </Text>
+      </View>
+      <View className="p-3 justify-center">
+        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+      </View>
+    </TouchableOpacity>
+  );
 
-        {/* Recommended Posts Section - Grid */}
-        <View style={{ marginTop: 12, paddingHorizontal: 16 }}>
-          <Text
-            style={{
-              fontSize: 16,
-              fontWeight: "bold",
-              color: "#1f2937",
-              marginBottom: 12,
-            }}
-          >
-            Tin đăng dành cho bạn
+  // 6. Main render
+  return (
+    <View className="flex-1 bg-gray-100 p-4">
+      <Text className="text-2xl font-bold mb-4">❤️ Sản phẩm đã lưu</Text>
+
+      {currentUser === null ? (
+        <View className="flex-1 justify-center items-center">
+          <Text className="text-lg font-semibold mb-2">Bạn chưa đăng nhập</Text>
+          <Text className="text-gray-500 text-center">
+            Vui lòng đăng nhập để xem danh sách sản phẩm đã lưu của bạn.
           </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-            }}
-          >
-            {recommendedPosts.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => handleProductPress(item)}
-                style={{
-                  width: "48%",
-                  backgroundColor: "white",
-                  borderRadius: 8,
-                  marginBottom: 12,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.05,
-                  shadowRadius: 3,
-                  elevation: 2,
-                }}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={item.image}
-                  style={{
-                    width: "100%",
-                    height: 120,
-                    borderTopLeftRadius: 8,
-                    borderTopRightRadius: 8,
-                  }}
-                  resizeMode="cover"
-                />
-                <View style={{ padding: 8 }}>
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontWeight: "600",
-                      color: "#1f2937",
-                      marginBottom: 4,
-                    }}
-                    numberOfLines={2}
-                  >
-                    {item.title}
-                  </Text>
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      color: "#ef4444",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {item.price}
-                  </Text>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ fontSize: 12, color: "#6b7280" }}>
-                      {item.location}
-                    </Text>
-                    <TouchableOpacity>
-                      <Feather
-                        name="heart"
-                        size={18}
-                        color={item.isFavorite ? "#ef4444" : "#d1d5db"}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
-      </ScrollView>
-
-      <Menu />
-    </SafeAreaView>
+      ) : savedProducts.length === 0 ? (
+        <View className="flex-1 justify-center items-center">
+          <Ionicons name="heart-dislike-outline" size={50} color="#D1D5DB" />
+          <Text className="text-lg font-semibold mt-4">Chưa có sản phẩm nào được lưu</Text>
+          <Text className="text-gray-500 text-center mt-1">
+            Hãy tìm kiếm các món đồ cũ yêu thích của bạn để thêm vào đây!
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={savedProducts}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </View>
   );
 }
