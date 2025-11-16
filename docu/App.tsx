@@ -1,4 +1,4 @@
-// App.tsx
+import React from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
@@ -94,7 +94,6 @@ export default function App() {
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
            <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
-        <Stack.Screen name="TrashScreen" component={TrashScreen} />
         <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
         <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
         <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
