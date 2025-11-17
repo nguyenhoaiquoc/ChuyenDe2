@@ -101,7 +101,7 @@ export default function UserScreen() {
       }
     };
 
- 
+
     if (isFocused) {
       fetchUserAndFollows();
     }
@@ -161,13 +161,40 @@ export default function UserScreen() {
           >
             {name || "Đang tải..."}
           </Text>
-          <View style={{ flexDirection: "row", marginTop: 4 }}>
-            <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
-              Người theo dõi : {followerCount}
-            </Text>
-            <Text style={{ color: "#6b7280", fontSize: 14 }}>
-              Đang theo dõi : {followingCount}
-            </Text>
+          <View className="flex flex-row gap-3">
+            {/* Nút Người theo dõi */}
+            <TouchableOpacity
+              onPress={async () => {
+                const userId = await AsyncStorage.getItem("userId");
+                if (userId) {
+                  navigation.navigate("FollowListScreen", {
+                    userId: userId,
+                    initialTab: 'followers', // 👈 Mở tab Người theo dõi
+                  });
+                }
+              }}
+            >
+              <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
+                Người theo dõi : {followerCount}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Nút Đang theo dõi */}
+            <TouchableOpacity
+              onPress={async () => {
+                const userId = await AsyncStorage.getItem("userId");
+                if (userId) {
+                  navigation.navigate("FollowListScreen", {
+                    userId: userId,
+                    initialTab: 'following', // 👈 Mở tab Đang theo dõi
+                  });
+                }
+              }}
+            >
+              <Text style={{ color: "#6b7280", fontSize: 14 }}>
+                Đang theo dõi : {followingCount}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

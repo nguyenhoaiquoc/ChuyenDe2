@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useMemo } from "react";
 import {
     View,
     Text,
@@ -35,6 +35,7 @@ export default function NotificationScreen({ navigation }: Props) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isNavigating, setIsNavigating] = useState(false)
+    const [selectedFilter, setSelectedFilter] = useState<string | null>(null);  
 
     //  USEEFFECT ĐỂ GỌI API (Code của ông)
     useEffect(() => {

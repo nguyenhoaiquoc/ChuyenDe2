@@ -8,6 +8,7 @@ import {
 
   ActivityIndicator,
   useWindowDimensions,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp, useIsFocused } from '@react-navigation/native';

@@ -101,6 +101,7 @@ export default function App() {
         <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
         <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
         <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+        <Stack.Screen name="FollowListScreen" component={FollowListScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

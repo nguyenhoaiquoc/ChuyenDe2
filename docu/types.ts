@@ -13,6 +13,10 @@ export type RootStackParamList = {
   OTPVerifyScreen: { email: string };
   ProductDetail: { product?: Product; isApproved?: boolean } | undefined;
   ManagePostsScreen: undefined;
+  FollowListScreen: {
+    userId: number | string; 
+    initialTab: 'followers' | 'following'; 
+  };
   ChooseCategoryScreen:
     | {
         group?: GroupType;
@@ -347,11 +351,6 @@ export type Notification = {
     id: number;
     name: string;
     // Thêm các trường khác của Product nếu ông cần
-  };
-
-  FollowListScreen: {
-    userId: number | string; // ID của người mà mình xem
-    initialTab: 'followers' | 'following'; // Bấm vào nút nào thì mở tab đó
   };
 };
 
