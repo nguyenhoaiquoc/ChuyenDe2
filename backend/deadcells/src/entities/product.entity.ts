@@ -291,6 +291,4 @@ export class Product {
 
   @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
-
-
 }
