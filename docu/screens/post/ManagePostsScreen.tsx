@@ -9,6 +9,9 @@ import {
   FlatList,
   ActivityIndicator,
   Alert,
+  Pressable,
+  Modal,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -19,11 +22,63 @@ import { RootStackParamList, Product } from "../../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { path } from "../../config";
-import ProductCard from "../../components/ProductCard";
 import "../../global.css";
 import { useNotification } from "../Notification/NotificationContext";
 
-const statusTabs = ["Đã duyệt", "Chờ duyệt", "Từ chối", "Đã ẩn"];
+const statusTabs = [
+  "Đã duyệt",
+  "Chờ duyệt",
+  "Từ chối",
+  "Đã ẩn",
+  "Hết hạn",
+  "Đã bán",
+];
+
+// Danh sách lý do gia hạn
+const EXTENSION_REASONS = [
+  "Sản phẩm chưa bán được",
+  "Sản phẩm đã giảm giá",
+  "Muốn làm mới tin đăng",
+  "Lý do khác",
+];
+
+// Hàm tính toán hạn dùng
+const getExpiryMessage = (
+  product: Product
+): { text: string; color: string } => {
+  const statusId = product.productStatus?.id;
+  if (statusId === 1) return { text: "Đang chờ duyệt", color: "text-blue-600" };
+  if (statusId === 3) return { text: "Đã bị từ chối", color: "text-red-600" };
+  if (statusId === 4) return { text: "Đang ẩn", color: "text-gray-600" };
+  if (statusId === 5) return { text: "Đã hết hạn", color: "text-red-600" };
+if (statusId === 6) return { text: "Đã bán", color: "text-green-600" };
+  // Logic mới: Ưu tiên 'expires_at'
+  if (statusId === 2 && product.expires_at) {
+    const expiryDate = new Date(product.expires_at);
+    const now = new Date();
+    const msRemaining = expiryDate.getTime() - now.getTime();
+    const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+
+    if (daysRemaining > 1) {
+      return {
+        text: `Hết hạn sau ${daysRemaining} ngày`,
+        color: "text-green-600",
+      };
+    } else if (daysRemaining === 1) {
+      return { text: "Hết hạn trong hôm nay", color: "text-yellow-600" };
+    } else if (msRemaining > 0) {
+      return { text: "Hết hạn trong hôm nay", color: "text-yellow-600" };
+    }
+  }
+
+  // Fallback (nếu expires_at = null hoặc đã qua)
+  if (statusId === 2) {
+    return { text: "Đã duyệt", color: "text-green-600" };
+  }
+
+  // Fallback cuối cùng
+  return { text: "Không rõ trạng thái", color: "text-gray-500" };
+};
 
 const timeSince = (date: Date): string => {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -149,6 +204,7 @@ const mapProductData = (item: any): Product => {
     year: item.year || null,
     created_at: item.created_at || new Date().toISOString(),
     updated_at: item.updated_at || undefined,
+    expires_at: item.expires_at || null,
     sub_category_id: item.sub_category_id || null,
     status_id: item.status_id?.toString() || undefined,
     visibility_type: item.visibility_type?.toString() || undefined,
@@ -175,6 +231,12 @@ export default function ManagePostsScreen({
   const [userName, setUserName] = useState<string | null>(null);
   const { unreadCount, setUnreadCount } = useNotification();
   const [searchText, setSearchText] = useState("");
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const [reasonModalVisible, setReasonModalVisible] = useState(false);
+
   const fetchMyPosts = async (currentUserId: string) => {
     setIsLoading(true);
     try {
@@ -215,6 +277,8 @@ export default function ManagePostsScreen({
         return p.productStatus?.id === 1 || p.productStatus == null;
       if (selectedTabName === "Từ chối") return p.productStatus?.id === 3;
       if (selectedTabName === "Đã ẩn") return p.productStatus?.id === 4;
+      if (selectedTabName === "Hết hạn") return p.productStatus?.id === 5;
+      if (selectedTabName === "Đã bán") return p.productStatus?.id === 6;
       return false;
     }); // Bước 2: Lọc tiếp theo tên (từ kết quả Bước 1)
 
@@ -239,48 +303,183 @@ export default function ManagePostsScreen({
     navigation.navigate("NotificationScreen");
   };
 
-  // Đây là code SỬA LẠI
-  const softDeleteProduct = async (productId: string) => {
+  /** Mở menu 3 chấm */
+  const handleOpenMenu = (product: Product, pageY: number) => {
+    setSelectedProduct(product); // Lưu cả sản phẩm
+    setMenuPosition({ top: pageY, right: 50 });
+    setIsMenuVisible(true);
+  }; /** Đóng menu 3 chấm */
+
+  const handleCloseMenu = () => {
+    setIsMenuVisible(false);
+    setSelectedProduct(null);
+  };
+
+  /** Xử lý Chỉnh sửa */
+  const handleEdit = () => {
+    // 💡 SỬA: Điều hướng sang màn hình Edit
+    if (!selectedProduct) return;
+    navigation.navigate("EditProductScreen", { product: selectedProduct });
+    handleCloseMenu();
+  };
+
+  /** Xử lý Ẩn tin (chuyển status 2 -> 4) */
+  const handleHideProduct = async () => {
+    if (!selectedProduct || !userId) return;
+    const productId = selectedProduct.id;
+    handleCloseMenu();
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập lại");
+      await axios.patch(
+        `${path}/products/${productId}/hide`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert("Đã ẩn", "Sản phẩm đã được ẩn đi.");
+      fetchMyPosts(userId);
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể ẩn tin, vui lòng thử lại.");
+    }
+  };
+
+  /** Xử lý Đánh dấu đã bán (chuyển status 2 -> 6) */
+  const handleMarkAsSold = async () => {
+    if (!selectedProduct || !userId) return;
+    const productId = selectedProduct.id;
+    handleCloseMenu(); // Đóng menu
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập lại");
+
+      await axios.patch(
+        `${path}/products/${productId}/sold`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      Alert.alert("Thành công", "Sản phẩm đã được đánh dấu 'Đã bán'.");
+      fetchMyPosts(userId); // Tải lại toàn bộ danh sách
+    } catch (err: any) {
+      console.error(
+        "Lỗi khi đánh dấu đã bán:",
+        err.response?.data || err.message
+      );
+      Alert.alert("Lỗi", "Không thể đánh dấu đã bán, vui lòng thử lại.");
+    }
+  };
+
+  /** Xử lý Hiện lại tin (Status 4 -> 2) */
+  const handleUnhideProduct = async () => {
+    if (!selectedProduct || !userId) return;
+    const productId = selectedProduct.id;
+    handleCloseMenu();
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập lại");
+      await axios.patch(
+        `${path}/products/${productId}/unhide`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert("Đã hiển thị lại", "Sản phẩm của bạn đã xuất hiện trở lại.");
+      fetchMyPosts(userId); // Tải lại
+
+      // 👇 SỬA: Chuyển sang tab "Đã duyệt" (ID 0)
+      setActiveStatus(0);
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể hiện lại tin, vui lòng thử lại.");
+    }
+  };
+
+  /** Mở Modal chọn lý do Gia hạn */
+  const handleOpenReasonModal = () => {
+    if (!selectedProduct) return;
+    setIsMenuVisible(false); // Đóng menu 3 chấm
+    setReasonModalVisible(true); // Mở modal lý do
+    // selectedProduct vẫn được giữ
+  };
+
+  /** Gửi yêu cầu gia hạn (Status 5) */
+  const handleSendExtensionRequest = async (reason: string) => {
+    if (!selectedProduct || !userId) return;
+    const productId = selectedProduct.id;
+    setReasonModalVisible(false); // Đóng modal lý do
+
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập lại"); // 1. Gửi API và NHẬN LẠI SẢN PHẨM ĐÃ CẬP NHẬT (Status 1)
+
+      const response = await axios.post(
+        `${path}/products/${productId}/extension`,
+        { reason: reason }, // Gửi lý do
+        { headers: { Authorization: `Bearer ${token}` } }
+      ); // 2. Dùng hàm mapProductData để chuẩn hóa response
+
+      const updatedProduct = mapProductData(response.data); // 3. Cập nhật State (thay thế tin cũ bằng tin đã cập nhật)
+
+      // Dòng này sẽ khiến tin biến mất khỏi tab "Hết hạn"
+      setAllPosts((prevPosts) =>
+        prevPosts.map(
+          (p) => (p.id === productId ? updatedProduct : p) // 👈 Thay thế bằng sản phẩm thật
+        )
+      ); // 4. Thông báo (Không tự chuyển tab)
+
+      Alert.alert("Đã gửi", "Yêu cầu đã được chuyển vào tab 'Chờ duyệt'.");
+      setSelectedProduct(null); // Đóng menu
+    } catch (err: any) {
+      Alert.alert("Lỗi", "Không thể gửi yêu cầu, vui lòng thử lại.");
+      console.error("Lỗi khi yêu cầu gia hạn:", err.message);
+    }
+  };
+  /** HÀM SỬA LẠI: Xử lý Xóa Vĩnh Viễn */
+
+  const handleHardDeleteConfirm = () => {
+    if (!selectedProduct) return;
+    const productName = selectedProduct.name;
+    const productId = selectedProduct.id;
+    handleCloseMenu(); // Đóng menu 3 chấm
+
+    Alert.alert(
+      "⚠️ Xóa vĩnh viễn ⚠️",
+      `Bạn có chắc muốn XÓA VĨNH VIỄN tin "${productName}" không? Hành động này không thể hoàn tác.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Xóa vĩnh viễn",
+          style: "destructive",
+          onPress: () => hardDeleteProduct(productId), // Gọi hàm thực thi
+        },
+      ]
+    );
+  };
+
+  const hardDeleteProduct = async (productId: string) => {
     if (!userId) {
-      Alert.alert("Lỗi", "Không thể xác thực người dùng, vui lòng thử lại.");
+      Alert.alert("Lỗi", "Không thể xác thực người dùng.");
       return;
     }
 
     try {
-      // 1. Lấy token từ AsyncStorage
-      const token = await AsyncStorage.getItem("token"); // (Giả sử bạn lưu token với key là "token")
-      console.log("Token lấy từ Storage:", token);
+      const token = await AsyncStorage.getItem("token");
       if (!token) {
-        Alert.alert("Lỗi", "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại."); // Cân nhắc điều hướng về màn hình Đăng nhập
-        // navigation.navigate("LoginScreen");
+        Alert.alert("Lỗi", "Phiên đăng nhập hết hạn.");
         return;
-      } // 2. Gửi request VỚI header Authorization
+      } // SỬ DỤNG METHOD DELETE VÀ ĐÚNG ENDPOINT
+      await axios.delete(
+        `${path}/products/${productId}`, // Endpoint của hardDelete
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      await axios.post(
-        `${path}/products/${productId}/soft-delete`,
-        { user_id: String(userId) }, // Body (dữ liệu)
-        {
-          headers: {
-            // Config (chứa headers)
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      ); // Cập nhật UI
-
+      Alert.alert("Đã xóa", "Sản phẩm đã được xóa vĩnh viễn.");
       setAllPosts((prev) => prev.filter((p) => p.id !== productId));
       setFilteredPosts((prev) => prev.filter((p) => p.id !== productId));
-
-      Alert.alert("Đã ẩn", "Sản phẩm đã được chuyển vào thùng rác.");
     } catch (err: any) {
-      console.error("Lỗi khi xóa mềm:", err.message); // Bắt lỗi 401 cụ thể
-      if (err.response && err.response.status === 401) {
-        Alert.alert(
-          "Lỗi",
-          "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại."
-        );
-      } else {
-        Alert.alert("Lỗi", "Không thể thực hiện. Vui lòng thử lại.");
-      }
+      console.error("Lỗi khi xóa vĩnh viễn:", err.message);
+      Alert.alert("Lỗi", "Không thể xóa. Vui lòng thử lại.");
     }
   };
 
@@ -328,6 +527,7 @@ export default function ManagePostsScreen({
                 </View>
               </View>
             </View>
+
             {/* Status Tabs */}
             <ScrollView
               horizontal
@@ -352,8 +552,9 @@ export default function ManagePostsScreen({
                 </TouchableOpacity>
               ))}
             </ScrollView>
+
+            {/* Search Input */}
             <View className="flex-row items-center bg-white rounded-lg px-4 w-full mx-2 h-12 mb-4">
-              {/* Ô tìm kiếm */}
               <View className="flex-row items-center flex-1 border border-gray-200 rounded-md h-full px-3">
                 <Feather name="search" size={20} color="#9ca3af" />
                 <TextInput
@@ -364,20 +565,9 @@ export default function ManagePostsScreen({
                   onChangeText={setSearchText}
                 />
               </View>
-
-              {/* Nút thùng rác */}
-              <TouchableOpacity
-                onPress={() => navigation.navigate("TrashScreen")}
-                className="flex-row items-center bg-red-50 px-3 py-2 rounded-md border border-red-200 ml-3 h-full"
-              >
-                <Feather name="trash-2" size={18} color="#dc2626" />
-                <Text className="text-red-600 font-medium ml-1 text-sm">
-                  Thùng rác
-                </Text>
-              </TouchableOpacity>
             </View>
 
-            {/* Loading*/}
+            {/* Loading */}
             {isLoading && (
               <ActivityIndicator
                 size="large"
@@ -390,6 +580,16 @@ export default function ManagePostsScreen({
         data={filteredPosts}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={async () => {
+              if (userId) await fetchMyPosts(userId);
+            }}
+            colors={["#6366f1"]} // màu của spinner (tím indigo)
+            tintColor="#6366f1"
+          />
+        }
         ListEmptyComponent={
           isLoading ? null : (
             <View className="items-center mt-10">
@@ -410,75 +610,191 @@ export default function ManagePostsScreen({
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <View className="flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-sm border border-gray-100">
-            <TouchableOpacity
-              className="flex-1 flex-row items-center"
-              onPress={() =>
-                navigation.navigate("ProductDetail", {
-                  product: item,
-                })
-              }
-            >
-              {/* Ảnh sản phẩm */}
-              <Image
-                source={{ uri: item.image }}
-                className="w-20 h-20 rounded-lg"
-                resizeMode="cover"
-              />
-
-              {/* Thông tin sản phẩm */}
-              <View className="flex-1 ml-3">
-                <Text
-                  className="text-base font-semibold text-gray-800 mb-1"
-                  numberOfLines={1}
-                >
-                  {item.name}
-                </Text>
-                <Text className="text-sm font-medium text-indigo-600">
-                  {item.price}
-                </Text>
-              </View>
-            </TouchableOpacity>
-            {/* Nút chỉnh sửa và xóa */}
-            <View className="flex-col space-y-2">
-              {/* Nút chỉnh sửa */}
+        renderItem={({ item }) => {
+          const expiryInfo = getExpiryMessage(item);
+          return (
+            <View className="flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-sm border border-gray-100">
               <TouchableOpacity
-                // onPress={() => navigation.navigate("EditProductScreen", { product: item })}
-                className="flex-row items-center bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg"
+                className="flex-1 flex-row items-center"
+                onPress={() =>
+                  navigation.navigate("ProductDetail", {
+                    product: item,
+                  })
+                }
               >
-                <Feather name="edit-2" size={18} color="#2563eb" />
-                <Text className="text-blue-600 font-medium ml-1">
-                  Chỉnh sửa
-                </Text>
+                <Image
+                  source={{ uri: item.image }}
+                  className="w-20 h-20 rounded-lg"
+                  resizeMode="cover"
+                />
+                <View className="flex-1 ml-3">
+                  <Text
+                    className="text-base font-semibold text-gray-800 mb-1"
+                    numberOfLines={1}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text className="text-sm font-medium text-indigo-600 mb-1">
+                    {item.price}
+                  </Text>
+                  <Text className={`text-xs font-medium ${expiryInfo.color}`}>
+                    {expiryInfo.text}
+                  </Text>
+                </View>
               </TouchableOpacity>
 
-              {/* Nút xóa */}
+              {/* More options */}
               <TouchableOpacity
-                onPress={() =>
-                  Alert.alert(
-                    "Xác nhận xóa",
-                    `Bạn có chắc muốn chuyển "${item.name}" vào thùng rác không?`,
-                    [
-                      { text: "Hủy", style: "cancel" },
-                      {
-                        text: "Xóa",
-                        style: "destructive",
-                        onPress: () => softDeleteProduct(item.id),
-                      },
-                    ]
-                  )
+                onPress={(event) =>
+                  handleOpenMenu(item, event.nativeEvent.pageY)
                 }
-                className="flex-row items-center bg-red-50 border border-red-200 px-3 py-2 rounded-lg"
+                className="p-2"
               >
-                <Feather name="trash-2" size={18} color="#dc2626" />
-                <Text className="text-red-600 font-medium ml-1">Xóa</Text>
+                <Feather name="more-vertical" size={24} color="#6b7280" />
               </TouchableOpacity>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
+
       <Menu />
+
+      {/* Options Menu Modal */}
+      <Modal
+        transparent={true}
+        visible={isMenuVisible}
+        animationType="fade"
+        onRequestClose={handleCloseMenu}
+      >
+        <Pressable className="flex-1" onPress={handleCloseMenu}>
+          <View
+            style={{
+              position: "absolute",
+              top: menuPosition.top,
+              right: menuPosition.right,
+            }}
+            className="bg-white rounded-lg shadow-xl border border-gray-100 w-44"
+            onStartShouldSetResponder={() => true}
+          >
+            {selectedProduct && (
+              <>
+                {/* Edit */}
+                {(selectedProduct.productStatus?.id === 1 ||
+                  selectedProduct.productStatus?.id === 2 ||
+                  selectedProduct.productStatus?.id === 3) && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleEdit}
+                  >
+                    <Feather name="edit-2" size={18} color="#4b5563" />
+                    <Text className="ml-2 text-base text-gray-700">
+                      Chỉnh sửa
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Hide */}
+                {selectedProduct.productStatus?.id === 2 && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleHideProduct}
+                  >
+                    <Feather name="eye-off" size={18} color="#4b5563" />
+                    <Text className="ml-2 text-base text-gray-700">Ẩn tin</Text>
+                  </TouchableOpacity>
+                )}
+                {/* Mark as Sold */}
+                {selectedProduct.productStatus?.id === 2 && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleMarkAsSold}
+                  >
+                    <Feather name="check-circle" size={18} color="#16a34a" />
+                    <Text className="ml-2 text-base text-green-700">
+                      Đánh dấu đã bán
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {/* Unhide */}
+                {selectedProduct.productStatus?.id === 4 && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleUnhideProduct}
+                  >
+                    <Feather name="eye" size={18} color="#4b5563" />
+                    <Text className="ml-2 text-base text-gray-700">
+                      Hiện lại
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Extend */}
+                {selectedProduct.productStatus?.id === 5 && (
+                  <TouchableOpacity
+                    className="flex-row items-center p-3"
+                    onPress={handleOpenReasonModal}
+                  >
+                    <Feather name="clock" size={18} color="#4b5563" />
+                    <Text className="ml-2 text-base text-gray-700">
+                      Gia hạn
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <View className="h-px bg-gray-100" />
+                {/* Delete */}
+                <TouchableOpacity
+                  className="flex-row items-center p-3"
+                  onPress={handleHardDeleteConfirm}
+                >
+                  <Feather name="trash-2" size={18} color="#ef4444" />
+                  <Text className="ml-2 text-base text-red-600">
+                    Xóa vĩnh viễn
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Extension Reason Modal */}
+      <Modal
+        transparent={true}
+        visible={reasonModalVisible}
+        animationType="fade"
+        onRequestClose={() => setReasonModalVisible(false)}
+      >
+        <Pressable
+          className="flex-1 justify-center items-center bg-black/50"
+          onPress={() => setReasonModalVisible(false)}
+        >
+          <Pressable
+            className="w-4/5 bg-white rounded-lg p-5 shadow-lg max-w-sm"
+            onStartShouldSetResponder={() => true}
+          >
+            <Text className="text-lg font-semibold text-gray-800 mb-4">
+              Chọn lý do gia hạn
+            </Text>
+
+            {EXTENSION_REASONS.map((reason, index) => (
+              <TouchableOpacity
+                key={index}
+                className="py-3 border-b border-gray-100"
+                onPress={() => handleSendExtensionRequest(reason)}
+              >
+                <Text className="text-base text-gray-700">{reason}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              className="mt-4 bg-gray-100 py-3 rounded-lg items-center"
+              onPress={() => setReasonModalVisible(false)}
+            >
+              <Text className="text-base font-medium text-gray-800">Hủy</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

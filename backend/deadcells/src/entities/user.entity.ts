@@ -38,7 +38,6 @@ export class User {
   @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;
 
-
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
 
@@ -83,22 +82,6 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
-  // ---- Thêm các trường xác thực sinh viên ----
-  // @Column({ nullable: true })
-  // studentId: string;
-
-  // @Column({ nullable: true })
-  // studentName: string;
-
-  // @Column({ nullable: true })
-  // faculty: string;
-
-  // @Column({ nullable: true })
-  // course: string;
-  // @Column({ type: 'boolean', default: false, name: 'is_verified_student' })
-  // isVerifiedStudent: boolean;
-  // @Column({ nullable: true })
-  // schoolName: string;
 
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
@@ -138,4 +121,5 @@ export class User {
 
   @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt?: Date | null;
+
 }

@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { CommentService } from './comment.service';
 
 @Controller('comments')
@@ -12,9 +21,39 @@ export class CommentController {
 
   @Post()
   async createComment(
-    @Body() body: { content: string; user_id: string; product_id: string },
+    @Body()
+    body: {
+      content: string;
+      user_id: string;
+      product_id: string;
+      parent_id?: string; // 👈 Thêm
+    },
   ) {
-    const { content, user_id, product_id } = body;
-    return this.commentService.createComment(user_id, product_id, content);
+    const { content, user_id, product_id, parent_id } = body;
+    return this.commentService.createComment(
+      user_id,
+      product_id,
+      content,
+      parent_id,
+    );
+  }
+
+  //  Xóa bình luận
+  @Delete(':id')
+  async deleteComment(
+    @Param('id') id: string,
+    @Query('user_id') userId: string,
+  ) {
+    return this.commentService.deleteComment(id, userId);
+  }
+
+  // Cập nhật bình luận
+  @Patch(':id')
+  async updateComment(
+    @Param('id') id: string,
+    @Body() body: { user_id: string; content: string },
+  ) {
+    const { user_id, content } = body;
+    return this.commentService.updateComment(id, user_id, content);
   }
 }

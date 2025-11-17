@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
@@ -9,10 +9,17 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
   // Cập nhật thông tin user + 1 ảnh avatar
-  async updateUser(id: number, data: Partial<User>, file?: Express.Multer.File) {
+  async updateUser(
+    id: number,
+    data: Partial<User>,
+    file?: Express.Multer.File,
+  ) {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new Error('User không tồn tại');
 
@@ -42,11 +49,38 @@ export class UsersService {
     return await this.userRepo.find();
   }
 
-  
- async findOne(id: number): Promise<User> {
-  const user = await this.userRepo.findOne({ where: { id } });
-  if (!user) throw new Error('User không tồn tại');
-  return user;
-}
+  async findOne(id: number): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new Error('User không tồn tại');
+    return user;
+  }
 
+  async searchUsersForInvite(currentUserId: number | string, search?: string) {
+    const userId = Number(currentUserId);
+    if (isNaN(userId)) {
+      throw new BadRequestException('User ID không hợp lệ');
+    }
+
+    const query = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id != :currentUserId', { currentUserId: userId })
+      .andWhere('user.deleted_at IS NULL')
+      .andWhere('user.role_id = :roleId', { roleId: 2 }); // chỉ lấy user
+
+    if (search) {
+      query.andWhere('unaccent(user.fullName) ILIKE unaccent(:search)', {
+        search: `%${search}%`,
+      });
+    }
+
+    const users = await query
+      .select(['user.id', 'user.fullName', 'user.image'])
+      .getMany();
+
+    return users.map((u) => ({
+      id: u.id,
+      name: u.fullName,
+      avatar: u.image,
+    }));
+  }
 }

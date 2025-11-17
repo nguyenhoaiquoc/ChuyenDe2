@@ -10,11 +10,12 @@ import { MailService } from 'src/mail/mail.service';
 import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { RoleSeedService } from './seed/role.seed.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([User, Role, Status, OtpVerification]),
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),
 
     // ✅ JwtModule toàn cục
     JwtModule.registerAsync({

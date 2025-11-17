@@ -6,6 +6,7 @@ import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import "../../global.css";
+import React from "react";
 
 type Props = {
   navigation: HomeAdminScreenNavigationProp;
@@ -97,7 +98,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Trang home"
             subtitle="Trang user"
             color="bg-purple-600"
-            onPress={() => navigation.navigate("Home")} // Đổi thành navigation.navigate("AdminDashboardScreen")
+            onPress={() => navigation.navigate("Home")}
           />
           {/* 1. Dashboard */}
           <AdminButton
@@ -117,6 +118,15 @@ export default function HomeAdminScreen({ navigation }: Props) {
             onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageUsersScreen")
           />
 
+          {/* Quản lý danh mục */}
+          <AdminButton
+            icon="list-outline"
+            title="Quản lý Danh mục"
+            subtitle="Danh mục cha - con, thêm/sửa/xóa"
+            color="bg-teal-600"
+            onPress={() => navigation.navigate("ManageCategoriesScreen")}
+          />
+
           {/* 3. Quản lý báo cáo */}
           <AdminButton
             icon="flag-outline"
@@ -130,16 +140,23 @@ export default function HomeAdminScreen({ navigation }: Props) {
             Quản lý nội dung
           </Text>
 
-          {/* 4. Duyệt tin sản phẩm (Cũ) */}
+          {/* 4. Duyệt tin Công Khai (Đã đổi tên) */}
           <AdminButton
             icon="checkmark-done-circle-outline"
-            title="Duyệt tin đăng Sản phẩm"
-            subtitle="Duyệt các sản phẩm đăng bán"
+            title="Duyệt tin Công Khai"
+            subtitle="Duyệt các tin đăng công khai"
             color="bg-green-600"
-            onPress={() => navigation.navigate("ManageProductsScreen")}
+            onPress={() => navigation.navigate("ManageProductsUserScreen")}
           />
 
-          {/* 5. Quản lý bài viết cộng đồng */}
+          {/* 5. Duyệt tin Nhóm (MỚI) */}
+          <AdminButton
+            icon="file-tray-stacked-outline"
+            title="Duyệt tin trong Nhóm"
+            subtitle="Duyệt các tin đăng trong nhóm"
+            color="bg-blue-600"
+            onPress={() => navigation.navigate("ManageGroupPostsScreen")}
+          />
         </View>
 
         {/* Nút đăng xuất */}

@@ -212,7 +212,9 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   category_id: number | null;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, (category) => category.products, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 

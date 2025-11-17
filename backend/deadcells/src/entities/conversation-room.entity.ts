@@ -20,14 +20,14 @@ export class ConversationRoom {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint' , nullable: true})
   seller_id: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'seller_id' })
   seller: User;
 
-  @Column({ type: 'bigint' })
+  @Column({ type: 'bigint', nullable: true })
   buyer_id: number;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })

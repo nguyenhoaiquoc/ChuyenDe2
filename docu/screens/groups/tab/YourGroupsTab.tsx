@@ -45,7 +45,7 @@ export default function YourGroupsTab({
       });
       setGroups(res.data);
     } catch (err) {
-      console.log("❌ Lỗi khi lấy nhóm đã tham gia:", err);
+      console.log("❌ Lỗi khi lấy nhóm private:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -108,14 +108,14 @@ export default function YourGroupsTab({
               key={g.id}
               className="flex-row items-center p-4 my-4 bg-white rounded-xl border-gray-500 shadow-sm"
               onPress={() =>
-                navigation.navigate("GroupDetailScreen", { group: g })
+                navigation.navigate("GroupDetailScreen", { groupId: g.id })
               }
             >
               <Image
                 source={
                   g.image
                     ? { uri: g.image }
-                    : require("../../../assets/khi.png")
+                    : require("../../../assets/defaultgroup.png")
                 }
                 className="w-16 h-16 rounded-full"
               />
@@ -123,9 +123,7 @@ export default function YourGroupsTab({
                 <Text className="font-bold text-lg text-gray-800">
                   {g.name}
                 </Text>
-                <Text className="text-gray-600 text-sm mt-1">
-                  {g.memberCount} thành viên
-                </Text>
+             
                 <Text className="text-gray-600 text-sm mt-1">
                   {g.posts > 0 ? `${g.posts} bài viết` : "Chưa có bài viết"}
                 </Text>

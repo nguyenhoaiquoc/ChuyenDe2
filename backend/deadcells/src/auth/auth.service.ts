@@ -14,17 +14,24 @@ import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { MailService } from 'src/mail/mail.service';
 import { v4 as uuidv4 } from 'uuid';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(OtpVerification)
-    private readonly otpRepository: Repository<OtpVerification>,
-    private readonly jwtService: JwtService,
-    private readonly mailService: MailService,
-  ) {}
+constructor(
+  @InjectRepository(User)
+  private readonly userRepository: Repository<User>,
+
+  @InjectRepository(GroupMember)
+  private readonly groupMemberRepo: Repository<GroupMember>,
+
+  @InjectRepository(OtpVerification)
+  private readonly otpRepository: Repository<OtpVerification>,
+
+  private readonly jwtService: JwtService,
+  private readonly mailService: MailService,
+) {}
+
 
   async getUsers() {
     return this.userRepository.find();
@@ -58,8 +65,16 @@ export class AuthService {
         roleId: 2, // mặc định member
         statusId: existing?.statusId ?? 1, // tuỳ hệ thống: 1 = active
       });
+
       user = await this.userRepository.save(user);
     }
+      await this.groupMemberRepo.save({
+        user_id: user.id,
+        group_id: dto.group_id,
+          group_role_id: 1,
+          pending: 3
+    })
+
 
     // 🔐 Tạo OTP xác minh: 6 chữ số, lưu HASH
     const rawOtp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
@@ -79,6 +94,8 @@ export class AuthService {
     await this.mailService.sendOTP(user.email, rawOtp);
 
     return { message: 'Đăng ký thành công. OTP đã được gửi về email' };
+
+   
   }
 
   /** ---------------- Verify Email OTP ---------------- */
