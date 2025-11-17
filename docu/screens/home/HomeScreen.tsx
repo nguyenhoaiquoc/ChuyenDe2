@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState, useCallback } from "react"; 
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -55,9 +55,9 @@ export default function HomeScreen({ navigation }: Props) {
           id: item.id.toString(),
           name: item.name,
           image: item.image
-            ? item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : `${path}/uploads/categories/${item.image}`
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${path}${item.image.startsWith("/") ? "" : "/uploads/categories/"}${item.image}`
             : `${path}/uploads/categories/default.png`,
         }));
         setCategories(mapped);
@@ -467,7 +467,7 @@ export default function HomeScreen({ navigation }: Props) {
               className="w-20 items-center mr-4 bg-white rounded-lg p-2 shadow-sm"
               onPress={() => {
                 navigation.navigate("CategoryIndex", {
-                  categoryId: item.id.toString(), 
+                  categoryId: item.id.toString(),
                   categoryName: item.name,
                 });
               }}
@@ -490,7 +490,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters} 
+            data={filters}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}

@@ -1,13 +1,13 @@
-// screens/admin/ManageCategoriesScreen.tsx
 import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   TextInput,
   Alert,
   ActivityIndicator,
+  Image,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +15,9 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ManageCategoriesScreenNavigationProp } from "../../../types";
 import { path } from "../../../config";
+import CategoryPickerModal from "../../../components/CategoryPickerModal";
+import DraggableFlatList from "react-native-draggable-flatlist";
+import * as ImagePicker from "expo-image-picker"; // ← THÊM DÒNG NÀY
 
 type Props = {
   navigation: ManageCategoriesScreenNavigationProp;
@@ -23,11 +26,17 @@ type Props = {
 interface CategoryNode {
   id: string;
   name: string;
+  image_url?: string;
   parent_category_id: string | null;
-  is_active: boolean;
   order_index: number;
   children?: CategoryNode[];
-  isSub?: boolean; // để phân biệt cha/con
+  isSub?: boolean;
+}
+
+// THÊM TYPE CHO ẢNH ĐÃ CHỌN
+interface SelectedImage {
+  uri: string;
+  mimeType?: string;
 }
 
 export default function ManageCategoriesScreen({ navigation }: Props) {
@@ -36,14 +45,42 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
   const [searchText, setSearchText] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingCat, setEditingCat] = useState<CategoryNode | null>(null);
-
-  // Form state
   const [formName, setFormName] = useState("");
   const [formParentId, setFormParentId] = useState<string | null>(null);
+  const [showPicker, setShowPicker] = useState(false);
+  const [tempParentId, setTempParentId] = useState<string | null>(null);
+
+  // STATE MỚI CHO ẢNH
+  const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
+    null
+  );
 
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  // HÀM CHỌN ẢNH
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Cần quyền", "Vui lòng cấp quyền truy cập thư viện ảnh");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedImage({
+        uri: result.assets[0].uri,
+        mimeType: result.assets[0].mimeType || "image/jpeg",
+      });
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -53,15 +90,20 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const apiData = response.data; // [{ id, name, children: [SubCategory] }]
-      const tree = apiData.map((cat: any) => ({
-        id: cat.id,
+      const tree = response.data.map((cat: any) => ({
+        id: cat.id.toString(),
         name: cat.name,
+        image_url: cat.image
+          ? cat.image.startsWith("http")
+            ? cat.image
+            : `${path}${cat.image.startsWith("/") ? "" : "/uploads/categories/"}${cat.image}`
+          : null,
         parent_category_id: null,
-        is_active: true,
+        order_index: cat.order_index || 0,
         children: (cat.children || []).map((sub: any) => ({
           ...sub,
-          parent_category_id: cat.id,
+          id: sub.id.toString(),
+          parent_category_id: cat.id.toString(),
           isSub: true,
         })),
       }));
@@ -77,89 +119,16 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
     }
   };
 
-  // Chuyển danh sách phẳng → cây
-  const buildCategoryTree = (list: CategoryNode[]): CategoryNode[] => {
-    const map = new Map<string, CategoryNode>();
-    const roots: CategoryNode[] = [];
-
-    list.forEach((cat) => {
-      map.set(cat.id, { ...cat, children: [] });
-    });
-
-    list.forEach((cat) => {
-      if (cat.parent_category_id && map.has(cat.parent_category_id)) {
-        map.get(cat.parent_category_id)!.children!.push(map.get(cat.id)!);
-      } else {
-        roots.push(map.get(cat.id)!);
-      }
-    });
-
-    // Sắp xếp con
-    roots.forEach(sortChildren);
-    return roots;
-  };
-
-  const sortChildren = (node: CategoryNode) => {
-    if (node.children) {
-      node.children.sort((a, b) => a.order_index - b.order_index);
-      node.children.forEach(sortChildren);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!formName.trim()) return Alert.alert("Lỗi", "Nhập tên danh mục");
-
-    try {
-      const token = await AsyncStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
-
-      if (editingCat) {
-        // Sửa: chỉ sửa được tên
-        if (editingCat.isSub) {
-          await axios.put(
-            `${path}/sub-categories/${editingCat.id}`,
-            { name: formName },
-            { headers }
-          );
-        } else {
-          await axios.put(
-            `${path}/categories/${editingCat.id}`,
-            { name: formName },
-            { headers }
-          );
-        }
-      } else {
-        // Thêm mới
-        if (formParentId) {
-          // Thêm danh mục con
-          await axios.post(
-            `${path}/sub-categories`,
-            {
-              name: formName,
-              parent_category_id: formParentId,
-              source_table: "categories",
-            },
-            { headers }
-          );
-        } else {
-          // Thêm danh mục cha
-          await axios.post(
-            `${path}/categories`,
-            { name: formName },
-            { headers }
-          );
-        }
-      }
-
-      resetForm();
-      fetchCategories();
-    } catch (err: any) {
-      Alert.alert("Lỗi", err.response?.data?.message || "Lưu thất bại");
-    }
-  };
-
   const handleDelete = (id: string | number, isSub: boolean) => {
-    Alert.alert("Xác nhận", "Xóa danh mục này?", [
+    const cat = categories.find((c) => c.id === id.toString());
+    const hasChildren = cat?.children && cat.children.length > 0;
+
+    let message = "Xóa danh mục này?";
+    if (hasChildren) {
+      message = `Danh mục này có ${cat!.children!.length} danh mục con. Xóa sẽ xóa toàn bộ!`;
+    }
+
+    Alert.alert("Xác nhận", message, [
       { text: "Hủy" },
       {
         text: "Xóa",
@@ -172,7 +141,6 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
                 headers: { Authorization: `Bearer ${token}` },
               });
             } else {
-              // Xóa cha → cần xóa con trước? Hoặc backend xử lý cascade
               await axios.delete(`${path}/categories/${id}`, {
                 headers: { Authorization: `Bearer ${token}` },
               });
@@ -185,25 +153,79 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
       },
     ]);
   };
+ 
+  const handleSave = async () => {
+    if (!formName.trim()) return Alert.alert("Lỗi", "Nhập tên danh mục");
 
-  const handleToggleActive = async (id: string, current: boolean) => {
+    if (editingCat?.isSub && !formParentId) {
+      return Alert.alert("Lỗi", "Danh mục con phải có danh mục cha");
+    }
+
     try {
       const token = await AsyncStorage.getItem("token");
-      await axios.patch(
-        `/api/admin/categories/${id}/toggle`,
-        { is_active: !current },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+
+      if (editingCat) {
+        if (editingCat.isSub) {
+          await axios.put(
+            `${path}/sub-categories/${editingCat.id}`,
+            {
+              name: formName,
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } else {
+          // SỬA DANH MỤC CHA – CÓ ẢNH
+          const formData = new FormData();
+          formData.append("name", formName);
+
+          if (selectedImage) {
+            formData.append("image", {
+              uri: selectedImage.uri,
+              type: selectedImage.mimeType || "image/jpeg",
+              name: "category.jpg",
+            } as any);
+          }
+
+          await axios.put(`${path}/categories/${editingCat.id}`, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        }
+      } else {
+        if (formParentId) {
+          await axios.post(
+            `${path}/sub-categories`,
+            {
+              name: formName,
+              parent_category_id: Number(formParentId),
+              source_table: "categories",
+            },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } else {
+          await axios.post(
+            `${path}/categories`,
+            { name: formName },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        }
+      }
+
+      resetForm();
       fetchCategories();
-    } catch (err) {
-      Alert.alert("Lỗi", "Không thể cập nhật trạng thái");
+    } catch (err: any) {
+      Alert.alert("Lỗi", err.response?.data?.message || "Lưu thất bại");
     }
   };
 
   const resetForm = () => {
     setFormName("");
     setFormParentId(null);
+    setTempParentId(null);
     setEditingCat(null);
+    setSelectedImage(null); 
     setShowAddModal(false);
   };
 
@@ -211,6 +233,8 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
     setEditingCat(cat);
     setFormName(cat.name);
     setFormParentId(cat.parent_category_id);
+    setTempParentId(cat.parent_category_id);
+    setSelectedImage(null);
     setShowAddModal(true);
   };
 
@@ -224,61 +248,62 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="px-5 pt-4 pb-2 flex-row justify-between items-center">
-        <Text className="text-2xl font-bold text-indigo-700">
-          Quản lý Danh mục
+      {categories.length === 0 ? (
+        <Text className="text-center text-gray-500 mt-10">
+          Chưa có danh mục
         </Text>
-        <TouchableOpacity
-          onPress={() => {
-            setEditingCat(null);
-            setFormName("");
-            setFormParentId(null);
-            setShowAddModal(true);
-          }}
-          className="bg-indigo-600 px-4 py-2 rounded-xl flex-row items-center"
-        >
-          <Ionicons name="add" size={18} color="white" />
-          <Text className="text-white font-medium ml-1">Thêm</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Tìm kiếm */}
-      <View className="px-5 mt-3">
-        <TextInput
-          placeholder="Tìm danh mục..."
-          value={searchText}
-          onChangeText={setSearchText}
-          className="bg-white border border-gray-300 rounded-xl px-4 py-3"
-        />
-      </View>
-
-      {/* Danh sách cây */}
-      <ScrollView className="flex-1 mt-4">
-        {categories.length === 0 ? (
-          <Text className="text-center text-gray-500 mt-10">
-            Chưa có danh mục
-          </Text>
-        ) : (
-          categories.map((cat) => (
+      ) : (
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
             <CategoryTreeItem
-              key={cat.id}
-              item={cat}
+              item={item}
               level={0}
               onEdit={openEdit}
-              onDelete={(id) => handleDelete(id, false)}
-              onToggle={() => {}}
+              onDelete={handleDelete}
               searchText={searchText}
             />
-          ))
-        )}
-        <View className="h-20" />
-      </ScrollView>
+          )}
+          ListHeaderComponent={
+            <>
+              <View className="px-5 pt-4 pb-2 flex-row justify-between items-center">
+                <Text className="text-2xl font-bold text-indigo-700">
+                  Quản lý Danh mục
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingCat(null);
+                    setFormName("");
+                    setFormParentId(null);
+                    setTempParentId(null);
+                    setSelectedImage(null);
+                    setShowAddModal(true);
+                  }}
+                  className="bg-indigo-600 px-4 py-2 rounded-xl flex-row items-center"
+                >
+                  <Ionicons name="add" size={18} color="white" />
+                  <Text className="text-white font-medium ml-1">Thêm</Text>
+                </TouchableOpacity>
+              </View>
 
-      {/* Modal Thêm/Sửa */}
+              <View className="px-5 mt-3 mb-3">
+                <TextInput
+                  placeholder="Tìm danh mục..."
+                  value={searchText}
+                  onChangeText={setSearchText}
+                  className="bg-white border border-gray-300 rounded-xl px-4 py-3"
+                />
+              </View>
+            </>
+          }
+        />
+      )}
+
+      {/* MODAL THÊM/SỬA – ĐÃ CÓ CHỌN ẢNH */}
       {showAddModal && (
         <View className="absolute inset-0 bg-black/50 justify-center items-center px-5">
-          <View className="bg-white rounded-2xl p-5 w-full">
+          <View className="bg-white rounded-2xl p-5 w-full max-h-[90%]">
             <Text className="text-xl font-bold mb-4">
               {editingCat ? "Sửa danh mục" : "Thêm danh mục mới"}
             </Text>
@@ -291,21 +316,81 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
               className="border border-gray-300 rounded-lg px-3 py-2 mb-3"
             />
 
-            <Text className="text-sm text-gray-600 mb-1">Danh mục cha</Text>
-            <View className="border border-gray-300 rounded-lg mb-4">
-              <TouchableOpacity
-                onPress={() => {
-                  // Có thể mở picker chọn cha
-                  Alert.alert("Chọn cha", "Tính năng chọn cha sẽ làm sau");
-                }}
-                className="px-3 py-2 flex-row justify-between items-center"
-              >
-                <Text>{formParentId ? "Có cha" : "Không (danh mục gốc)"}</Text>
-                <Ionicons name="chevron-down" size={18} color="#666" />
-              </TouchableOpacity>
-            </View>
+            {/* CHỌN ẢNH – CHỈ HIỆN KHI SỬA DANH MỤC CHA */}
+            {editingCat && !editingCat.isSub && (
+              <>
+                <Text className="text-sm text-gray-600 mb-2">Ảnh danh mục</Text>
 
-            <View className="flex-row justify-end space-x-3">
+                {/* Preview ảnh hiện tại */}
+                {(selectedImage || editingCat.image_url) && (
+                  <Image
+                    source={{
+                      uri: selectedImage?.uri || editingCat.image_url!,
+                    }}
+                    className="w-32 h-32 rounded-xl mb-3 self-center"
+                    resizeMode="cover"
+                  />
+                )}
+
+                {/* Nút chọn ảnh */}
+                <TouchableOpacity
+                  onPress={pickImage}
+                  className="border-2 border-dashed border-indigo-500 rounded-xl p-8 items-center justify-center mb-4"
+                >
+                  <Ionicons name="camera-outline" size={40} color="#6366F1" />
+                  <Text className="text-indigo-600 mt-2 font-medium">
+                    {selectedImage ? "Đổi ảnh" : "Chọn ảnh mới"}
+                  </Text>
+                </TouchableOpacity>
+
+                {selectedImage && (
+                  <TouchableOpacity
+                    onPress={() => setSelectedImage(null)}
+                    className="self-center mb-3"
+                  >
+                    <Text className="text-red-500 text-sm">
+                      Xóa ảnh đã chọn
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
+
+            {/* Danh mục cha */}
+            {(!editingCat) && (
+              <>
+                <Text className="text-sm text-gray-600 mb-1">
+                  Danh mục cha
+                  {editingCat && (
+                    <Text className="text-red-500"> *</Text>
+                  )}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowPicker(true)}
+                  className={`border rounded-lg px-3 py-2 mb-4 flex-row justify-between items-center ${
+                    editingCat && !tempParentId
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                >
+                  <Text
+                    className={
+                      editingCat && !tempParentId ? "text-red-500" : ""
+                    }
+                  >
+                    {tempParentId
+                      ? categories.find((c) => c.id === tempParentId)?.name ||
+                        "Đang tải..."
+                      : editingCat
+                        ? "Vui lòng chọn danh mục cha"
+                        : "Không (danh mục gốc)"}
+                  </Text>
+                  <Ionicons name="chevron-down" size={18} color="#666" />
+                </TouchableOpacity>
+              </>
+            )}
+
+            <View className="flex-row justify-end space-x-3 mt-4">
               <TouchableOpacity
                 onPress={resetForm}
                 className="px-5 py-2 border border-gray-300 rounded-lg"
@@ -322,32 +407,44 @@ export default function ManageCategoriesScreen({ navigation }: Props) {
           </View>
         </View>
       )}
+
+      <CategoryPickerModal
+        visible={showPicker}
+        categories={categories}
+        selectedId={tempParentId}
+        onSelect={(id) => {
+          const selected = categories.find((c) => c.id === id);
+          if (selected?.isSub) {
+            Alert.alert("Lỗi", "Không thể chọn danh mục con làm cha");
+            return;
+          }
+          setTempParentId(id);
+          setFormParentId(id);
+          setShowPicker(false);
+        }}
+        onClose={() => setShowPicker(false)}
+      />
     </SafeAreaView>
   );
 }
 
-// Component cây danh mục
+// CategoryTreeItem giữ nguyên như cũ
 const CategoryTreeItem = ({
   item,
   level,
-  allCategories,
   onEdit,
   onDelete,
-  onToggle,
   searchText,
 }: {
   item: CategoryNode;
   level: number;
-  allCategories: CategoryNode[];
   onEdit: (cat: CategoryNode) => void;
-  onDelete: (id: string) => void;
-  onToggle: (id: string, current: boolean) => void;
+  onDelete: (id: string, isSub: boolean) => void;
   searchText: string;
 }) => {
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const hasChildren = item.children && item.children.length > 0;
 
-  // Ẩn nếu không khớp tìm kiếm
   if (
     searchText &&
     !item.name.toLowerCase().includes(searchText.toLowerCase())
@@ -358,46 +455,54 @@ const CategoryTreeItem = ({
   return (
     <View>
       <View
-        className={`flex-row items-center justify-between bg-white px-4 py-3 rounded-lg mx-5 mb-2 ${
-          level > 0 ? "ml-8" : ""
-        }`}
-        style={{ marginLeft: level * 20 }}
+        className={`flex-row items-center justify-between bg-white px-4 py-4 rounded-xl mx-5 mb-3 shadow-sm ${level > 0 ? "ml-12" : ""}`}
+        style={{ marginLeft: level * 24 }}
       >
         <TouchableOpacity
           className="flex-row items-center flex-1"
           onPress={() => hasChildren && setExpanded(!expanded)}
         >
+          {!item.isSub && item.image_url ? (
+            <Image
+              source={{ uri: item.image_url }}
+              className="w-14 h-14 rounded-lg mr-4"
+              resizeMode="cover"
+            />
+          ) : !item.isSub ? (
+            <View className="w-14 h-14 bg-gray-200 rounded-lg mr-4 border-2 border-dashed border-gray-400 justify-center items-center">
+              <Ionicons name="image-outline" size={28} color="#999" />
+            </View>
+          ) : null}
+
           {hasChildren && (
             <Ionicons
               name={expanded ? "chevron-down" : "chevron-forward"}
-              size={18}
-              color="#666"
-              className="mr-1"
-            />
-          )}
-          <Text
-            className={`font-medium ${!item.is_active ? "text-gray-400" : ""}`}
-          >
-            {item.name}
-          </Text>
-          {!item.is_active && (
-            <Text className="ml-2 text-xs text-red-500">(Ẩn)</Text>
-          )}
-        </TouchableOpacity>
-
-        <View className="flex-row space-x-2">
-          <TouchableOpacity onPress={() => onToggle(item.id, item.is_active)}>
-            <Ionicons
-              name={item.is_active ? "eye" : "eye-off"}
               size={20}
               color="#666"
+              className="mr-2"
             />
-          </TouchableOpacity>
+          )}
+
+          <View className="flex-1">
+            <Text
+              className={`font-semibold text-base ${item.isSub ? "text-gray-800" : "text-indigo-700"}`}
+            >
+              {item.name}
+            </Text>
+            {hasChildren && (
+              <Text className="text-xs text-gray-500 mt-1">
+                {item.children?.length} danh mục con
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        <View className="flex-row space-x-3">
           <TouchableOpacity onPress={() => onEdit(item)}>
-            <Ionicons name="pencil" size={20} color="#4F46E5" />
+            <Ionicons name="pencil" size={22} color="#4F46E5" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(item.id)}>
-            <Ionicons name="trash" size={20} color="#EF4444" />
+          <TouchableOpacity onPress={() => onDelete(item.id, item.isSub ?? false)}>
+            <Ionicons name="trash" size={22} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
@@ -408,10 +513,8 @@ const CategoryTreeItem = ({
             key={child.id}
             item={child}
             level={level + 1}
-            allCategories={allCategories}
             onEdit={onEdit}
             onDelete={onDelete}
-            onToggle={onToggle}
             searchText={searchText}
           />
         ))}
