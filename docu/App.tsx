@@ -49,7 +49,7 @@ import EditGroupScreen from "./screens/groups/crud/EditGroupScreen";
 import InviteMembersScreen from "./screens/groups/crud/InviteMembersScreen";
 import QRInviteScreen from "./screens/groups/crud/QRInviteScreen";
 import DeepLinkHandlerScreen from "./screens/groups/crud/DeepLinkHandlerScreen";
-import React from "react";
+import React, { useEffect } from "react";
 import ManageGroupPostsScreen from "./screens/admin/ManageProductsUserScreen";
 import EditProductScreen from "./screens/products/EditProductScreen";
 import SuggestionScreen from "./screens/products/SuggestionScreen";

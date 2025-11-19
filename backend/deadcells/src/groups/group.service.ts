@@ -684,9 +684,8 @@ export class GroupService {
       group_role_id: 1,
       pending: pendingStatus,
     });
-    await this.chatService.createRoomGroup(groupId);
     await this.groupMemberRepo.save(member);
-
+    await this.chatService.createRoomGroup(groupId);
     return {
       success: true,
       message: group.isPublic

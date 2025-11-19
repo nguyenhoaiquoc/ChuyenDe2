@@ -15,6 +15,7 @@ import { MailService } from 'src/mail/mail.service';
 import { v4 as uuidv4 } from 'uuid';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { ChatService } from 'src/chat/chat.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ constructor(
 
   @InjectRepository(OtpVerification)
   private readonly otpRepository: Repository<OtpVerification>,
+    private readonly chatService: ChatService, 
 
   private readonly jwtService: JwtService,
   private readonly mailService: MailService,
@@ -74,6 +76,7 @@ constructor(
           group_role_id: 1,
           pending: 3
     })
+  await this.chatService.createRoomGroup(dto.group_id);
 
 
     // 🔐 Tạo OTP xác minh: 6 chữ số, lưu HASH

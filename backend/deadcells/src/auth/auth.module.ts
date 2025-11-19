@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,11 +11,12 @@ import { OtpVerification } from 'src/entities/otp-verification.entity';
 import { RoleSeedService } from './seed/role.seed.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),  forwardRef(() => ChatModule),
 
     // ✅ JwtModule toàn cục
     JwtModule.registerAsync({

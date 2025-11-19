@@ -465,37 +465,51 @@ async getRoomMetaData(userId: number, roomId: number) {
   }
 
   async createRoomGroup(groupId: number) {
-      const group = await this.groupRepo.findOne({where: {id: groupId}})
-      if(!group) {
-        throw new Error('Group not found');
-      }
-      if(!group.isPublic) {
-        return null
-      }
+       // check room tồn tại chưa
+  let room = await this.roomRepo.findOne({ where: { group_id: groupId } });
 
-      //2 Lấy tất cả member 
-      const members = await this.groupMembersRepo.find({where: {group_id: groupId,pending: 3}})
-      if(members.length === 0) {
-        throw new Error('Group has no members')
-      }
-
-      //3 Tạo conversation_room 
-      const room = this.roomRepo.create({
+  // nếu chưa có thì tạo 1 room
+  if (!room) {
+    room = await this.roomRepo.save(
+      this.roomRepo.create({
+        group_id: groupId,
         room_type: 'GROUP',
-        participants_count: members.length,
       })
-      const savedRoom = await this.roomRepo.save(room)
-      
-     // 4. Insert tất cả user vào conversation_participants
-    const participants = members.map((m) =>
+    );
+  }
+
+  // lấy tất cả group members đã duyệt
+  const members = await this.groupMembersRepo.find({
+    where: { group_id: groupId, pending: 3 },
+  });
+
+  // lấy participant hiện có
+  const existingParts = await this.partRepo.find({
+    where: { conversation_id: room.id },
+  });
+
+  const existingUserIds = new Set(existingParts.map(p => p.user_id));
+
+  // add những user chưa có
+  const newParticipants = members
+    .filter(m => !existingUserIds.has(m.user_id))
+    .map(m =>
       this.partRepo.create({
-        conversation_id: savedRoom.id,
+        conversation_id: room.id,
         user_id: m.user_id,
         role: 'MEMBER',
-      }),
+      })
     );
-      await this.partRepo.save(participants)
-      return savedRoom
+
+  if (newParticipants.length > 0) {
+    await this.partRepo.save(newParticipants);
+  }
+
+  // update số lượng
+  room.participants_count = members.length;
+  await this.roomRepo.save(room);
+
+  return room;
   }
   
 }

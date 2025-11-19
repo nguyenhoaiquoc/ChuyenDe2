@@ -26,6 +26,9 @@ export class ConversationRoom {
   @Column({ type: 'text', nullable: true })
   group_avatar: string | null;
 
+  @Column({ type: 'int', nullable: true })
+  group_id: number;
+
   @Column({ type: 'bigint', nullable: true })
   last_message_id: number | null;
 

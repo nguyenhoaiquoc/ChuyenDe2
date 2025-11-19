@@ -89,9 +89,6 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
-  @Column({ nullable: true })
-  hometown?: string;
-
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
