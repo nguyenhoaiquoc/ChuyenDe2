@@ -45,6 +45,9 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
 
+  @Column({ nullable: true })
+  hometown?: string;
+  
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })

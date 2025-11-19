@@ -799,6 +799,10 @@ export class GroupService {
     });
     if (!post) throw new NotFoundException('Bài viết không tồn tại');
 
+    if (!post.group_id) {
+      throw new BadRequestException('Bài viết này không thuộc nhóm nào (Không thể duyệt qua GroupService).');
+    }
+    
     const role = await this.getUserRole(post.group_id, userId);
     if (role !== 'leader') {
       throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt bài viết');

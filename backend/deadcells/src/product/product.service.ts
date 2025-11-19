@@ -426,6 +426,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -470,6 +471,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
 
       order: { created_at: 'DESC' },
@@ -508,6 +510,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
     });
@@ -547,6 +550,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
     });
@@ -822,6 +826,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -872,6 +877,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
       take: limit,
@@ -919,6 +925,7 @@ export class ProductService {
           'gender',
           'engineCapacity',
           'productStatus',
+          'group',
         ],
         order: { created_at: 'DESC' },
         take: needed,
@@ -963,6 +970,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -1040,7 +1048,7 @@ export class ProductService {
   async hardDeleteProduct(productId: number, userId: number): Promise<string> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      relations: ['user', 'images'],
+      relations: ['user', 'images', 'group'],
     });
 
     if (!product) {
@@ -1295,7 +1303,6 @@ export class ProductService {
   ): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      // Tải sẵn các relations để kiểm tra
       relations: [
         'images',
         'user',
@@ -1324,6 +1331,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -1411,8 +1419,6 @@ export class ProductService {
 
     // --- 4b. Xử lý Condition (Tùy chọn) ---
     if (data.condition_id !== undefined) {
-      // (undefined nghĩa là người dùng không gửi lên,
-      // null nghĩa là người dùng muốn 'xóa' tình trạng)
       product.condition = data.condition_id
         ? await this.conditionRepo.findOneBy({ id: data.condition_id })
         : null;
@@ -1535,6 +1541,27 @@ export class ProductService {
         : null;
     }
 
+    if (data.visibility_type !== undefined) {
+      const vis = Number(data.visibility_type);
+      product.visibility_type = vis;
+
+      if (vis === 0) {
+        // 1. Nếu chọn "Toàn trường" -> Xóa sạch quan hệ nhóm
+        product.group_id = null;
+        product.group = null;
+      } else if (vis === 1 && data.group_id) {
+        // 2. Nếu chọn "Nhóm" -> Phải tìm Group Entity và gán vào
+        const newGroupId = Number(data.group_id);
+        product.group_id = newGroupId;
+
+        // Gọi GroupService để lấy thông tin nhóm
+        const groupEntity = await this.groupService.findOneById(newGroupId);
+        if (groupEntity) {
+          product.group = groupEntity;
+        }
+      }
+    }
+
     // === 5. CHUYỂN VỀ CHỜ DUYỆT ===
     const pendingStatus = await this.productStatusService.findOne(1);
     if (!pendingStatus) {
@@ -1559,7 +1586,43 @@ export class ProductService {
       );
     }
 
-    return updatedProduct;
+    const fullProduct = await this.productRepo.findOne({
+      where: { id: updatedProduct.id },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+        'group',
+      ],
+    });
+
+    if (!fullProduct) throw new Error('Không tìm thấy sản phẩm sau khi lưu.');
+
+    return this.formatProduct(fullProduct);
   }
 
   // Lấy danh sách sản phẩm miễn phí (loại bỏ sản phẩm do chính user đăng)

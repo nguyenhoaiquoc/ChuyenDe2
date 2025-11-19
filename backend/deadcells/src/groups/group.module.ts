@@ -25,7 +25,7 @@ import { ProductModule } from 'src/product/product.module';
       GroupInvitation,
       Product,
       ProductStatus,
-      User, // thêm User
+      User, 
     ]),
     forwardRef(() => ChatModule),
     forwardRef(() => NotificationModule),
