@@ -1,17 +1,17 @@
-import "../../global.css";
-import { Text, View, ScrollView, Alert } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { FontAwesome } from "@expo/vector-icons";
-import Button from "../../components/Button";
-import Header_lg_reg from "../../components/HeaderAuth";
-import { useEffect, useState } from "react";
-import FloatingInput from "../../components/FloatingInput";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Group, RootStackParamList } from "../../types";
-import axios from "axios";
-import { path } from "../../config";
-import { Picker } from "@react-native-picker/picker";
-import React from "react";
+import '../../global.css';
+import { Text, View, ScrollView, Alert } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { FontAwesome } from '@expo/vector-icons';
+import Button from '../../components/Button';
+import Header_lg_reg from '../../components/HeaderAuth';
+import { useEffect, useState } from 'react';
+import FloatingInput from '../../components/FloatingInput';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Group, RootStackParamList } from '../../types';
+import axios from 'axios';
+import { path } from '../../config';
+import { Picker } from '@react-native-picker/picker';
+import React from 'react';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "RegisterScreen">;

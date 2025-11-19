@@ -16,6 +16,7 @@ import { FavoritesService } from 'src/favorites/favorites.service';
 import { GroupInvitation } from 'src/entities/group-invitation.entity';
 import { User } from 'src/entities/user.entity';
 import { NotificationService } from 'src/notification/notification.service';
+import { ChatService } from 'src/chat/chat.service';
 
 @Injectable()
 export class GroupService {
@@ -36,6 +37,8 @@ export class GroupService {
     @Inject(forwardRef(() => NotificationService))
     private readonly notificationService: NotificationService,
     private readonly favoritesService: FavoritesService,
+    private readonly chatService: ChatService, // ⭐ Inject ở đây
+
   ) {}
 
   // ==================== UTILITY FUNCTIONS ====================
@@ -670,6 +673,8 @@ export class GroupService {
   async joinGroup(groupId: number, userId: number): Promise<any> {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+    await this.chatService.createRoomGroup(groupId);
 
     const existing = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },

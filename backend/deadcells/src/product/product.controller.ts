@@ -215,5 +215,6 @@ export class ProductController {
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findById(id);
-  }
+  }    
+  
 }

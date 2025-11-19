@@ -48,6 +48,7 @@ export class Product {
   @Column({ name: 'product_type_id', type: 'bigint', nullable: true })
   product_type_id: number | null;
 
+
   @ManyToOne(() => ProductType, { nullable: true })
   @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
   productType: ProductType | null;
