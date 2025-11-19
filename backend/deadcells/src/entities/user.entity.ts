@@ -22,8 +22,6 @@ export class User {
 
   /** --------- Quan hệ & FK rõ ràng --------- */
 
-
-
   @ManyToOne(() => Role, { nullable: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;
@@ -47,7 +45,7 @@ export class User {
 
   @Column({ nullable: true })
   hometown?: string;
-  
+
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })
@@ -89,8 +87,8 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
-  @Column({ nullable: true })
-  hometown?: string;
+  @Column({ default: false })
+  is_cccd_verified: boolean;
 
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng

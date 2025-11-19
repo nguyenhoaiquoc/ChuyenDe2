@@ -58,14 +58,19 @@ export default function ManageProductsUserScreen() {
   const [filteredPosts, setFilteredPosts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState(TABS.PENDING);
 
-  const fetchAllPosts = async () => {
+  useEffect(() => {
+    console.log("🌍 [SCREEN] ManageProductsUserScreen (TOÀN TRƯỜNG) đã được MOUNT!");
+  }, []);
+const fetchAllPosts = async () => {
     try {
       const response = await axios.get(`${path}/products/admin/all`);
 
-      // Lọc tin CÔNG KHAI
+      // ✅ SỬA: Chỉ lọc theo visibility_type = 0
+      // (Ép kiểu Number để so sánh chính xác)
       const publicPosts = response.data.filter(
-        (item: any) => item.visibility_type == "0"
+        (item: any) => Number(item.visibility_type || 0) === 0
       );
+
       const mappedData = publicPosts.map(mapProductData);
       setAllPosts(mappedData);
     } catch (error: any) {

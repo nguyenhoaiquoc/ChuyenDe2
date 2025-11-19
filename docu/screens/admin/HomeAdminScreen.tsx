@@ -140,22 +140,30 @@ export default function HomeAdminScreen({ navigation }: Props) {
             Quản lý nội dung
           </Text>
 
-          {/* 4. Duyệt tin Công Khai (Đã đổi tên) */}
+          {/* 4. Duyệt tin Công Khai*/}
           <AdminButton
             icon="checkmark-done-circle-outline"
             title="Duyệt tin Công Khai"
             subtitle="Duyệt các tin đăng công khai"
             color="bg-green-600"
-            onPress={() => navigation.navigate("ManageProductsUserScreen")}
+            // onPress={() => navigation.navigate("ManageProductsUserScreen")}
+            onPress={() => {
+              console.log("🔘 [HomeAdmin] Đang bấm: Duyệt tin Công Khai -> Navigate: ManageProductsUserScreen");
+              navigation.navigate("ManageProductsUserScreen");
+            }}
           />
 
-          {/* 5. Duyệt tin Nhóm (MỚI) */}
+          {/* 5. Duyệt tin Nhóm */}
           <AdminButton
             icon="file-tray-stacked-outline"
             title="Duyệt tin trong Nhóm"
             subtitle="Duyệt các tin đăng trong nhóm"
             color="bg-blue-600"
-            onPress={() => navigation.navigate("ManageGroupPostsScreen")}
+            // onPress={() => navigation.navigate("ManageGroupPostsScreen")}
+            onPress={() => {
+              console.log("🔵 [HomeAdmin] Đang bấm: Duyệt tin Nhóm -> Navigate: ManageGroupPostsScreen");
+              navigation.navigate("ManageGroupPostsScreen");
+            }}
           />
         </View>
 

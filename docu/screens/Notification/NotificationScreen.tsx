@@ -26,8 +26,6 @@ type Props = {
   >;
 };
 
-const filters = ["Tài khoản", "Giao dịch", "Tin đăng", "Sự kiện"];
-
 export default function NotificationScreen({ navigation }: Props) {
   const [activeTab, setActiveTab] = useState("Hoạt động");
 
@@ -450,24 +448,6 @@ export default function NotificationScreen({ navigation }: Props) {
             Tin tức
           </Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Filter Chips */}
-      <View className="px-4 pt-4 pb-2 border-b border-gray-100">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity className="flex-row items-center bg-gray-100 px-3 py-1.5 rounded-full mr-2 border border-gray-200">
-            <Ionicons name="filter" size={16} color="#333" />
-            <Text className="ml-1 text-sm text-gray-800">Lọc</Text>
-          </TouchableOpacity>
-          {filters.map((filter) => (
-            <TouchableOpacity
-              key={filter}
-              className="bg-gray-100 px-3 py-1.5 rounded-full mr-2 border border-gray-200"
-            >
-              <Text className="text-sm text-gray-800">{filter}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
       {/* Nội dung thông báo */}

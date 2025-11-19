@@ -102,7 +102,7 @@ export default function ProductCard({
         )}
         {/* Danh mục */}
         <View className="flex-row justify-between items-center mb-1.5">
-          <Text>{category}</Text>
+          <Text>{tag}</Text>
         </View>
         {/* Giá */}
         <TouchableOpacity onPress={onPress}>

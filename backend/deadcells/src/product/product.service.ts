@@ -720,8 +720,9 @@ export class ProductService {
         category_change_id: p.category_change_id,
         sub_category_change_id: p.sub_category_change_id,
         status_id: p.status_id,
-        visibility_type: p.visibility_type,
-        group_id: p.group_id,
+        visibility_type:
+          p.visibility_type != null ? Number(p.visibility_type) : 0,
+        group_id: p.group_id || p.group?.id || null,
         group: p.group
           ? { id: p.group.id, name: p.group.name, isPublic: p.group.isPublic }
           : null,
@@ -1034,7 +1035,14 @@ export class ProductService {
     }
 
     const updatedProduct = await this.productRepo.save(product); // Thông báo
-    // this.notificationService.notifyUserOfApproval(updatedProduct);
+
+    if (dto.product_status_id === 2) {
+      this.notificationService
+        .notifyUserOfPostSuccess(updatedProduct)
+        .catch((err) =>
+          this.logger.error('Lỗi gửi thông báo duyệt bài:', err.message),
+        );
+    }
 
     // 🚀 GỬI THÔNG BÁO GỢI Ý
     if (dto.product_status_id === 2) {
@@ -1275,6 +1283,7 @@ export class ProductService {
     }
 
     const approvedStatus = await this.productStatusService.findOne(2); // ID 2 = "Đã duyệt"
+
     if (!approvedStatus)
       throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã duyệt"');
 
@@ -1286,6 +1295,12 @@ export class ProductService {
     product.expires_at = newExpiresAt;
 
     const savedProduct = await this.productRepo.save(product);
+
+    this.notificationService
+      .notifyUserOfPostSuccess(savedProduct)
+      .catch((err) =>
+        this.logger.error('Lỗi gửi thông báo duyệt gia hạn:', err.message),
+      );
 
     // 🚀 GỬI THÔNG BÁO GỢI Ý
     // Mở comment này khi sẵn sàng
@@ -1832,49 +1847,72 @@ export class ProductService {
   async getSuggestionFeed(userId: number): Promise<any[]> {
     this.logger.log(`Đang lấy feed gợi ý cá nhân hóa cho userId: ${userId}`);
 
-    // 1. SỬA LỖI QUERYBUILDER: Dùng GROUP BY thay vì DISTINCT
+    // 1. Lấy danh sách các subCategory mà user đã từng đăng bài
     const distinctSubCategories = await this.productRepo
       .createQueryBuilder('product')
-      .select('product.sub_category_id', 'id') // Chọn ID
-      .addSelect('subCategory.name', 'name') // Chọn Name
+      .select('product.sub_category_id', 'id')
+      .addSelect('subCategory.name', 'name')
       .leftJoin('product.subCategory', 'subCategory')
       .where('product.user.id = :userId', { userId })
       .andWhere('product.sub_category_id IS NOT NULL')
-      .groupBy('product.sub_category_id') // Nhóm theo ID
-      .addGroupBy('subCategory.name') // Nhóm theo Tên
-      .getRawMany(); // Lấy kết quả [ { id: 40, name: 'Laptop' }, ... ]
+      .groupBy('product.sub_category_id')
+      .addGroupBy('subCategory.name')
+      .getRawMany();
 
     if (distinctSubCategories.length === 0) {
-      this.logger.log('User này chưa đăng tin, không có gì để gợi ý.');
       return [];
     }
 
-    // 2. Lặp và gọi các hàm "nhẹ" (Lean)
     const feedResults: any[] = [];
 
+    // 2. Duyệt qua từng danh mục
     for (const subCat of distinctSubCategories) {
       const subCatId = subCat.id;
       if (!subCatId) continue;
 
-      // 3. GỌI CÁC HÀM "LEAN" (NHẸ)
-      const [sellingSuggestions, buyingSuggestions] = await Promise.all([
-        this.suggestForSelling(subCatId, userId),
-        this.suggestForBuying(subCatId, userId),
-      ]);
+      let sellingSuggestions: Product[] = [];
+      let buyingSuggestions: Product[] = [];
 
-      // 4. Đóng gói kết quả
-      if (sellingSuggestions.length > 0 || buyingSuggestions.length > 0) {
-        feedResults.push({
-          subCategory: { id: subCatId, name: subCat.name },
-          sellingSuggestions: sellingSuggestions,
-          buyingSuggestions: buyingSuggestions,
-        });
+      // --- SỬA ĐỔI TỪ ĐÂY: Dùng count thay vì findOne ---
+
+      // Check 1: User có bài ĐĂNG BÁN (id=1) nào trong danh mục này không?
+      const hasSellingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 1 }, // 1 là Đăng bán
+        },
+      });
+
+      // Check 2: User có bài ĐĂNG MUA (id=2) nào trong danh mục này không?
+      const hasBuyingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 2 }, // 2 là Đăng mua
+        },
+      });
+
+      // --- XỬ LÝ LOGIC ---
+
+      // Nếu có bài Bán -> Cần tìm người Mua -> Gọi suggestForSelling
+      if (hasSellingPost > 0) {
+        sellingSuggestions = await this.suggestForSelling(subCatId, userId);
       }
+
+      // Nếu có bài Mua -> Cần tìm người Bán -> Gọi suggestForBuying
+      if (hasBuyingPost > 0) {
+        buyingSuggestions = await this.suggestForBuying(subCatId, userId);
+      }
+
+      // Luôn push vào kết quả để Frontend xử lý hiển thị (dù mảng rỗng)
+      feedResults.push({
+        subCategory: { id: subCatId, name: subCat.name },
+        sellingSuggestions: sellingSuggestions,
+        buyingSuggestions: buyingSuggestions,
+      });
     }
 
-    this.logger.log(
-      `Đã tìm thấy ${feedResults.length} khối gợi ý cho user ${userId}.`,
-    );
     return feedResults;
   }
 

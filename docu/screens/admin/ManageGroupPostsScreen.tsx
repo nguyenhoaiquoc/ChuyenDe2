@@ -43,7 +43,7 @@ const mapProductData = (item: any): Product => {
       ? parseInt(item.product_status_id, 10)
       : 1,
     // Đảm bảo group được map
-    group: item.group || null, 
+    group: item.group || null,
   } as Product;
 };
 
@@ -56,14 +56,19 @@ export default function ManageGroupPostsScreen() {
   const [filteredPosts, setFilteredPosts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState(TABS.PENDING);
 
+  useEffect(() => {
+    console.log("🚀 [SCREEN] ManageGroupPostsScreen (NHÓM) đã được MOUNT!");
+  }, []);
   const fetchAllPosts = async () => {
     try {
       const response = await axios.get(`${path}/products/admin/all`);
-      
-      // ⚠️ LỌC TIN TRONG NHÓM
+
+      // ✅ SỬA: Chỉ lọc theo visibility_type = 1
       const groupPosts = response.data.filter(
-        (item: any) => item.visibility_type == "1"
+        (item: any) =>
+          Number(item.visibility_type) === 1 && item.group?.isPublic === true
       );
+
       const mappedData = groupPosts.map(mapProductData);
       setAllPosts(mappedData);
     } catch (error: any) {
@@ -135,7 +140,7 @@ export default function ManageGroupPostsScreen() {
         >
           {item.name}
         </Text>
-        
+
         {/* THÊM TÊN NHÓM */}
         <Text className="text-sm text-indigo-600 font-medium">
           Nhóm: {item.group?.name || `ID: ${item.group_id}` || "Không rõ"}
@@ -148,10 +153,10 @@ export default function ManageGroupPostsScreen() {
           {item.dealType?.name === "Miễn phí"
             ? "Miễn phí"
             : item.dealType?.name === "Trao đổi"
-            ? "Trao đổi"
-            : item.price
-            ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-            : "Liên hệ"}
+              ? "Trao đổi"
+              : item.price
+                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+                : "Liên hệ"}
         </Text>
 
         {activeTab === TABS.PENDING && (
