@@ -11,6 +11,7 @@ import { RootStackParamList } from "../../types";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { path } from "../../config";
+import React from "react";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;

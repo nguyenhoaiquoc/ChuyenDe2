@@ -661,7 +661,7 @@ export class GroupService {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
-    await this.chatService.createRoomGroup(groupId);
+   
 
     const existing = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
@@ -684,7 +684,7 @@ export class GroupService {
       group_role_id: 1,
       pending: pendingStatus,
     });
-
+    await this.chatService.createRoomGroup(groupId);
     await this.groupMemberRepo.save(member);
 
     return {

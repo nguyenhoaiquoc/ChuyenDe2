@@ -465,13 +465,16 @@ async getRoomMetaData(userId: number, roomId: number) {
   }
 
   async createRoomGroup(groupId: number) {
-      const group = await this.groupRepo.findOne({where: {id: groupId}, relations: ['members']})
+      const group = await this.groupRepo.findOne({where: {id: groupId}})
       if(!group) {
         throw new Error('Group not found');
       }
+      if(!group.isPublic) {
+        return null
+      }
 
       //2 Lấy tất cả member 
-      const members = await this.groupMembersRepo.find({where: {group_id: groupId}})
+      const members = await this.groupMembersRepo.find({where: {group_id: groupId,pending: 3}})
       if(members.length === 0) {
         throw new Error('Group has no members')
       }
