@@ -10,6 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types';
 import axios from 'axios';
 import { path } from '../../config';
+import React from 'react';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'ForgotPasswordScreen'>;

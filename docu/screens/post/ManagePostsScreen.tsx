@@ -517,7 +517,7 @@ export default function ManagePostsScreen({
             <View className="px-5 pt-5">
               <View className="flex-row items-center mb-5">
                 <Image
-                  source={require("../../assets/meo.jpg")}
+                  source={require("../../assets/khi.png")}
                   className="w-14 h-14 rounded-full"
                 />
                 <View className="ml-3">

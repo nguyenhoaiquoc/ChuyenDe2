@@ -28,7 +28,7 @@ export class Group {
   owner: User;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description?: string;
 
   @Column({ type: 'text', nullable: true })
   thumbnail_url?: string;

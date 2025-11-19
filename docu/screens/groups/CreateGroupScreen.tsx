@@ -34,6 +34,7 @@ export default function CreateGroupScreen() {
   const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [description, setDescription] = useState("");
 
   // --- Chọn ảnh nhóm ---
   const handlePickFromLibrary = async () => {
@@ -67,7 +68,7 @@ export default function CreateGroupScreen() {
   const removeImage = () => setImages([]);
 
   const uploadGroupImage = async (uri: string) => {
-    const data = new FormData();  
+    const data = new FormData();
     const filename = uri.split("/").pop();
     const ext = filename?.split(".").pop();
     const type = ext ? `image/${ext}` : "image";
@@ -140,7 +141,12 @@ export default function CreateGroupScreen() {
 
       await axios.post(
         `${path}/groups`,
-        { name: groupName, thumbnail_url, invitedUserIds: selectedUsers },
+        {
+          name: groupName,
+          thumbnail_url,
+          description: description,
+          invitedUserIds: selectedUsers,
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -201,7 +207,9 @@ export default function CreateGroupScreen() {
 
           {/* Ảnh nhóm */}
           <View className="mt-6">
-            <Text className="text-base font-medium mb-2">Ảnh nhóm</Text>
+            <Text className="text-base font-medium mb-2">
+              Ảnh nhóm (Tùy chọn)
+            </Text>
             <View className="flex-row space-x-4 mt-2">
               <TouchableOpacity
                 onPress={handlePickFromLibrary}
@@ -253,6 +261,20 @@ export default function CreateGroupScreen() {
             )}
           </View>
 
+          {/* Mô tả nhóm */}
+          <View className="mt-6">
+            <Text className="text-base font-medium mb-2">Mô tả nhóm</Text>
+            <TextInput
+              value={description}
+              editable={!isLoading}
+              onChangeText={setDescription}
+              numberOfLines={5}
+              placeholder="Ví dụ: Nơi chia sẻ kinh nghiệm nuôi thú cưng"
+              className="border border-gray-300 rounded-lg p-3 text-base"
+              multiline
+            />
+          </View>
+
           {/* Mời bạn */}
           <View className="mt-10">
             <Text className="text-base font-medium mb-2">Mời bạn bè</Text>
@@ -294,7 +316,7 @@ export default function CreateGroupScreen() {
                         source={
                           user.avatar
                             ? { uri: user.avatar }
-                            : require("../../assets/defaultgroup.png")
+                            : require("../../assets/khi.png")
                         }
                         className="w-10 h-10 rounded-full"
                       />
@@ -394,7 +416,7 @@ export default function CreateGroupScreen() {
                         source={
                           item.avatar
                             ? { uri: item.avatar }
-                            : require("../../assets/defaultgroup.png")
+                            : require("../../assets/khi.png")
                         }
                         className="w-12 h-12 rounded-full"
                       />

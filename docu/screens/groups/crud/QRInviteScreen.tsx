@@ -42,6 +42,7 @@ export default function QRInviteScreen() {
     try {
       const url = new URL(path);
       const ip = url.hostname;
+      console.log(groupId);
       setQrValue(`exp://${ip}:8081/--/join/${groupId}`);
     } catch {
       setQrValue(`exp://192.168.102.150:8081/--/join/${groupId}`); // fallback
@@ -60,7 +61,7 @@ export default function QRInviteScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
+    <SafeAreaView className="flex-1 bg-gray-100 mt-5">
       <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
         <TouchableOpacity
           onPress={() => navigation.goBack()}

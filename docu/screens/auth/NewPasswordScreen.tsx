@@ -11,6 +11,7 @@ import { RootStackParamList } from '../../types';
 import { useRoute } from '@react-navigation/native';
 import axios from 'axios';
 import { path } from '../../config';
+import React from 'react';
 
 type RouteParams = { email?: string; token?: string };
 type Props = {
