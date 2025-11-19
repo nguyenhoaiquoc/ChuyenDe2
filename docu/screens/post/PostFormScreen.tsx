@@ -48,16 +48,59 @@ const PostFormScreen = ({
   const [description, setDescription] = useState("");
   const [user, setUser] = useState<{ id: number; name: string } | null>(null);
 
+  // 1. Lấy thông tin User từ bộ nhớ máy (AsyncStorage)
   useEffect(() => {
     const fetchUser = async () => {
-      const userId = await AsyncStorage.getItem("userId");
-      const userName = await AsyncStorage.getItem("userName");
-      if (userId && userName) {
-        setUser({ id: Number(userId), name: userName });
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const userName = await AsyncStorage.getItem("userName");
+
+        console.log("🔍 Kiểm tra AsyncStorage - userId:", userId);
+
+        if (userId) {
+          setUser({ id: Number(userId), name: userName || "User" });
+        } else {
+          console.log(
+            "⚠️ Không tìm thấy userId trong bộ nhớ. Vui lòng đăng nhập lại."
+          );
+        }
+      } catch (e) {
+        console.error("Lỗi lấy user:", e);
       }
     };
     fetchUser();
   }, []);
+
+  // 2. Fetch các nhóm mà user đã tham gia (Chạy khi user thay đổi)
+  useEffect(() => {
+    const fetchGroups = async () => {
+      // Chỉ chạy khi đã có User ID
+      if (!user?.id) return;
+
+      console.log("============== GỌI API GROUP ==============");
+      console.log("👤 User ID:", user.id);
+
+      try {
+        // Gọi API kèm params userId
+        const res = await axios.get(`${path}/groups/my-public-joined`, {
+          params: { userId: user.id },
+        });
+
+        console.log("✅ Kết quả:", res.data);
+
+        if (Array.isArray(res.data)) {
+          setGroups(res.data);
+          setSelectedGroupId(null); // Reset về mặc định "Toàn trường"
+        } else {
+          setGroups([]);
+        }
+      } catch (err: any) {
+        console.error("❌ Lỗi tải nhóm:", err.message);
+      }
+    };
+
+    fetchGroups();
+  }, [user]);
 
   const [conditionId, setConditionId] = useState<number | null>(null);
   const [productTypeId, setProductTypeId] = useState<number | null>(null);
@@ -197,7 +240,6 @@ const PostFormScreen = ({
   const [showWarrantyModal, setShowWarrantyModal] = useState(false);
   const [showWarrantyDropdown, setShowWarrantyDropdown] = useState(false);
 
-  // ===== BẮT ĐẦU THÊM 4 STATE MỚI (LAPTOP) =====
   // State cho Bộ vi xử lý
   const [processorId, setProcessorId] = useState<number | null>(null);
   const [processors, setProcessors] = useState<{ id: number; name: string }[]>(
@@ -283,6 +325,30 @@ const PostFormScreen = ({
   // State cho Số km đã đi (Xe cộ)
   const [mileage, setMileage] = useState("");
   const [showMileageInput, setShowMileageInput] = useState(false);
+
+  // STATE CHO NHÓM/KHOA
+  const [groups, setGroups] = useState<{ id: number; name: string }[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+
+  // Hàm xử lý chọn nhóm
+  const handleSelectGroup = (id: number | null) => {
+    setSelectedGroupId(id);
+    setShowGroupModal(false);
+  };
+
+  // Fetch các nhóm mà user đã tham gia
+  useEffect(() => {
+    if (user?.id) {
+      // Gọi endpoint chỉ lấy nhóm PUBLIC đã tham gia
+      axios
+        .get(`${path}/groups/my-public-joined`)
+        .then((res) => {
+          setGroups(res.data);
+        })
+        .catch((err) => console.log("Lỗi tải nhóm:", err));
+    }
+  }, [user]);
 
   // Loaders
   const [isLoadingModels, setIsLoadingModels] = useState(false);
@@ -584,6 +650,16 @@ const PostFormScreen = ({
       formData.append("deal_type_id", String(dealTypeId));
       formData.append("category_id", String((category as any)?.id));
       formData.append("sub_category_id", String(subCategory?.id));
+
+      if (selectedGroupId) {
+        // Nếu có chọn nhóm -> Gửi ID nhóm và visibility_type = 1
+        formData.append("group_id", String(selectedGroupId));
+        formData.append("visibility_type", "1");
+      } else {
+        // Nếu không chọn (null) -> visibility_type = 0 (Toàn trường)
+        formData.append("visibility_type", "0");
+      }
+      
       if (conditionId) {
         formData.append("condition_id", String(conditionId));
       }
@@ -2280,6 +2356,32 @@ const PostFormScreen = ({
           <Text style={styles.helperText}>Chọn địa chỉ giao dịch</Text>
         </View>
 
+        {/* Chọn phạm vi bài đăng */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowGroupModal(true)}
+          >
+            <Text style={styles.dropdownLabel}>Đăng tại (Phạm vi)</Text>
+            <View style={styles.dropdownContent}>
+              <Text
+                style={styles.dropdownText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {selectedGroupId
+                  ? groups.find((g) => g.id === selectedGroupId)?.name ||
+                    "Không xác định"
+                  : "Toàn trường"}
+              </Text>
+              <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.helperText}>
+            Chọn đăng công khai hoặc trong nhóm bạn đã tham gia
+          </Text>
+        </View>
+
         {/* Loại bài đăng */}
         {!isLoadingOptions && (
           <View style={styles.section}>
@@ -2887,6 +2989,72 @@ const PostFormScreen = ({
 
             <TouchableOpacity
               onPress={() => setShowDealTypeModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* --- MODAL CHỌN NHÓM --- */}
+      {showGroupModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn nơi đăng bài</Text>
+            <ScrollView style={{ flexShrink: 1, maxHeight: 300 }}>
+              {/* Option 1: Toàn trường (Mặc định) */}
+              <TouchableOpacity
+                style={[
+                  styles.modalOption,
+                  selectedGroupId === null && styles.modalOptionSelected,
+                ]}
+                onPress={() => handleSelectGroup(null)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalOptionText}>Toàn trường</Text>
+                  <Text style={{ fontSize: 12, color: "#94a3b8" }}>
+                    Hiển thị công khai cho tất cả sinh viên
+                  </Text>
+                </View>
+                {selectedGroupId === null && (
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={20}
+                    color="#8c7ae6"
+                  />
+                )}
+              </TouchableOpacity>
+
+              {/* Option 2: Các nhóm đã tham gia */}
+              {groups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={[
+                    styles.modalOption,
+                    selectedGroupId === group.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectGroup(group.id)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalOptionText}>{group.name}</Text>
+                    <Text style={{ fontSize: 12, color: "#94a3b8" }}>
+                      Chỉ hiển thị trong nhóm này
+                    </Text>
+                  </View>
+                  {selectedGroupId === group.id && (
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={20}
+                      color="#8c7ae6"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={() => setShowGroupModal(false)}
               style={styles.modalCancelButton}
             >
               <Text style={styles.modalCancelText}>Hủy</Text>

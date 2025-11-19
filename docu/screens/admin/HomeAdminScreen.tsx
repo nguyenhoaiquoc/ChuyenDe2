@@ -98,7 +98,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Trang home"
             subtitle="Trang user"
             color="bg-purple-600"
-            onPress={() => navigation.navigate("Home")} 
+            onPress={() => navigation.navigate("Home")}
           />
           {/* 1. Dashboard */}
           <AdminButton
@@ -116,6 +116,15 @@ export default function HomeAdminScreen({ navigation }: Props) {
             subtitle="Khóa/mở khóa tài khoản vi phạm"
             color="bg-red-600"
             onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageUsersScreen")
+          />
+
+          {/* Quản lý danh mục */}
+          <AdminButton
+            icon="list-outline"
+            title="Quản lý Danh mục"
+            subtitle="Danh mục cha - con, thêm/sửa/xóa"
+            color="bg-teal-600"
+            onPress={() => navigation.navigate("ManageCategoriesScreen")}
           />
 
           {/* 3. Quản lý báo cáo */}
@@ -148,7 +157,6 @@ export default function HomeAdminScreen({ navigation }: Props) {
             color="bg-blue-600"
             onPress={() => navigation.navigate("ManageGroupPostsScreen")}
           />
-
         </View>
 
         {/* Nút đăng xuất */}

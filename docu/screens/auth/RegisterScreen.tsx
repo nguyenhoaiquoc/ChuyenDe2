@@ -14,37 +14,41 @@ import { Picker } from '@react-native-picker/picker';
 import React from 'react';
 
 type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'RegisterScreen'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "RegisterScreen">;
 };
 
 export default function RegisterScreen({ navigation }: Props) {
-  const [values, setValues] = useState<string[]>(['', '', '', '', '']); // [fullName, email, phone, password, confirmPassword]
+  const [values, setValues] = useState<string[]>(["", "", "", "", ""]); // [fullName, email, phone, password, confirmPassword]
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]); // [password, confirm]
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<Group[]>([]);
 
   useEffect(() => {
-axios.get(`${path}/groups/public`)
-    .then(res => setGroups(res.data))
-    .catch(err => console.error(err))
-  },[])
+    axios
+      .get(`${path}/groups/public`)
+      .then((res) => setGroups(res.data))
+      .catch((err) => console.error(err));
+  }, []);
 
+  const [selectedGroup, setSelectedGroup] = useState("");
 
-
-  const [selectedGroup, setSelectedGroup] = useState("")
-
-
-  const content = ['Họ và tên', 'Email', 'Số điện thoại', 'Mật khẩu', 'Xác nhận mật khẩu'];
+  const content = [
+    "Họ và tên",
+    "Email",
+    "Số điện thoại",
+    "Mật khẩu",
+    "Xác nhận mật khẩu",
+  ];
   const binding = [
-    'Giới hạn 8-32 ký tự',
-    'Tối thiểu 01 ký tự IN HOA',
-    'Tối thiểu 01 ký tự in thường',
-    'Tối thiểu 01 chữ số',
+    "Giới hạn 8-32 ký tự",
+    "Tối thiểu 01 ký tự IN HOA",
+    "Tối thiểu 01 ký tự in thường",
+    "Tối thiểu 01 chữ số",
   ];
 
   const togglePassword = (index: 0 | 1) => {
-    setShowPasswords(prev => {
+    setShowPasswords((prev) => {
       const next = [...prev];
       next[index] = !next[index];
       return next;
@@ -61,20 +65,23 @@ axios.get(`${path}/groups/public`)
   const handleRegister = async () => {
     if (isLoading) return;
     const [fullName, emailRaw, phoneRaw, password, confirmPassword] = values;
-    const email = (emailRaw || '').trim().toLowerCase();
-    const phone = (phoneRaw || '').trim();
+    const email = (emailRaw || "").trim().toLowerCase();
+    const phone = (phoneRaw || "").trim();
 
     // kiểm tra cơ bản phía client
     if (!fullName?.trim() || !email || !password || !confirmPassword) {
-      Alert.alert('Vui lòng điền đầy đủ thông tin');
+      Alert.alert("Vui lòng điền đầy đủ thông tin");
       return;
     }
-    if (!email.endsWith('@fit.tdc.edu.vn')) {
-      Alert.alert('Email không hợp lệ', 'Chỉ chấp nhận email sinh viên @fit.tdc.edu.vn');
+    if (!email.endsWith("@fit.tdc.edu.vn")) {
+      Alert.alert(
+        "Email không hợp lệ",
+        "Chỉ chấp nhận email sinh viên @fit.tdc.edu.vn"
+      );
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Mật khẩu và xác nhận mật khẩu không khớp');
+      Alert.alert("Mật khẩu và xác nhận mật khẩu không khớp");
       return;
     }
 
@@ -82,17 +89,26 @@ axios.get(`${path}/groups/public`)
       setIsLoading(true);
       const res = await axios.post(
         `${path}/auth/register`,
-        { fullName: fullName.trim(), email, password, phone,group_id: selectedGroup },
-        { timeout: 15000 },
+        {
+          fullName: fullName.trim(),
+          email,
+          password,
+          phone,
+          group_id: selectedGroup,
+        },
+        { timeout: 15000 }
       );
-      Alert.alert(res.data?.message || 'Đăng ký thành công. Vui lòng kiểm tra email để xác minh.');
-      navigation.navigate('VerifyAccountScreen', { email });
+      Alert.alert(
+        res.data?.message ||
+          "Đăng ký thành công. Vui lòng kiểm tra email để xác minh."
+      );
+      navigation.navigate("VerifyAccountScreen", { email });
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
-        'Đăng ký thất bại. Vui lòng thử lại.';
-      setLoginError(Array.isArray(msg) ? msg.join('\n') : msg);
+        "Đăng ký thất bại. Vui lòng thử lại.";
+      setLoginError(Array.isArray(msg) ? msg.join("\n") : msg);
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +117,12 @@ axios.get(`${path}/groups/public`)
   return (
     <ScrollView className="flex-1">
       <View className="pl-5 pt-14">
-        <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
+        <FontAwesome
+          onPress={() => navigation.goBack()}
+          name="arrow-left"
+          size={20}
+          color="#000"
+        />
       </View>
 
       <StatusBar style="auto" />
@@ -126,19 +147,28 @@ axios.get(`${path}/groups/public`)
               label={label}
               value={values[index]}
               onChangeText={(text: string) => setField(index, text)}
-              secureTextEntry={isPassword ? !showPasswords[pwToggleIdx as 0 | 1] : false}
+              secureTextEntry={
+                isPassword ? !showPasswords[pwToggleIdx as 0 | 1] : false
+              }
               toggleSecure={
-                isPassword ? () => togglePassword(pwToggleIdx as 0 | 1) : undefined
+                isPassword
+                  ? () => togglePassword(pwToggleIdx as 0 | 1)
+                  : undefined
               }
               // gợi ý input cho email/phone
-              keyboardType={label === 'Email' ? 'email-address' : label === 'Số điện thoại' ? 'phone-pad' : 'default'}
-              autoCapitalize={label === 'Email' ? 'none' : 'sentences'}
-              autoCorrect={label === 'Email' || isPassword ? false : true}
+              keyboardType={
+                label === "Email"
+                  ? "email-address"
+                  : label === "Số điện thoại"
+                    ? "phone-pad"
+                    : "default"
+              }
+              autoCapitalize={label === "Email" ? "none" : "sentences"}
+              autoCorrect={label === "Email" || isPassword ? false : true}
             />
-            
           );
         })}
-             {/*dropdow chon khoa */}
+        {/*dropdow chon khoa */}
         <View className="mt-4">
           <Text className="mb-1 font-semibold">Khoa</Text>
           <View className="border border-gray-300 rounded-lg overflow-hidden">
@@ -146,8 +176,12 @@ axios.get(`${path}/groups/public`)
               selectedValue={selectedGroup}
               onValueChange={(value) => setSelectedGroup(value)}
             >
-              {groups.map(group => (
-                <Picker.Item key = {group.id} label={group.name} value={group.id}/>
+              {groups.map((group) => (
+                <Picker.Item
+                  key={group.id}
+                  label={group.name}
+                  value={group.id}
+                />
               ))}
             </Picker>
           </View>
@@ -169,7 +203,7 @@ axios.get(`${path}/groups/public`)
           <Text className="text-[12px]">Đã có tài khoản?</Text>
           <Text
             className="text-blue-500 font-bold text-[12px]"
-            onPress={() => navigation.navigate('LoginScreen')}
+            onPress={() => navigation.navigate("LoginScreen")}
           >
             Đăng nhập ngay
           </Text>

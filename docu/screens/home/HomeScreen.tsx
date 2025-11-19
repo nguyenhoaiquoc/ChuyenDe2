@@ -8,7 +8,8 @@ import {
   StatusBar,
   FlatList,
   Alert,
-  RefreshControl, // 1. Thêm RefreshControl
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -16,7 +17,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
+import { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -30,25 +31,22 @@ type Props = {
 
 const filters = [
   { id: "1", label: "Mới nhất" },
-  { id: "2", label: "Đang tìm mua" },
+  { id: "2", label: "Gợi ý cho bạn", type: "navigate" },
   { id: "3", label: "Đồ miễn phí" },
   { id: "4", label: "Trao đổi" },
-  { id: "5", label: "Gợi ý cho bạn " },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedFilter, setSelectedFilter] = useState<string>("Mới nhất");
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  
-  // 3. Thêm state cho RefreshControl
+
   const [refreshing, setRefreshing] = useState(false);
 
+  const [isLoading, setIsLoading] = useState(false);
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
 
-  // 4. Tách logic fetching ra các hàm riêng
   const fetchCategories = () => {
     return axios
       .get(`${path}/categories`)
@@ -57,183 +55,178 @@ export default function HomeScreen({ navigation }: Props) {
           id: item.id.toString(),
           name: item.name,
           image: item.image
-            ? item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : `${path}/uploads/categories/${item.image}`
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${path}${item.image.startsWith("/") ? "" : "/uploads/categories/"}${item.image}`
             : `${path}/uploads/categories/default.png`,
         }));
         setCategories(mapped);
       })
       .catch((err) => {
         console.log("Lỗi khi lấy danh mục:", err.message);
-        throw err; // Ném lỗi để Promise.all bắt được
+        throw err;
       });
   };
 
-  const fetchProducts = () => {
-    return axios
-      .get(`${path}/products`)
-      .then((res) => {
-        // dữ liệu là mảng
-        const rawData = Array.isArray(res.data) ? res.data : [res.data];
+  const fetchProducts = async (filterType?: string): Promise<void> => {
+    try {
+      let url = `${path}/products`; // mặc định: tất cả sản phẩm
 
-        const mapped = rawData.map((item: any) => {
-          // Lấy URL ảnh chính
-          const imageUrl = (() => {
-            if (!item.thumbnail_url && item.images?.length)
-              return item.images[0].image_url;
+      if (filterType === "Miễn phí") {
+        url = `${path}/products/free`; // API lấy đồ miễn phí
+      } else if (filterType === "Trao đổi") {
+        url = `${path}/products/exchange`; // API lấy đồ trao đổi
+      }
 
-            const url = item.thumbnail_url || "";
-            if (url.startsWith("http")) return url;
+      console.log("Fetching URL:", url);
 
-            return `${path}${url}`;
-          })();
-          let locationText = "Chưa rõ địa chỉ";
-          if (item.address_json) {
-            try {
-              const addr =
-                typeof item.address_json === "string"
-                  ? JSON.parse(item.address_json)
-                  : item.address_json;
-              if (addr.full) {
-                locationText = addr.full;
-              } else {
-                const parts = [addr.ward, addr.district, addr.province]
-                  .filter(Boolean)
-                  .slice(-2);
-                locationText =
-                  parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
-              }
-            } catch (e) {
-              console.log("Lỗi parse address cho product", item.id, ":", e);
-              locationText = "Chưa rõ địa chỉ";
+      // 🔹 Gọi API
+      const res = await axios.get(url);
+      const rawData = Array.isArray(res.data) ? res.data : [res.data];
+
+      // 🔹 Xử lý dữ liệu
+      const mapped = rawData.map((item) => {
+        // Lấy URL ảnh chính
+        const imageUrl = (() => {
+          if (!item.thumbnail_url && item.images?.length)
+            return item.images[0].image_url;
+
+          const url = item.thumbnail_url || "";
+          if (url.startsWith("http")) return url;
+
+          return `${path}${url}`;
+        })();
+
+        // Xử lý địa chỉ
+        let locationText = "Chưa rõ địa chỉ";
+        if (item.address_json) {
+          try {
+            const addr =
+              typeof item.address_json === "string"
+                ? JSON.parse(item.address_json)
+                : item.address_json;
+            if (addr.full) {
+              locationText = addr.full;
+            } else {
+              const parts = [addr.ward, addr.district, addr.province]
+                .filter(Boolean)
+                .slice(-2);
+              locationText =
+                parts.length > 0 ? parts.join(", ") : "Chưa rõ địa chỉ";
             }
+          } catch (e) {
+            console.log("Lỗi parse address cho product", item.id, ":", e);
+            locationText = "Chưa rõ địa chỉ";
           }
+        }
 
-          // Thời gian đăng
-          const createdAt = item.created_at
-            ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
-            : new Date();
+        // Thời gian đăng
+        const createdAt = item.created_at
+          ? new Date(new Date(item.created_at).getTime() + 7 * 60 * 60 * 1000)
+          : new Date();
+        const timeDisplay = timeSince(createdAt);
 
-          const timeDisplay = timeSince(createdAt);
+        // Danh mục
+        let tagText = "Không có danh mục";
+        const categoryName = item.category?.name || null;
+        const subCategoryName = item.subCategory?.name || null;
+        if (categoryName && subCategoryName)
+          tagText = `${categoryName} - ${subCategoryName}`;
+        else if (categoryName) tagText = categoryName;
+        else if (subCategoryName) tagText = subCategoryName;
 
-          // Danh mục
-          let tagText = "Không có danh mục";
+        // 🟢 Trả về đầy đủ dữ liệu sản phẩm
+        return {
+          id: item.id.toString(),
+          image: imageUrl,
+          name: item.name || "Không có tiêu đề",
+          price: (() => {
+            if (item.dealType?.name === "Miễn phí") return "Miễn phí";
+            if (item.dealType?.name === "Trao đổi") return "Trao đổi";
+            return item.price
+              ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+              : "Liên hệ";
+          })(),
+          location: locationText,
+          time: timeDisplay,
+          tag: tagText,
+          authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+          user_id: item.user?.id ?? item.user_id ?? 0,
+          category: item.category || null,
+          subCategory: item.subCategory
+            ? {
+                id: item.subCategory.id,
+                name: item.subCategory.name,
+                parent_category_id: item.subCategory.parent_category_id,
+                source_table: item.subCategory.source_table,
+                source_id: item.subCategory.source_id,
+              }
+            : null,
 
-          const categoryName = item.category?.name || null; // Tên danh mục cha
-          const subCategoryName = item.subCategory?.name || null; // Tên danh mục con
+          category_change: item.category_change || null,
+          sub_category_change: item.sub_category_change || null,
 
-          if (categoryName && subCategoryName) {
-            // Trường hợp đầy đủ: Cha - Con
-            tagText = `${categoryName} - ${subCategoryName}`;
-          } else if (categoryName) {
-            // Chỉ có tên cha
-            tagText = categoryName;
-          } else if (subCategoryName) {
-            // Chỉ có tên con
-            tagText = subCategoryName;
-          }
-          const authorName = item.user?.name || "Ẩn danh";
+          imageCount: item.images?.length || (imageUrl ? 1 : 0),
+          isFavorite: false,
+          images: item.images || [],
+          description: item.description || "",
 
-          return {
-            id: item.id.toString(),
-            image: imageUrl,
-            name: item.name || "Không có tiêu đề",
-            price: (() => {
-              if (item.dealType?.name === "Miễn phí") return "Miễn phí";
-              if (item.dealType?.name === "Trao đổi") return "Trao đổi";
-              return item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-                : "Liên hệ";
-            })(),
-            location: locationText,
-            time: timeDisplay,
-            tag: tagText,
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
-            user_id: item.user?.id ?? item.user_id ?? 0,
-            category: item.category || null,
-            subCategory: item.subCategory
-              ? {
-                  id: item.subCategory.id,
-                  name: item.subCategory.name,
-                  parent_category_id: item.subCategory.parent_category_id,
-                  source_table: item.subCategory.source_table,
-                  source_id: item.subCategory.source_id,
-                }
+          postType: item.postType || null,
+          condition: item.condition || null,
+          dealType: item.dealType || null,
+
+          productStatus: item.productStatus || null,
+
+          productType:
+            item.productType && item.productType.name ? item.productType : null,
+          origin: item.origin && item.origin.name ? item.origin : null,
+          material: item.material && item.material.name ? item.material : null,
+          size: item.size && item.size.name ? item.size : null,
+          brand: item.brand && item.brand.name ? item.brand : null,
+          color: item.color && item.color.name ? item.color : null,
+          capacity: item.capacity && item.capacity.name ? item.capacity : null,
+          warranty: item.warranty && item.warranty.name ? item.warranty : null,
+          productModel:
+            item.productModel && item.productModel.name
+              ? item.productModel
               : null,
+          processor:
+            item.processor && item.processor.name ? item.processor : null,
+          ramOption:
+            item.ramOption && item.ramOption.name ? item.ramOption : null,
+          storageType:
+            item.storageType && item.storageType.name ? item.storageType : null,
+          graphicsCard:
+            item.graphicsCard && item.graphicsCard.name
+              ? item.graphicsCard
+              : null,
+          breed: item.breed && item.breed.name ? item.breed : null,
+          ageRange: item.ageRange && item.ageRange.name ? item.ageRange : null,
+          gender: item.gender && item.gender.name ? item.gender : null,
+          engineCapacity:
+            item.engineCapacity && item.engineCapacity.name
+              ? item.engineCapacity
+              : null,
+          mileage: item.mileage || null,
 
-            category_change: item.category_change || null,
-            sub_category_change: item.sub_category_change || null,
+          address_json: item.address_json || { full: locationText },
+          phone: item.user?.phone || null,
+          author: item.author || null,
+          year: item.year || null,
 
-            imageCount: item.images?.length || (imageUrl ? 1 : 0),
-            isFavorite: false,
-            images: item.images || [],
-            description: item.description || "",
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || undefined,
 
-            postType: item.postType || null,
-            condition: item.condition || null,
-            dealType: item.dealType || null,
+          sub_category_id: item.sub_category_id || null,
+          status_id: item.status_id?.toString() || undefined,
+          visibility_type: item.visibility_type?.toString() || undefined,
+          group_id: item.group_id || null,
+        };
+      });
 
-            productStatus: item.productStatus || null,
-            
-            productType:
-              item.productType && item.productType.name
-                ? item.productType
-                : null,
-            origin: item.origin && item.origin.name ? item.origin : null,
-            material:
-              item.material && item.material.name ? item.material : null,
-            size: item.size && item.size.name ? item.size : null,
-            brand: item.brand && item.brand.name ? item.brand : null,
-            color: item.color && item.color.name ? item.color : null,
-            capacity:
-              item.capacity && item.capacity.name ? item.capacity : null,
-            warranty:
-              item.warranty && item.warranty.name ? item.warranty : null,
-            productModel:
-              item.productModel && item.productModel.name
-                ? item.productModel
-                : null,
-            processor:
-              item.processor && item.processor.name ? item.processor : null,
-            ramOption:
-              item.ramOption && item.ramOption.name ? item.ramOption : null,
-            storageType:
-              item.storageType && item.storageType.name
-                ? item.storageType
-                : null,
-            graphicsCard:
-              item.graphicsCard && item.graphicsCard.name
-                ? item.graphicsCard
-                : null,
-            breed: item.breed && item.breed.name ? item.breed : null,
-            ageRange:
-              item.ageRange && item.ageRange.name ? item.ageRange : null,
-            gender: item.gender && item.gender.name ? item.gender : null,
-            engineCapacity:
-              item.engineCapacity && item.engineCapacity.name
-                ? item.engineCapacity
-                : null,
-            mileage: item.mileage || null,
-
-            address_json: item.address_json || { full: locationText },
-            phone: item.user?.phone || null,
-            author: item.author || null,
-            year: item.year || null,
-
-            created_at: item.created_at || new Date().toISOString(),
-            updated_at: item.updated_at || undefined,
-
-            sub_category_id: item.sub_category_id || null,
-            status_id: item.status_id?.toString() || undefined,
-            visibility_type: item.visibility_type?.toString() || undefined,
-            group_id: item.group_id || null,
-          };
-        });
-
-        setProducts(mapped);
-      })
-      .catch((err) => {
+      setProducts(mapped);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
         if (err.response) {
           console.log("Lỗi từ server:", err.response.data);
         } else if (err.request) {
@@ -241,9 +234,35 @@ export default function HomeScreen({ navigation }: Props) {
         } else {
           console.log("Lỗi khi gọi API:", err.message);
         }
-        throw err; // Ném lỗi để Promise.all bắt được
-      });
+      } else {
+        console.error("Lỗi không xác định:", err);
+      }
+    }
   };
+  useEffect(() => {
+    const loadProducts = async () => {
+      // 1. Bắt đầu loading
+      setIsLoading(true);
+      //  Xóa list cũ để màn hình trống sạch sẽ trước khi hiện cái mới
+      setProducts([]);
+
+      try {
+        let apiFilter: string | undefined;
+        if (selectedFilter === "Đồ miễn phí") apiFilter = "Miễn phí";
+        else if (selectedFilter === "Trao đổi") apiFilter = "Trao đổi";
+
+        // Gọi hàm fetch có sẵn của bạn
+        await fetchProducts(apiFilter);
+      } catch (error) {
+        console.log("Lỗi load tab:", error);
+      } finally {
+        // 2. Kết thúc loading dù thành công hay thất bại
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, [selectedFilter]);
 
   const fetchFavorites = async () => {
     try {
@@ -254,36 +273,15 @@ export default function HomeScreen({ navigation }: Props) {
       setFavoriteIds(res.data.productIds || []);
     } catch (err) {
       console.log("Lỗi khi lấy danh sách yêu thích:", err);
-      throw err; // Ném lỗi để Promise.all bắt được
+      throw err;
     }
   };
 
   // Gọi các hàm fetch khi component mount lần đầu
   useEffect(() => {
     fetchCategories();
-    fetchProducts();
     fetchFavorites();
   }, []);
-
-  useEffect(() => {
-    // Định nghĩa hàm lọc
-    const filterProducts = () => {
-      console.log("Chạy logic filter cho:", selectedFilter);
-
-      if (selectedFilter === "Đồ miễn phí") {
-        setFilteredProducts(products.filter((p) => p.price === "Miễn phí"));
-      } else if (selectedFilter === "Trao đổi") {
-        setFilteredProducts(products.filter((p) => p.price === "Trao đổi"));
-      } else if (selectedFilter == "Đang tìm mua") {
-        setFilteredProducts(products.filter((p) => p.postType?.id == "2"));
-      } else {
-        // "Mới nhất", "Gợi ý" và các trường hợp khác sẽ hiển thị tất cả
-        setFilteredProducts(products);
-      }
-    }; // Gọi hàm lọc
-
-    filterProducts(); // useEffect này sẽ chạy lại mỗi khi selectedFilter hoặc products thay đổi
-  }, [selectedFilter, products]);
 
   useEffect(() => {
     fetchUnreadCount();
@@ -291,17 +289,34 @@ export default function HomeScreen({ navigation }: Props) {
 
   const handleToggleFavorite = async (productId: string) => {
     try {
-      const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
         Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
         return;
       }
-      const userId = parseInt(userIdStr, 10);
-      await axios.post(`${path}/favorites/toggle/${productId}`, { userId });
-      const res = await axios.get(`${path}/favorites/user/${userId}`);
-      setFavoriteIds(res.data.productIds || []);
-    } catch (err) {
-      console.log("Lỗi toggle yêu thích screen:", err);
+
+      // Gửi token để BE tự nhận diện user
+      await axios.post(
+        `${path}/favorites/toggle/${productId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Sau khi toggle, lấy lại danh sách favorites
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (userIdStr) {
+        const res = await axios.get(
+          `${path}/favorites/user/${parseInt(userIdStr, 10)}`
+        );
+        setFavoriteIds(res.data.productIds || []);
+      }
+    } catch (err: any) {
+      console.log("Lỗi toggle yêu thích:", err.response?.data || err.message);
+      if (err.response?.status === 401) {
+        Alert.alert("Phiên đăng nhập hết hạn", "Vui lòng đăng nhập lại.");
+      }
     }
   };
 
@@ -333,7 +348,7 @@ export default function HomeScreen({ navigation }: Props) {
     interval = seconds / 60;
     return Math.floor(interval) + " phút trước";
   };
-  
+
   const handleBellPress = async () => {
     const userId = await AsyncStorage.getItem("userId");
     if (!userId) {
@@ -356,7 +371,7 @@ export default function HomeScreen({ navigation }: Props) {
       // Gọi song song các hàm fetch
       await Promise.all([
         fetchCategories(),
-        fetchProducts(),
+        fetchProducts(selectedFilter),
         fetchFavorites(),
         fetchUnreadCount(),
       ]);
@@ -366,10 +381,10 @@ export default function HomeScreen({ navigation }: Props) {
     } finally {
       setRefreshing(false);
     }
-  }, [fetchUnreadCount]); // fetchUnreadCount là dependency ổn định từ context
+  }, [selectedFilter, fetchUnreadCount]); // fetchUnreadCount là dependency ổn định từ context
 
   return (
-    <View className="flex-1 bg-[#f5f6fa]">
+    <View className="flex-1 bg-[#f5f6fa] mt-8">
       <StatusBar hidden={true} />
 
       {/* Header */}
@@ -451,9 +466,8 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               className="w-20 items-center mr-4 bg-white rounded-lg p-2 shadow-sm"
               onPress={() => {
-                // Navigate sang CategoryIndex với categoryId (danh mục cha) để fetch sản phẩm theo cha
                 navigation.navigate("CategoryIndex", {
-                  categoryId: item.id.toString(), // ID danh mục cha để filter products
+                  categoryId: item.id.toString(),
                   categoryName: item.name,
                 });
               }}
@@ -476,7 +490,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
         <View className="px-4">
           <FlatList
-            data={filters} // Đảm bảo bạn đã dùng mảng 'filters' mới
+            data={filters}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
@@ -488,7 +502,11 @@ export default function HomeScreen({ navigation }: Props) {
                     : "bg-white border-gray-300"
                 }`}
                 onPress={() => {
-                  setSelectedFilter(item.label);
+                  if (item.type === "navigate") {
+                    navigation.navigate("SuggestionScreen");
+                  } else {
+                    setSelectedFilter(item.label);
+                  }
                 }}
               >
                 <Text
@@ -506,31 +524,45 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
         {/* Danh sách sản phẩm */}
         <View className="px-4 mt-4">
-          <FlatList
-            data={(selectedFilter ? filteredProducts : products).filter(
-              (p) => p.productStatus?.id === 2
-            )}
-            numColumns={2}
-            keyExtractor={(item) => item.id}
-            columnWrapperStyle={{ justifyContent: "space-between" }}
-            contentContainerStyle={{ paddingBottom: 80 }}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <ProductCard
-                product={item}
-                isFavorite={favoriteIds.includes(String(item.id))}
-                onToggleFavorite={() => handleToggleFavorite(item.id)}
-                onPress={() =>
-                  navigation.navigate("ProductDetail", { product: item })
-                }
-                onPressPostType={(pt) => {
-                  if (pt.id == "1") navigation.navigate("SellProductScreen");
-                  else if (pt.id == "2")
-                    navigation.navigate("PurchaseRequestScreen");
-                }}
-              />
-            )}
-          />
+          {isLoading ? (
+            <View className="py-20 items-center justify-center">
+              <ActivityIndicator size="large" color="#3b82f6" />
+              <Text className="text-gray-400 mt-2 text-sm">
+                Đang tải dữ liệu...
+              </Text>
+            </View>
+          ) : (
+            /* 👇 Nếu không load thì hiện FlatList như cũ */
+            <FlatList
+              data={products.filter((p) => p.productStatus?.id === 2)}
+              numColumns={2}
+              keyExtractor={(item) => item.id}
+              columnWrapperStyle={{ justifyContent: "space-between" }}
+              contentContainerStyle={{ paddingBottom: 80 }}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                // Thêm dòng này để báo nếu không có sản phẩm nào
+                <Text className="text-center text-gray-500 mt-10">
+                  Không tìm thấy sản phẩm nào.
+                </Text>
+              }
+              renderItem={({ item }) => (
+                <ProductCard
+                  product={item}
+                  isFavorite={favoriteIds.includes(String(item.id))}
+                  onToggleFavorite={() => handleToggleFavorite(item.id)}
+                  onPress={() =>
+                    navigation.navigate("ProductDetail", { product: item })
+                  }
+                  onPressPostType={(pt) => {
+                    if (pt.id == "1") navigation.navigate("SellProductScreen");
+                    else if (pt.id == "2")
+                      navigation.navigate("PurchaseRequestScreen");
+                  }}
+                />
+              )}
+            />
+          )}
         </View>
       </ScrollView>
       {/* Menu dưới */}

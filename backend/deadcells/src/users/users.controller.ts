@@ -1,11 +1,29 @@
-import { Controller, Get, Patch, Param, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  UploadedFile,
+  UseInterceptors,
+  UseGuards,
+  Req,
+  Query,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  async searchUsers(@Req() req, @Query('q') search?: string) {
+    const currentUserId = req.user.id;
+    return this.usersService.searchUsersForInvite(currentUserId, search);
+  }
 
   @Get(':id')
   async getUser(@Param('id') id: string) {

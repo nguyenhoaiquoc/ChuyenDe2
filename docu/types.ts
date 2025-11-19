@@ -53,7 +53,7 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsUserScreen: undefined;
-  
+  ManageCategoriesScreen: undefined;  
   // 👇 THÊM DÒNG NÀY
   ManageGroupPostsScreen: undefined; 
 
@@ -62,8 +62,10 @@ export type RootStackParamList = {
   GroupMembersScreen: { groupId: number; isLeader: boolean };
   ApprovePostsScreen: { groupId: number };
   EditGroupScreen: { group: any };
-
-  GroupDetailScreen: { group: GroupType };
+  InviteMembersScreen: { groupId: number };
+  QRInviteScreen: { groupId: number };
+  DeepLinkHandler: undefined;
+  GroupDetailScreen: { groupId: number };
   PostGroupFormScreen: {
     group: GroupType;
     category?: Category;
@@ -90,6 +92,7 @@ export type RootStackParamList = {
     productId: string;
     product: Product;
   };
+  SuggestionScreen: undefined;
   // TestApi: undefined;
 };
 
@@ -97,6 +100,11 @@ export type CategoryType = {
   id: string;
   name: string;
 };
+
+export type ManageCategoriesScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "ManageCategoriesScreen"
+>;
 
 export type ProductDetailScreenRouteProp = RouteProp<
   RootStackParamList,
@@ -323,14 +331,18 @@ export type Comment = {
   content: string;
   created_at: string;
   user?: {
+    id: string | number;
     fullName?: string;
     image?: string;
   };
+  children: Comment[];
 };
 
 export type User = {
   id: number;
   name: string;
+  email?: string;
+  avatar?: string | null;
 };
 
 export type FileResult = {
@@ -344,6 +356,7 @@ export type Notification = {
   is_read: boolean;
   createdAt: string; 
   target_id: number;
+  group?: Partial<GroupType>;
 
   // Quan hệ: Người gây ra hành động
   actor: {
@@ -368,6 +381,16 @@ export type Notification = {
     id: number;
     name: string;
   };
+
+  invitationStatus?: "accepted" | "rejected" | "pending";
+};
+
+// Join status types
+export type JoinStatus = "none" | "pending" | "joined";
+
+export type GroupWithStatus = GroupType & {
+  joinStatus: JoinStatus;
+  memberCount: number | string;
 };
 
 export type GroupType = {
@@ -376,7 +399,7 @@ export type GroupType = {
   image: string | number;
   isPublic: boolean;
   mustApprovePosts?: boolean;
-  
+  joinStatus: "none" | "pending" | "joined";
 };
 
 export interface Group {
