@@ -1494,4 +1494,5 @@ this.logger.log(`DealType hiện tại: ${product.dealType?.id}`);
 
     return updatedProduct;
   }
+
 }

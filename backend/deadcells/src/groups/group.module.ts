@@ -8,9 +8,11 @@ import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
 import { Product } from 'src/entities/product.entity';
 import { ProductStatus } from 'src/entities/product-status.entity';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Group, GroupMember, GroupRole, Product, ProductStatus])],
+  imports: [TypeOrmModule.forFeature([Group, GroupMember, GroupRole, Product, ProductStatus]),ChatModule],
+  
   providers: [GroupService],
   controllers: [GroupController],
   exports: [GroupService],

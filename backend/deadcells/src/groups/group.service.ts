@@ -10,6 +10,7 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Repository, FindManyOptions, In } from 'typeorm';
 import { ProductStatus } from 'src/entities/product-status.entity';
+import { ChatService } from 'src/chat/chat.service';
 
 @Injectable()
 export class GroupService {
@@ -25,6 +26,8 @@ export class GroupService {
 
     @InjectRepository(ProductStatus)
     private readonly productStatusRepo: Repository<ProductStatus>,
+        private readonly chatService: ChatService, // ⭐ Inject ở đây
+
   ) {}
 
   // ==================== CRUD Groups ====================
@@ -333,6 +336,8 @@ export class GroupService {
   async joinGroup(groupId: number, userId: number): Promise<any> {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
+
+    await this.chatService.createRoomGroup(groupId);
 
     const existing = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
