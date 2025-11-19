@@ -49,18 +49,24 @@ import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
 import InviteMembersScreen from './screens/groups/crud/InviteMembersScreen';
 import QRInviteScreen from './screens/groups/crud/QRInviteScreen';
 import DeepLinkHandlerScreen from './screens/groups/crud/DeepLinkHandlerScreen';
-import React from 'react';
+import React, { useEffect } from 'react';
 import ManageGroupPostsScreen from './screens/admin/ManageProductsUserScreen';
 import EditProductScreen from './screens/products/EditProductScreen';
 import SuggestionScreen from './screens/products/SuggestionScreen';
 import ManageCategoriesScreen from './screens/admin/category/ManageCategoriesScreen';
+import { setupDeepLink } from './src/navigation/DeepLinkHandler';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const navigationRef = React.createRef<any>();
+  useEffect(() => {
+    const cleanup = setupDeepLink(navigationRef);
+    return cleanup;
+  }, []);
   return (
     <NotificationProvider>
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef} onReady={() => {console.log("NavigationContainer đã sẵn sàng!");}}>
         <StatusBar hidden />
         <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
           {/* <Stack.Screen name="TestApi" component={TestApi} /> */}
@@ -101,21 +107,17 @@ export default function App() {
           <Stack.Screen name="CreateGroupScreen" component={CreateGroupScreen} />
           <Stack.Screen name="SavedPostsScreen" component={SavedPostsScreen} />
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
-           <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
-        <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
-        <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
-        <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
-        <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
-        <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
-        <Stack.Screen name="InviteMembersScreen" component={InviteMembersScreen} />
-        <Stack.Screen name="QRInviteScreen" component={QRInviteScreen} />
-        <Stack.Screen 
-  name="DeepLinkHandler" 
-  component={DeepLinkHandlerScreen} 
-  options={{ headerShown: false }} 
-/>
-        <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
-        <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
+          <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+          <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
+          <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
+          <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
+          <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
+          <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+          <Stack.Screen name="InviteMembersScreen" component={InviteMembersScreen} />
+          <Stack.Screen name="QRInviteScreen" component={QRInviteScreen} />
+          <Stack.Screen name="DeepLinkHandler" component={DeepLinkHandlerScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
+          <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

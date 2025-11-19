@@ -53,7 +53,10 @@ const GroupSuggestionCard = ({
     <View className="w-[48%] mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
       <TouchableOpacity
         onPress={() =>
-          navigation.navigate("GroupDetailScreen", { groupId: group.id })
+          navigation.navigate("GroupDetailScreen", {
+            groupId: group.id,
+            initialJoinStatus: group.joinStatus,
+          })
         }
       >
         <ImageBackground
@@ -82,6 +85,17 @@ const GroupSuggestionCard = ({
           >
             <Text className="text-blue-600 font-semibold text-center text-sm">
               {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {group.joinStatus === "pending" && (
+          <TouchableOpacity
+            className="bg-blue-100 mt-3 py-2 rounded-md"
+            onPress={() => onJoin(group.id)} // gọi lại handleJoin để hủy
+          >
+            <Text className="text-yellow-600 font-semibold text-center text-sm">
+              Hủy yêu cầu
             </Text>
           </TouchableOpacity>
         )}
@@ -136,23 +150,31 @@ export default function DiscoverTab() {
     }
 
     try {
+      // ✅ Tìm nhóm hiện tại để kiểm tra trạng thái
+      const currentGroup = suggestedGroups.find((g) => g.id === groupId);
+
+      // ✅ Nếu đang "pending" → Hủy yêu cầu
+      if (currentGroup?.joinStatus === "pending") {
+        await axios.delete(`${path}/groups/${groupId}/cancel-request`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Refresh danh sách
+        await fetchSuggestedGroups();
+        return;
+      }
+
+      // ✅ Nếu "none" → Gửi yêu cầu tham gia
       const res = await axios.post(
         `${path}/groups/${groupId}/join`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const joinStatus = res.data.joinStatus as JoinStatus | undefined;
-      const message =
-        res.data.message ||
-        (joinStatus === "joined" ? "Bạn đã tham gia nhóm" : "Đã gửi yêu cầu");
-
-      Alert.alert("Thông báo", message);
-
-      // refresh danh sách / trạng thái
+      // Refresh danh sách
       await fetchSuggestedGroups();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Không thể tham gia nhóm";
+      const msg = err.response?.data?.message || "Không thể thực hiện thao tác";
       Alert.alert("Lỗi", msg);
     }
   };

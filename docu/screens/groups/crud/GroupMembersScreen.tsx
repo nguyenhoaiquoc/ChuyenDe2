@@ -191,7 +191,7 @@ export default function GroupMembersScreen({ navigation, route }: Props) {
         source={
           item.avatar
             ? { uri: item.avatar }
-            : require("../../../assets/defaultgroup.png")
+            : require("../../../assets/khi.png")
         }
         className="w-12 h-12 rounded-full"
       />
@@ -221,7 +221,7 @@ export default function GroupMembersScreen({ navigation, route }: Props) {
         source={
           item.avatar
             ? { uri: item.avatar }
-            : require("../../../assets/defaultgroup.png")
+            : require("../../../assets/khi.png")
         }
         className="w-12 h-12 rounded-full"
       />

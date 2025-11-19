@@ -8,6 +8,8 @@ import {
   UseGuards,
   Req,
   Query,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -50,5 +52,40 @@ export class UsersController {
   ) {
     if (!file) return { error: 'Chưa chọn file' };
     return this.usersService.updateUser(+id, { coverImage: file.path });
+  }
+
+  /** Đánh giá user */
+  @Post(':userId/rate')
+  @UseGuards(JwtAuthGuard)
+  async rateUser(
+    @Req() req,
+    @Param('userId') userId: number,
+    @Body() data: { stars: number; content?: string },
+  ) {
+    return this.usersService.rateUser(
+      req.user.id,
+      userId,
+      data.stars,
+      data.content,
+    );
+  }
+
+  /** Lấy danh sách đánh giá của user */
+  @Get(':userId/ratings')
+  async getUserRatings(@Param('userId') userId: number) {
+    return this.usersService.getUserRatings(userId);
+  }
+
+  /** Lấy rating trung bình */
+  @Get(':userId/rating-average')
+  async getUserAverageRating(@Param('userId') userId: number) {
+    return this.usersService.getUserAverageRating(userId);
+  }
+
+  /** Kiểm tra đã đánh giá chưa */
+  @Get(':userId/check-rating')
+  @UseGuards(JwtAuthGuard)
+  async checkUserRating(@Req() req, @Param('userId') userId: number) {
+    return this.usersService.checkUserRating(req.user.id, userId);
   }
 }

@@ -10,10 +10,12 @@ import { ChatController } from './chat.controller';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { AuthModule } from 'src/auth/auth.module';
 import { User } from 'src/entities/user.entity';
+import { GroupMember } from 'src/entities/group-member.entity';
+import { Group } from 'src/entities/group.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConversationRoom, ConversationParticipant, Message,User]),
+    TypeOrmModule.forFeature([ConversationRoom, ConversationParticipant, Message,User,GroupMember,Group]),
   AuthModule,],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, JwtAuthGuard],
