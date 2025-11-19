@@ -16,8 +16,17 @@ import { GroupModule } from 'src/groups/group.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConversationRoom, ConversationParticipant, Message,User,Group,GroupMember]),
-  AuthModule,   forwardRef(() => GroupModule)],
+    TypeOrmModule.forFeature([
+      ConversationRoom,
+      ConversationParticipant,
+      Message,
+      User,
+      Group,
+      GroupMember,
+    ]),
+    AuthModule,
+    forwardRef(() => GroupModule),
+  ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, JwtAuthGuard],
   exports: [ChatService],

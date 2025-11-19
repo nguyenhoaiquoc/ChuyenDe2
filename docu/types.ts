@@ -54,7 +54,6 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   ManageProductsUserScreen: undefined;
   ManageCategoriesScreen: undefined;  
-  // 👇 THÊM DÒNG NÀY
   ManageGroupPostsScreen: undefined; 
 
   PostsTab: undefined;
@@ -165,9 +164,9 @@ export type Category = { id: string; name: string; image?: string };
 export type SubCategory = {
   id: string | number;
   name: string;
-  parent_category_id?: number | null; // (Trường này API có gửi)
-  source_table?: string | null; // (Trường này API có gửi)
-  source_id?: number | null; // (Trường này API có gửi)
+  parent_category_id?: number | null; 
+  source_table?: string | null; 
+  source_id?: number | null; 
 };
 export type ProductType = {
   id: string | number;

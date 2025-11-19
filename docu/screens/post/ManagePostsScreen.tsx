@@ -306,7 +306,7 @@ export default function ManagePostsScreen({
   /** Mở menu 3 chấm */
   const handleOpenMenu = (product: Product, pageY: number) => {
     setSelectedProduct(product); // Lưu cả sản phẩm
-    setMenuPosition({ top: pageY, right: 50 });
+    setMenuPosition({ top: pageY - 230, right: 20 });
     setIsMenuVisible(true);
   }; /** Đóng menu 3 chấm */
 

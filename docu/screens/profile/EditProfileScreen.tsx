@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "UserInforScreen">;
