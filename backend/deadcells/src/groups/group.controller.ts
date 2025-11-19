@@ -104,6 +104,21 @@ export class GroupController {
     return this.groupService.getPublicGroups();
   }
 
+/** Lấy danh sách nhóm PUBLIC user đã tham gia (pending = 3) */
+  @Get('my-public-joined')
+  async getMyPublicJoinedGroups(@Query('userId') userId: any) {
+    // 1. Ép kiểu sang số
+    const uid = Number(userId);
+
+    // 2. CHẶN LỖI: Nếu uid không tồn tại hoặc là NaN -> Trả về rỗng luôn
+    if (!uid || isNaN(uid)) {
+      return [];
+    }
+
+    // 3. Nếu ID hợp lệ mới gọi Service
+    return this.groupService.getMyPublicJoinedGroups(uid);
+  }
+
   /** Lấy nhóm private đã tham gia */
   @Get()
   @UseGuards(JwtAuthGuard)

@@ -19,6 +19,7 @@ import { NotificationService } from 'src/notification/notification.service';
 
 @Injectable()
 export class GroupService {
+  logger: Console;
   constructor(
     @InjectRepository(Group)
     private readonly groupRepo: Repository<Group>,
@@ -1011,5 +1012,34 @@ export class GroupService {
       created_at: p.created_at,
       updated_at: p.updated_at,
     };
+  }
+
+ // Thay thế hàm cũ bằng hàm này
+  async getMyPublicJoinedGroups(userId: number) {
+    // 1. Dùng hàm find của TypeORM để lấy dữ liệu an toàn nhất
+    const members = await this.groupMemberRepo.find({
+      where: {
+        user_id: userId,
+        pending: 3, // Đã tham gia
+      },
+      relations: ['group'], // Load thông tin nhóm đi kèm
+    });
+
+    // 2. Lọc danh sách bằng Javascript (Tránh lỗi SQL query với Boolean)
+    const result = members
+      .map((m) => m.group) // Lấy ra object Group
+      .filter((g) => g && g.isPublic === true) // Chỉ lấy nhóm Public
+      .map((g) => ({
+        id: g.id,
+        name: g.name,
+        isPublic: true,
+      }));
+
+    // Log ra terminal server để bạn yên tâm
+    console.log(
+      `✅ [API Group] User ${userId} - Tìm thấy ${result.length} nhóm Public`,
+    );
+
+    return result;
   }
 }

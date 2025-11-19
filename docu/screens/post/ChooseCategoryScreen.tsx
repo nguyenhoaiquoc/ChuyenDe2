@@ -29,12 +29,11 @@ export default function ChooseCategoryScreen({ navigation, route }: any) {
         const mapped = res.data.map((item: Category) => ({
           id: item.id.toString(),
           name: item.name,
-          image:
-            item.image && item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : item.image
-                ? `${path}/uploads/categories/${item.image}`
-                : `${path}/uploads/categories/default.png`,
+          image: item.image
+    ? item.image.startsWith("http") // Trường hợp 1: Link Cloudinary hoặc link tuyệt đối
+        ? item.image
+        : `${path}${item.image.startsWith("/") ? "" : "/uploads/categories/"}${item.image}` // Trường hợp 2: Ảnh lưu local (có hoặc không có dấu / ở đầu)
+    : `${path}/uploads/categories/default.png`, // Trường hợp 3: Không có ảnh
         }));
         setCategories(mapped);
       })
