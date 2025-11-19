@@ -13,6 +13,7 @@ import { Role } from './role.entity';
 import { Status } from './status.entity';
 import { Report } from './report.entity';
 import { Comment } from './comment.entity';
+import { Product } from './product.entity';
 
 @Entity('users')
 export class User {
@@ -20,6 +21,9 @@ export class User {
   id: number;
 
   /** --------- Quan hệ & FK rõ ràng --------- */
+
+
+
   @ManyToOne(() => Role, { nullable: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;

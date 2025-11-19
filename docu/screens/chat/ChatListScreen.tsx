@@ -14,6 +14,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import { useFocusEffect } from "@react-navigation/native";
 import { io, Socket } from "socket.io-client";
+import React from "react";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ChatListScreen">;
@@ -159,7 +160,7 @@ export default function ChatListScreen({ navigation }: Props) {
         token: tokenValue,
       });
     } catch (error) {
-      console.error("❌ Lỗi mở phòng chat:", error);
+      console.error("chat lỗi:", error);
       Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
     }
   };

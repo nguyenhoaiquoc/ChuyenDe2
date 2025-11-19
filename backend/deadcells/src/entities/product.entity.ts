@@ -48,6 +48,7 @@ export class Product {
   @Column({ name: 'product_type_id', type: 'bigint', nullable: true })
   product_type_id: number | null;
 
+
   @ManyToOne(() => ProductType, { nullable: true })
   @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
   productType: ProductType | null;
@@ -212,7 +213,9 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   category_id: number | null;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, (category) => category.products, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
@@ -283,7 +286,7 @@ export class Product {
     comment: 'Ngày sản phẩm sẽ hết hạn',
   })
   expires_at: Date | null;
-  
+
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

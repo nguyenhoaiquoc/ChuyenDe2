@@ -1,9 +1,18 @@
-import { Controller, Get, Param, Post, Body, Put, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Body,
+  Put,
+  Delete,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { SubCategoryService } from './sub-category.service';
 
 @Controller('sub-categories')
 export class SubCategoryController {
-  constructor(private readonly subCategoryService: SubCategoryService) { }
+  constructor(private readonly subCategoryService: SubCategoryService) {}
 
   @Get()
   findAll() {
@@ -45,9 +54,14 @@ export class SubCategoryController {
     return this.subCategoryService.findByCategory(7);
   }
 
+  @Get('by-category/:categoryId')
+  async getByCategory(@Param('categoryId') categoryId: string) {
+    return this.subCategoryService.findByCategory(Number(categoryId));
+  }
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.subCategoryService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.subCategoryService.findOne(id);
   }
 
   @Post()
@@ -56,14 +70,12 @@ export class SubCategoryController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.subCategoryService.update(+id, body);
+  update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.subCategoryService.update(id, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.subCategoryService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.subCategoryService.remove(id);
   }
-
-
 }
