@@ -364,6 +364,26 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
+  useEffect(() => {
+    const check = async () => {
+      const data = await AsyncStorage.getItem("JOIN_GROUP_SUCCESS");
+      if (data) {
+        const { groupName } = JSON.parse(data);
+        Alert.alert(
+          "BẠN ĐÃ THAM GIA NHÓM!",
+          `Chào mừng bạn đến với ${groupName}!`,
+          [
+            {
+              text: "OK",
+              onPress: () => AsyncStorage.removeItem("JOIN_GROUP_SUCCESS"),
+            },
+          ]
+        );
+      }
+    };
+    check();
+  }, []);
+
   // 5. Tạo hàm onRefresh
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

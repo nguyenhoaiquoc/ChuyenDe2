@@ -119,19 +119,27 @@ export default function PostsTab({ navigation }: PostsTabProps) {
         renderItem={({ item }) => (
           <View className="mb-6 p-3 bg-white rounded-lg shadow">
             {/* Nhóm */}
-            <View className="flex-row items-center">
-              <Image
-                source={
-                  item.group?.image
-                    ? { uri: item.group.image }
-                    : require("../../../assets/meo.jpg")
-                }
-                className="w-12 h-12 rounded-full"
-              />
-              <Text className="text-xl ml-2 font-semibold">
-                {item.group.name || "Nhóm ẩn danh"}
-              </Text>
-            </View>
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("GroupDetailScreen", {
+                  groupId: item.group.id,
+                })
+              }
+            >
+              <View className="flex-row items-center">
+                <Image
+                  source={
+                    item.group?.image
+                      ? { uri: item.group.image }
+                      : require("../../../assets/defaultgroup.png")
+                  }
+                  className="w-12 h-12 rounded-full"
+                />
+                <Text className="text-xl ml-2 font-semibold">
+                  {item.group.name || "Nhóm ẩn danh"}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             {/* User */}
             <View className="flex-row items-center ml-7 mt-1">
@@ -139,7 +147,7 @@ export default function PostsTab({ navigation }: PostsTabProps) {
                 source={
                   item.user?.avatar
                     ? { uri: item.user.avatar }
-                    : require("../../../assets/meo.jpg")
+                    : require("../../../assets/khi.png")
                 }
                 className="w-7 h-5 rounded-full"
               />

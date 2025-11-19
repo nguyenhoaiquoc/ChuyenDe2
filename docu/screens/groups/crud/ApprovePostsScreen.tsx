@@ -143,7 +143,7 @@ export default function ApprovePostsScreen({ navigation, route }: Props) {
                   source={
                     item.user?.avatar
                       ? { uri: item.user.avatar }
-                      : require("../../../assets/defaultgroup.png")
+                      : require("../../../assets/khi.png")
                   }
                   className="w-10 h-10 rounded-full"
                 />

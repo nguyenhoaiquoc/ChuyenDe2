@@ -60,7 +60,16 @@ export default function NotificationScreen({ navigation }: Props) {
 
       const apiUrl = `${path}/notifications/user/${userId}${tabQueryParam}`;
       const response = await axios.get(apiUrl);
-      setNotifications(response.data);
+      const updated = await Promise.all(
+        response.data.map(async (n: Notification) => {
+          if (n.action?.name === "group_invitation") {
+            const localStatus = await getHandledInvitation(n.target_id);
+            if (localStatus) return { ...n, invitationStatus: localStatus };
+          }
+          return n;
+        })
+      );
+      setNotifications(updated);
     } catch (error: any) {
       console.log("Lỗi khi tải thông báo:", error.message);
       Alert.alert("Lỗi", "Không thể tải danh sách thông báo.");
@@ -73,6 +82,33 @@ export default function NotificationScreen({ navigation }: Props) {
     fetchNotifications();
   }, [activeTab]);
 
+  // 🔹 Lưu trạng thái lời mời đã xử lý
+  const saveHandledInvitation = async (
+    invitationId: number,
+    status: "accepted" | "rejected"
+  ) => {
+    try {
+      const stored = await AsyncStorage.getItem("handledInvitations");
+      const obj = stored ? JSON.parse(stored) : {};
+      obj[invitationId] = status;
+      await AsyncStorage.setItem("handledInvitations", JSON.stringify(obj));
+    } catch (err) {
+      console.log("❌ Lỗi lưu trạng thái lời mời:", err);
+    }
+  };
+
+  // 🔹 Lấy trạng thái lời mời
+  const getHandledInvitation = async (invitationId: number) => {
+    try {
+      const stored = await AsyncStorage.getItem("handledInvitations");
+      const obj = stored ? JSON.parse(stored) : {};
+      return obj[invitationId] || null;
+    } catch (err) {
+      console.log("❌ Lỗi lấy trạng thái lời mời:", err);
+      return null;
+    }
+  };
+
   // ✅ Chấp nhận lời mời
   const handleAcceptInvitation = async (invitationId: number) => {
     setProcessingInvitation(invitationId);
@@ -83,7 +119,7 @@ export default function NotificationScreen({ navigation }: Props) {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
+      await saveHandledInvitation(invitationId, "accepted");
       Alert.alert(
         "Thành công",
         res.data.message || "Đã tham gia nhóm thành công"
@@ -118,7 +154,7 @@ export default function NotificationScreen({ navigation }: Props) {
                 {},
                 { headers: { Authorization: `Bearer ${token}` } }
               );
-
+              await saveHandledInvitation(invitationId, "rejected");
               // ✅ Cập nhật UI ngay
               setNotifications((prev) =>
                 prev.map((n) =>
@@ -231,7 +267,7 @@ export default function NotificationScreen({ navigation }: Props) {
               source={
                 item.actor?.image
                   ? { uri: item.actor.image }
-                  : require("../../assets/defaultgroup.png")
+                  : require("../../assets/khi.png")
               }
               className="w-12 h-12 rounded-full"
             />

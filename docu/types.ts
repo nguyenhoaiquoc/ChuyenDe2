@@ -11,7 +11,7 @@ export type RootStackParamList = {
   NewPasswordScreen: { email: string; token: string };
   ChatListScreen: undefined;
   OTPVerifyScreen: { email: string };
-  ProductDetail: { product?: Product} | undefined;
+  ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
     | {
@@ -53,9 +53,9 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   ManageProductsUserScreen: undefined;
-  ManageCategoriesScreen: undefined;  
+  ManageCategoriesScreen: undefined;
   // 👇 THÊM DÒNG NÀY
-  ManageGroupPostsScreen: undefined; 
+  ManageGroupPostsScreen: undefined;
 
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
@@ -65,7 +65,10 @@ export type RootStackParamList = {
   InviteMembersScreen: { groupId: number };
   QRInviteScreen: { groupId: number };
   DeepLinkHandler: undefined;
-  GroupDetailScreen: { groupId: number };
+  GroupDetailScreen: {
+    groupId: number;
+    initialJoinStatus?: "none" | "pending" | "joined";
+  };
   PostGroupFormScreen: {
     group: GroupType;
     category?: Category;
@@ -148,7 +151,6 @@ export type ManageGroupPostsScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
   "ManageGroupPostsScreen"
 >;
-
 
 export type ProductImage = {
   id: string;
@@ -249,8 +251,6 @@ export type AddressJson = {
   village?: string;
 };
 
-
-
 export type Product = {
   id: string;
   authorName: string;
@@ -304,7 +304,7 @@ export type Product = {
   year: number | null;
   created_at: string;
   updated_at?: string;
-  expires_at?: string | null ;
+  expires_at?: string | null;
   user_id: string | number;
 
   user?: {
@@ -354,7 +354,7 @@ export type FileResult = {
 export type Notification = {
   id: number;
   is_read: boolean;
-  createdAt: string; 
+  createdAt: string;
   target_id: number;
   group?: Partial<GroupType>;
 
@@ -408,3 +408,8 @@ export interface Group {
   isPublic: boolean;
 }
 
+export type StarRatingProps = {
+  rating: number;
+  onRatingChange?: (stars: number) => void;
+  editable?: boolean;
+};

@@ -30,7 +30,7 @@ export default function GroupDetailScreen({
   navigation,
   route,
 }: GroupDetailScreenProps) {
-  const { groupId } = route.params;
+  const { groupId, initialJoinStatus } = route.params;
 
   const [groupDetail, setGroupDetail] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
@@ -40,9 +40,12 @@ export default function GroupDetailScreen({
   const [isApprovalEnabled, setIsApprovalEnabled] = useState(false);
 
   const role = groupDetail?.userRole || "none";
-  const joinStatus = groupDetail?.isMember ? "joined" : "none";
   const isLeader = role === "leader";
+  const isPublic = groupDetail?.isPublic === true;
   const isMember = groupDetail?.isMember || false;
+  const [joinStatus, setJoinStatus] = useState<"none" | "pending" | "joined">(
+    initialJoinStatus || "none"
+  );
 
   const fetchData = useCallback(async () => {
     try {
@@ -57,6 +60,24 @@ export default function GroupDetailScreen({
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
+      const detail = detailRes.data;
+
+      const apiJoinStatus: "none" | "pending" | "joined" = detail.isMember
+        ? "joined"
+        : detail.pending === true
+          ? "pending"
+          : "none";
+
+      if (!initialJoinStatus) {
+        setJoinStatus(apiJoinStatus);
+      } else if (
+        initialJoinStatus === "pending" &&
+        apiJoinStatus === "joined"
+      ) {
+        setJoinStatus("joined");
+      } else {
+        setJoinStatus(initialJoinStatus);
+      }
 
       setGroupDetail(detailRes.data);
       setProducts(productsRes.data);
@@ -134,6 +155,41 @@ export default function GroupDetailScreen({
     );
   };
 
+  const handleJoinOrCancel = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+
+      if (joinStatus === "pending") {
+        // Hủy yêu cầu
+        await axios.delete(`${path}/groups/${groupId}/cancel-request`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // ✅ Cập nhật UI ngay
+        setJoinStatus("none");
+        return;
+      }
+
+      if (joinStatus === "none") {
+        // Gửi yêu cầu tham gia
+        const res = await axios.post(
+          `${path}/groups/${groupId}/join`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        const newStatus = res.data.joinStatus ?? "pending";
+        // ✅ Cập nhật UI ngay
+        setJoinStatus(newStatus);
+      }
+    } catch (err: any) {
+      Alert.alert(
+        "Lỗi",
+        err.response?.data?.message || "Không thể thực hiện thao tác"
+      );
+    }
+  };
+
   const handleInviteMembers = () => {
     setMenuVisible(false);
     navigation.navigate("InviteMembersScreen", { groupId });
@@ -163,6 +219,13 @@ export default function GroupDetailScreen({
   ];
 
   const leaderMenuItems = [
+    {
+      name: "Tạo chat cộng đồng",
+      icon: "message-circle",
+      action: () => {
+        console.log("mess");
+      },
+    },
     {
       name: "QR nhóm",
       icon: "share-2",
@@ -249,51 +312,61 @@ export default function GroupDetailScreen({
     return null;
   };
 
-  const renderGroupTypeLabel = () => {
-    if (!groupDetail) return null;
-
-    const isPublic = groupDetail?.isPublic === true;
-    const mustApprove = groupDetail?.mustApprovePosts === true;
-
-    if (isPublic) {
+  const renderActionButton = () => {
+    if (joinStatus === "none") {
       return (
-        <View className="flex-row items-center mt-1">
-          <Feather name="globe" size={12} color="#E5E7EB" />
-          <Text className="text-xs text-gray-200 ml-1">Nhóm công khai</Text>
-        </View>
+        <TouchableOpacity
+          onPress={handleJoinOrCancel}
+          className="bg-blue-600 px-6 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">
+            {groupDetail?.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
+          </Text>
+        </TouchableOpacity>
       );
     }
 
-    // Nhóm riêng tư
-    return (
-      <View className="flex-row items-center mt-1">
-        <Feather name="lock" size={12} color="#E5E7EB" />
-        <Text className="text-xs text-gray-200 ml-1">
-          Nhóm riêng tư ({mustApprove ? "Duyệt bài viết" : "Không phê duyệt"})
-        </Text>
-      </View>
-    );
-  };
-
-  const renderActionButton = () => {
-    if (isMember) {
+    if (joinStatus === "pending") {
       return (
-        <View className="flex-row items-center space-x-3">
-          <TouchableOpacity
-            onPress={handleCreatePost}
-            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
-          >
-            <Feather name="edit" size={20} color="black" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setMenuVisible(true)}
-            className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
-          >
-            <Feather name="more-vertical" size={20} color="black" />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={handleJoinOrCancel}
+          className="bg-yellow-500 px-6 py-2 rounded-full"
+        >
+          <Text className="text-white font-semibold">Chờ phê duyệt (Hủy)</Text>
+        </TouchableOpacity>
       );
+    }
+    //iconr
+    if (joinStatus === "joined") {
+      if (!isPublic) {
+        return (
+          <View className="flex-row items-center space-x-3">
+            <TouchableOpacity
+              onPress={handleCreatePost}
+              className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+            >
+              <Feather name="edit" size={20} color="black" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setMenuVisible(true)}
+              className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+            >
+              <Feather name="more-vertical" size={20} color="black" />
+            </TouchableOpacity>
+          </View>
+        );
+      } else {
+        return (
+          <View className="flex-row items-center space-x-3">
+            <TouchableOpacity
+              onPress={() => setMenuVisible(true)}
+              className="bg-white/70 p-2 rounded-full w-10 h-10 items-center justify-center"
+            >
+              <Feather name="more-vertical" size={20} color="black" />
+            </TouchableOpacity>
+          </View>
+        );
+      }
     }
 
     return null;
@@ -330,47 +403,84 @@ export default function GroupDetailScreen({
 
   const renderGroupDetail = () => {
     if (!groupDetail) return null;
-
-    const isPublic = groupDetail.isPublic === true;
     const mustApprove = groupDetail.mustApprovePosts === true;
 
     return (
       <View className="px-4 py-3 bg-gray-50 rounded-xl shadow-md mb-4">
-        <Text className="text-2xl font-bold text-gray-900">
+        {/* Tên nhóm */}
+        <Text className="text-2xl font-bold text-gray-900 mb-3">
           {groupDetail.name}
         </Text>
 
-        <View className="flex-row items-center mt-2">
-          <Feather name="users" size={14} color="#6b7280" />
-          <Text className="text-gray-700 text-sm ml-1">
-            {groupDetail.memberCount} thành viên
-          </Text>
-        </View>
-
-        <View className="flex-row items-center mt-1">
-          {isPublic ? (
-            <>
-              <Feather name="globe" size={12} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-1">Nhóm công khai</Text>
-            </>
-          ) : (
-            <>
-              <Feather name="lock" size={12} color="#6b7280" />
-              <Text className="text-xs text-gray-500 ml-1">
-                Nhóm riêng tư (
-                {mustApprove ? "Duyệt bài viết" : "Không phê duyệt"})
+        {/* Hai cột */}
+        <View className="flex-row justify-between">
+          {/* Bên trái */}
+          <View className="flex-1 pr-2">
+            {/* Trạng thái nhóm */}
+            <View className="flex-row items-center">
+              {groupDetail.isPublic ? (
+                <>
+                  <Feather name="globe" size={12} color="#6b7280" />
+                  <Text className="text-xs text-gray-500 ml-1">
+                    Nhóm công khai
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Feather name="lock" size={12} color="#6b7280" />
+                  <Text className="text-xs text-red-500 ml-1">
+                    Nhóm riêng tư (
+                    {groupDetail.mustApprovePosts
+                      ? "Có kiểm duyệt"
+                      : "Không kiểm duyệt"}
+                    )
+                  </Text>
+                </>
+              )}
+            </View>
+            {/* Vai trò của người dùng */}
+            {renderStatusBadge()}
+            {/* Chủ nhóm */}
+            <View className="flex-row items-center mb-2 mt-3">
+              <Image
+                source={
+                  groupDetail.owner?.avatar
+                    ? { uri: groupDetail.owner.avatar }
+                    : require("../../assets/khi.png")
+                }
+                className="w-6 h-6 rounded-full"
+              />
+              <Text className="ml-2 text-sm text-gray-600">
+                Chủ nhóm: {isLeader ? "Tôi" : groupDetail.owner?.name}
               </Text>
-            </>
-          )}
+            </View>
+          </View>
+          {/* Bên phải */}
+          <View className="flex-1 items-end pl-2">
+            {/* Số thành viên */}
+            <View className="flex-row items-center mb-2">
+              <Feather name="users" size={14} color="#6b7280" />
+              <Text className="text-gray-700 text-sm ml-1">
+                {groupDetail.memberCount} thành viên
+              </Text>
+            </View>
+
+            {/* Số bài viết */}
+            <View className="flex-row items-center mb-2">
+              <Feather name="file-text" size={14} color="#6b7280" />
+              <Text className="text-gray-700 text-sm ml-1">
+                {groupDetail.postCount} bài viết
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {renderStatusBadge()}
-
+        {/* Mô tả nhóm */}
         {groupDetail.description ? (
-          <View className="mt-2">
+          <View className="mt-3">
             <Text
               className="text-gray-700 text-sm"
-              numberOfLines={showFullDescription ? undefined : 1}
+              numberOfLines={showFullDescription ? undefined : 2}
               ellipsizeMode="tail"
             >
               {groupDetail.description}
@@ -448,7 +558,7 @@ export default function GroupDetailScreen({
                   source={
                     item.user?.avatar
                       ? { uri: item.user.avatar }
-                      : require("../../assets/defaultgroup.png")
+                      : require("../../assets/khi.png")
                   }
                   className="w-10 h-10 rounded-full border border-gray-300"
                 />
@@ -502,7 +612,7 @@ export default function GroupDetailScreen({
             <Text className="text-gray-500 mt-4 text-center">
               Chưa có bài viết nào trong nhóm này.
             </Text>
-            {isMember && (
+            {isMember && !isPublic ? (
               <TouchableOpacity
                 onPress={handleCreatePost}
                 className="mt-4 bg-blue-600 px-6 py-2 rounded-full"
@@ -511,7 +621,7 @@ export default function GroupDetailScreen({
                   Đăng bài viết đầu tiên
                 </Text>
               </TouchableOpacity>
-            )}
+            ) : null}
           </View>
         }
       />

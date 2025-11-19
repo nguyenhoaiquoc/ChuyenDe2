@@ -29,11 +29,20 @@ export class GroupController {
   async createGroup(
     @Req() req,
     @Body()
-    data: { name: string; thumbnail_url?: string; invitedUserIds?: number[] },
+    data: {
+      name: string;
+      thumbnail_url?: string;
+      description?: string;
+      invitedUserIds?: number[];
+    },
   ) {
     const userId = req.user.id;
     const group = await this.groupService.create(
-      { name: data.name, thumbnail_url: data.thumbnail_url },
+      {
+        name: data.name,
+        thumbnail_url: data.thumbnail_url,
+        description: data.description,
+      },
       userId,
       data.invitedUserIds,
     );
@@ -41,6 +50,7 @@ export class GroupController {
     return {
       id: group.id,
       name: group.name,
+      description: group.description,
       isPublic: group.isPublic,
       image: group.thumbnail_url,
       owner: group.owner_id,
@@ -122,8 +132,8 @@ export class GroupController {
   /** Lấy nhóm private đã tham gia */
   @Get()
   @UseGuards(JwtAuthGuard)
-  async getPrivateGroups(@Req() req) {
-    return this.groupService.getPrivateGroups(req.user.id);
+  async getGroupsJoin(@Req() req) {
+    return this.groupService.getGroupsJoin(req.user.id);
   }
 
   /** Lấy nhóm mới tham gia (latest) */
@@ -230,7 +240,7 @@ export class GroupController {
     @Param('groupId') groupId: number,
     @Query('search') search?: string,
   ) {
-    return this.groupService.getUsersToInvite(groupId, req.user.id, search);
+    return this.groupService.getUsersToInvite(groupId, search);
   }
 
   /** Lấy danh sách lời mời đang chờ */
@@ -283,8 +293,8 @@ export class GroupController {
     return this.groupService.joinGroup(groupId, req.user.id);
   }
 
-  /** Hủy yêu cầu tham gia (xóa pending = 2) */
-  @Delete(':groupId/join-request')
+  /** ✅ Hủy yêu cầu tham gia (xóa pending = 2) */
+  @Delete(':groupId/cancel-request')
   @UseGuards(JwtAuthGuard)
   async cancelJoinRequest(@Req() req, @Param('groupId') groupId: number) {
     await this.groupService.cancelJoinRequest(groupId, req.user.id);

@@ -55,10 +55,16 @@ import EditProductScreen from "./screens/products/EditProductScreen";
 import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { setupDeepLink } from './src/navigation/DeepLinkHandler';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const navigationRef = React.createRef<any>();
+  useEffect(() => {
+    const cleanup = setupDeepLink(navigationRef);
+    return cleanup;
+  }, []);
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NotificationProvider>
