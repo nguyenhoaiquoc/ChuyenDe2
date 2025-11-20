@@ -835,6 +835,15 @@ const handleChatPress = async () => {
                   {product.name || "Chưa rõ"}
                 </Text>
               </View>
+              <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">
+                <Text className="text-gray-600 text-sm">Loại danh mục</Text>
+                <Text
+                  className="text-gray-800 text-sm font-medium"
+                  style={{ flexShrink: 1, flexWrap: "wrap" }}
+                >
+                  {formatAgeRangeName(product.tag || "Chưa rõ")}
+                  </Text>
+              </View>
 
               {/* Giống thú cưng */}
               {product.breed?.name && (

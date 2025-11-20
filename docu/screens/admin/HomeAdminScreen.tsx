@@ -12,7 +12,6 @@ type Props = {
   navigation: HomeAdminScreenNavigationProp;
 };
 
-// Component Nút Chức Năng (để tái sử dụng)
 const AdminButton = ({
   icon,
   title,
@@ -58,7 +57,6 @@ export default function HomeAdminScreen({ navigation }: Props) {
       console.log("⚠️ [Admin] Lỗi khi gửi sự kiện logout:", err);
     }
 
-    // ✨ ĐÃ SỬA LẠI: Thêm 'role_id' vào danh sách xóa
     await AsyncStorage.multiRemove([
       "token",
       "userId",
@@ -73,7 +71,6 @@ export default function HomeAdminScreen({ navigation }: Props) {
     });
   };
 
-  // Hàm placeholder cho các màn hình chưa tạo
   const navigateToWIP = () => {
     Alert.alert("Chưa hoàn thiện", "Màn hình này đang được phát triển.");
   };
@@ -146,11 +143,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Duyệt tin Công Khai"
             subtitle="Duyệt các tin đăng công khai"
             color="bg-green-600"
-            // onPress={() => navigation.navigate("ManageProductsUserScreen")}
-            onPress={() => {
-              console.log("🔘 [HomeAdmin] Đang bấm: Duyệt tin Công Khai -> Navigate: ManageProductsUserScreen");
-              navigation.navigate("ManageProductsUserScreen");
-            }}
+            onPress={() => navigation.navigate("ManageProductsUserScreen")}
           />
 
           {/* 5. Duyệt tin Nhóm */}
@@ -159,11 +152,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Duyệt tin trong Nhóm"
             subtitle="Duyệt các tin đăng trong nhóm"
             color="bg-blue-600"
-            // onPress={() => navigation.navigate("ManageGroupPostsScreen")}
-            onPress={() => {
-              console.log("🔵 [HomeAdmin] Đang bấm: Duyệt tin Nhóm -> Navigate: ManageGroupPostsScreen");
-              navigation.navigate("ManageGroupPostsScreen");
-            }}
+            onPress={() => navigation.navigate("ManageGroupPostsScreen")}
           />
         </View>
 

@@ -90,6 +90,12 @@ export class User {
   @Column({ default: false })
   is_cccd_verified: boolean;
 
+  @Column({ type: 'json', nullable: true })
+  cccd_verified_data: any;
+
+  @Column({ type: 'json', nullable: true })
+  cccd_pending_data: any;
+
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */

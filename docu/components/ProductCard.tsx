@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { FontAwesome, Ionicons } from "@expo/vector-icons";
 import { PostType, Product } from "../types";
 import React from "react";
 
@@ -119,13 +119,21 @@ export default function ProductCard({
           {location || "Chưa rõ địa chỉ"}
         </Text>
         {/* Tên người dùng */}
-        <Text
-          className="text-[11px] text-blue-600 font-semibold mb-0.5"
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {authorName || "Ẩn danh"}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <FontAwesome
+            name="user"
+            size={12}
+            color="#2563eb"
+            style={{ marginRight: 4 }}
+          />
+          <Text
+            className="text-[11px] text-blue-600 font-semibold mb-0.5"
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {authorName || "Ẩn danh"}
+          </Text>
+        </View>
       </View>
     </View>
   );

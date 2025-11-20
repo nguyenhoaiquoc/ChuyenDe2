@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { RefreshControl } from "react-native-gesture-handler";
 
 type Props = {
   navigation: NativeStackNavigationProp<
@@ -36,30 +37,40 @@ export default function NotificationScreen({ navigation }: Props) {
   const [processingInvitation, setProcessingInvitation] = useState<
     number | null
   >(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchNotifications = async () => {
     try {
-      setIsLoading(true);
+      // Không set isLoading = true ở đây nữa để tránh nháy màn hình khi refresh
       const userId = await AsyncStorage.getItem("userId");
-      if (!userId) {
-        Alert.alert(
-          "Lỗi",
-          "Không tìm thấy người dùng. Vui lòng đăng nhập lại."
-        );
-        setIsLoading(false);
-        navigation.goBack();
-        return;
-      }
+      if (!userId) return;
 
       let tabQueryParam = "";
       if (activeTab === "Tin tức") {
         tabQueryParam = "?tab=news";
       }
 
+      console.log(`🔄 Đang tải thông báo cho user ${userId}...`);
       const apiUrl = `${path}/notifications/user/${userId}${tabQueryParam}`;
+
       const response = await axios.get(apiUrl);
+const data = response.data;
+
+console.log(`📦 API trả về ${data.length} thông báo.`);
+
+const matchingItems = data.filter((n: any) => n.action?.name === 'matching_buy_request');
+      
+      if (matchingItems.length > 0) {
+        console.log("✅ SUCCESS: Frontend ĐÃ NHẬN ĐƯỢC thông báo matching_buy_request!");
+        console.log("🔍 Chi tiết item đầu tiên:", JSON.stringify(matchingItems[0], null, 2));
+      } else {
+        console.log("⚠️ WARNING: Không tìm thấy 'matching_buy_request' nào trong API trả về.");
+        // 2. Log ra danh sách các action đang có để xem có bị sai chính tả không
+        const currentActions = data.map((n: any) => n.action?.name);
+        console.log("📋 Danh sách các action hiện có:", JSON.stringify(currentActions));
+      }
       const updated = await Promise.all(
-        response.data.map(async (n: Notification) => {
+        data.map(async (n: Notification) => { 
           if (n.action?.name === "group_invitation") {
             const localStatus = await getHandledInvitation(n.target_id);
             if (localStatus) return { ...n, invitationStatus: localStatus };
@@ -70,15 +81,21 @@ export default function NotificationScreen({ navigation }: Props) {
       setNotifications(updated);
     } catch (error: any) {
       console.log("Lỗi khi tải thông báo:", error.message);
-      Alert.alert("Lỗi", "Không thể tải danh sách thông báo.");
     } finally {
       setIsLoading(false);
+      setRefreshing(false); // Tắt loading refresh
     }
   };
 
   useEffect(() => {
+    setIsLoading(true); // Chỉ hiện loading lần đầu
     fetchNotifications();
   }, [activeTab]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications();
+  };
 
   // 🔹 Lưu trạng thái lời mời đã xử lý
   const saveHandledInvitation = async (
@@ -254,6 +271,25 @@ export default function NotificationScreen({ navigation }: Props) {
 
   //  HÀM RENDER ITEM
   const renderNotificationItem = ({ item }: { item: Notification }) => {
+    if (item.action?.name === "matching_buy_request") {
+      console.log("✅ TÌM THẤY thông báo matching_buy_request ID:", item.id);
+    }
+
+    let avatarUrl = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    if (item.actor?.image) {
+      // Nếu ảnh bắt đầu bằng http thì dùng luôn, nếu không thì nối path
+      if (item.actor.image.startsWith("http")) {
+        avatarUrl = item.actor.image;
+      } else {
+        // Xử lý trường hợp path có dấu / ở cuối và image có dấu / ở đầu
+        const cleanPath = path.endsWith("/") ? path.slice(0, -1) : path;
+        const cleanImage = item.actor.image.startsWith("/")
+          ? item.actor.image
+          : `/${item.actor.image}`;
+        avatarUrl = `${cleanPath}${cleanImage}`;
+      }
+    }
+
     // Nếu là lời mời nhóm
     if (item.action?.name === "group_invitation") {
       return (
@@ -281,8 +317,8 @@ export default function NotificationScreen({ navigation }: Props) {
               <Text className="text-sm text-gray-700 mb-3">
                 <Text className="font-semibold">
                   {item.actor?.fullName || "???"}
-                </Text>{" "}
-                đã mời bạn tham gia nhóm{" "}
+                </Text>
+                đã mời bạn tham gia nhóm
                 <Text className="font-semibold">{item.group?.name || ""}</Text>
               </Text>
 
@@ -366,36 +402,56 @@ export default function NotificationScreen({ navigation }: Props) {
           );
         case "favorite_confirmation":
           return <Text>Bạn đã thích {productName}.</Text>;
+        case "matching_buy_request":
+          return (
+            <Text>
+              {actorName} đang tìm mua{" "}
+              <Text className="font-bold text-blue-600">
+                {item.product?.name}
+              </Text>{" "}
+              phù hợp với danh mục bạn đang bán.
+            </Text>
+          );
         default:
           return <Text>{actorName} đã có một hoạt động mới.</Text>;
       }
     };
 
-    // Đây là return của renderNotificationItem
     return (
       <TouchableOpacity
-        className={`flex-row items-start p-4 border-b border-gray-100 ${
+        className={`flex-row items-center p-4 border-b border-gray-100 ${
           !item.is_read ? "bg-blue-50" : "bg-white"
         }`}
         onPress={() => handleNotificationPress(item)}
         disabled={isNavigating}
       >
         <Image
-          source={{
-            uri: item.actor?.image
-              ? `${path}${item.actor.image}`
-              : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          }}
-          className="w-10 h-10 rounded-full"
+          source={{ uri: avatarUrl }}
+          className="w-12 h-12 rounded-full mr-3 border border-gray-200"
+          resizeMode="cover"
+          onError={(e) =>
+            console.log(
+              `❌ Lỗi tải avatar (ID: ${item.id}):`,
+              e.nativeEvent.error,
+              "URL:",
+              avatarUrl
+            )
+          }
         />
-        <View className="flex-1 ml-3">
-          <Text className="text-sm leading-5">{formatMessage(item)}</Text>
-          <Text className="text-xs text-gray-500 mt-1">
+
+        {/* Phần nội dung chữ */}
+        <View className="flex-1 justify-center">
+          <Text className="text-sm text-gray-800 leading-5">
+            {formatMessage(item)}
+          </Text>
+          <Text className="text-xs text-gray-400 mt-1">
             {new Date(item.createdAt).toLocaleDateString("vi-VN")}
           </Text>
         </View>
+
+        {/* Dấu chấm xanh chưa đọc */}
         {!item.is_read && (
-          <View className="w-2.5 h-2.5 bg-blue-500 rounded-full ml-2 mt-1" />
+          <View className="w-3 h-3 bg-blue-600 rounded-full ml-2" />
         )}
       </TouchableOpacity>
     );
@@ -456,18 +512,32 @@ export default function NotificationScreen({ navigation }: Props) {
           <View className="flex-1 items-center justify-center bg-gray-50/50">
             <ActivityIndicator size="large" color="#007AFF" />
           </View>
-        ) : notifications.length === 0 ? (
-          <View className="flex-1 items-center justify-center bg-gray-50/50">
-            <Text className="text-gray-500">
-              Hiện tại bạn chưa có thông báo nào
-            </Text>
-          </View>
         ) : (
           <FlatList
             data={notifications}
             renderItem={renderNotificationItem}
             keyExtractor={(item) => item.id.toString()}
             className="bg-white"
+            contentContainerStyle={{ flexGrow: 1 }}
+            ListEmptyComponent={() => (
+              <View className="items-center justify-center pt-20">
+                <Image
+                  source={{
+                    uri: "https://cdn-icons-png.flaticon.com/512/4076/4076432.png",
+                  }}
+                  className="w-20 h-20 opacity-50 mb-4"
+                />
+                <Text className="text-gray-500 text-base">
+                  Hiện tại bạn chưa có thông báo nào
+                </Text>
+                <Text className="text-gray-400 text-sm mt-1">
+                  Vuốt xuống để làm mới
+                </Text>
+              </View>
+            )}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
           />
         )}
       </View>
