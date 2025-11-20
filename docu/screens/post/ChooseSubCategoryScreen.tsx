@@ -12,7 +12,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { path } from "../../config";
-import { categoryEndpoints } from "../../src/constants/category-endpoints";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseSubCategoryScreen({ navigation, route }: any) {
@@ -23,37 +22,32 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
   }
 
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-
   const [loading, setLoading] = useState(true);
-
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const endpointKey = categoryEndpoints[Number(category.id)];
-    if (!endpointKey) {
-      setSubCategories([]);
-      setLoading(false);
-      return;
-    }
+    const fetchSubCategories = async () => {
+      try {
+        setLoading(true);
+        const token = await AsyncStorage.getItem("token");
+        const res = await axios.get(
+          `${path}/sub-categories/by-category/${category.id}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setSubCategories(res.data);
+      } catch (err: any) {
+        Alert.alert(
+          "Lỗi",
+          err.response?.data?.message || "Không tải danh mục con"
+        );
+        setSubCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const fullUrl = `${path}/sub-categories/${endpointKey}`;
-    console.log("🔍 Đang gọi API:", fullUrl);
-
-    axios
-      .get(fullUrl)
-      .then((res) => {
-        const subData = res.data.map((item: any) => ({
-          name: item.name,
-          id: item.id,
-        }));
-        setSubCategories(subData);
-      })
-
-      .catch((err) => {
-        console.log("❌ Lỗi khi lấy danh mục con:", err.message);
-      })
-      .finally(() => setLoading(false));
-  }, [category]);
+    fetchSubCategories();
+  }, [category.id]);
 
   const handleSelectSubCategory = (sub: SubCategory) => {
     if (group) {
@@ -77,7 +71,7 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        {/* 🚨 SỬA: HIỂN THỊ category.name */}
+        {/* HIỂN THỊ category.name */}
         <Text style={styles.headerTitle}>{category.name}</Text>
         <TouchableOpacity onPress={() => navigation.navigate("Home")}>
           <Ionicons name="close" size={24} color="white" />
@@ -97,7 +91,7 @@ export default function ChooseSubCategoryScreen({ navigation, route }: any) {
             <TouchableOpacity
               key={idx}
               style={styles.categoryItem}
-              onPress={() => handleSelectSubCategory(sub)} // 👈 Dùng hàm mới
+              onPress={() => handleSelectSubCategory(sub)}
             >
               <Text style={styles.categoryText}>{sub.name}</Text>
             </TouchableOpacity>

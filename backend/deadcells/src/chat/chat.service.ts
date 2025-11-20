@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { ConversationRoom } from 'src/entities/conversation-room.entity';
 import { ConversationParticipant } from 'src/entities/conversation-participant.entity';
 import { Message } from 'src/entities/message.entity';
+import { GroupMember } from 'src/entities/group-member.entity';
+import { Group } from 'src/entities/group.entity';
 
 @Injectable()
 export class ChatService {
@@ -14,34 +16,44 @@ export class ChatService {
     private readonly partRepo: Repository<ConversationParticipant>,
     @InjectRepository(Message)
     private readonly messageRepo: Repository<Message>,
+    @InjectRepository(GroupMember)
+    private readonly groupMembersRepo: Repository<GroupMember>,
+    @InjectRepository(Group)
+    private readonly groupRepo: Repository<Group>,
   ) {}
 
-  /** 🧩 Tạo hoặc lấy room giữa hai user (fix duplicate room) */
-  async openOrCreateRoom(userA: number, userB: number, productId?: number) {
-  let room = await this.roomRepo.findOne({
-    where: [
-      { seller_id: userA, buyer_id: userB, room_type: 'PAIR' },
-      { seller_id: userB, buyer_id: userA, room_type: 'PAIR' },
-    ],
-  });
+/** 🧩 Tạo hoặc lấy room giữa hai user */
+async openOrCreateRoom(currentUserId: number, targetUserId: number, productId?: number) {
+  const users = [currentUserId, targetUserId];
 
+  // 1️⃣ Kiểm tra room 1-1
+  let room = await this.roomRepo
+    .createQueryBuilder('room')
+    .leftJoin('room.participants', 'participant')
+    .where('room.room_type = :type', { type: 'PAIR' })
+    .andWhere('participant.user_id IN (:...users)', { users })
+    .groupBy('room.id')
+    .having('COUNT(participant.user_id) = 2')
+    .getOne();
+
+  // 2️⃣ Nếu chưa có, tạo mới
   if (!room) {
     room = this.roomRepo.create({
-      seller_id: userA,
-      buyer_id: userB,
       room_type: 'PAIR',
-      product_id: productId ?? null,   // ✅ thêm dòng này
+      participants_count: 2,
     });
     await this.roomRepo.save(room);
 
+    // Thêm cả 2 participants
     await this.partRepo.insert([
-      { conversation_id: room.id, user_id: userA, role: 'SELLER' },
-      { conversation_id: room.id, user_id: userB, role: 'BUYER' },
+      { conversation_id: room.id, user_id: currentUserId, role: 'MEMBER' },
+      { conversation_id: room.id, user_id: targetUserId, role: 'MEMBER' },
     ]);
   }
 
   return room;
 }
+
 
   /** 💬 Gửi tin nhắn (text hoặc media) */
 async sendMessage(
@@ -68,7 +80,6 @@ async sendMessage(
   await this.roomRepo.update(conversationId, {
     last_message_id: saved.id,
     last_message_at: saved.created_at,
-    last_product_id: productId ?? null,
   });
 
   return saved;
@@ -94,23 +105,20 @@ async markRead(conversationId: number, userId: number) {
 }
 
 
-  /** 📜 Lấy danh sách các cuộc chat (chatlist) */
  /** 📜 Lấy danh sách các cuộc chat (có số tin chưa đọc) */
 async getChatList(userId: number, limit = 20, offset = 0) {
-  const qb = this.roomRepo
+  // 1️⃣ Lấy rooms mà user tham gia
+  const rooms = await this.roomRepo
     .createQueryBuilder('r')
-    .leftJoinAndSelect('r.seller', 'seller')
-    .leftJoinAndSelect('r.buyer', 'buyer')
+    .leftJoinAndSelect('r.participants', 'p')
     .leftJoinAndSelect('r.last_message', 'm')
-    .leftJoinAndSelect('r.last_product', 'p')
-    .where('r.seller_id = :uid OR r.buyer_id = :uid', { uid: userId })
+    .where('p.user_id = :userId', { userId })
     .orderBy('r.last_message_at', 'DESC')
     .limit(limit)
-    .offset(offset);
+    .offset(offset)
+    .getMany();
 
-  const rooms = await qb.getMany();
-
-  // 🔁 Đếm số tin chưa đọc từng phòng
+  // 2️⃣ Đếm số tin chưa đọc
   const unreadCounts = await this.messageRepo
     .createQueryBuilder('msg')
     .select('msg.conversation_id', 'conversation_id')
@@ -124,52 +132,62 @@ async getChatList(userId: number, limit = 20, offset = 0) {
     unreadCounts.map((r) => [Number(r.conversation_id), Number(r.count)]),
   );
 
-  return rooms.map((r) => ({
-    room_id: r.id,
-    last_message: r.last_message?.content || '',
-    last_message_at: r.last_message_at,
-    unread_count: unreadMap.get(r.id) || 0, // ✅ thêm vào
-    product: r.last_product
-      ? { id: r.last_product.id, name: r.last_product['name'] }
-      : null,
-    partner:
-      r.seller_id === userId
-        ? { id: r.buyer?.id, name: r.buyer?.fullName, avatar: r.buyer?.image }
-        : { id: r.seller?.id, name: r.seller?.fullName, avatar: r.seller?.image },
-  }));
+  // 3️⃣ Map dữ liệu trả về
+  return rooms.map((r) => {
+    // Lấy partner (cho chat 1-1)
+    const partners = r.participants.filter((p) => p.user_id !== userId);
+
+    return {
+      room_id: r.id,
+      last_message: r.last_message?.content || '',
+      last_message_at: r.last_message_at,
+      unread_count: unreadMap.get(r.id) || 0,
+      product: null, // last_product đã xóa
+      partner: partners.length > 0 ? {
+        id: partners[0].user.id,
+        name: partners[0].user.fullName,
+        avatar: partners[0].user.image,
+      } : null,
+    };
+  });
 }
 
-  /** 🧱 Lấy lịch sử tin nhắn theo roomId (fix đủ 2 chiều) */
-  async getHistory(roomId: number, userId: number, cursor?: string, limit = 50) {
-    console.log(`📜 Lấy lịch sử roomId=${roomId}, userId=${userId}`);
 
-    // 🔍 Lấy thông tin room để biết seller & buyer
-    const room = await this.roomRepo.findOne({ where: { id: roomId } });
-    if (!room) {
-      console.log('⚠️ Không tìm thấy room');
-      return [];
-    }
+ /** 🧱 Lấy lịch sử tin nhắn theo roomId (hỗ trợ chat 1-1 và nhóm) */
+async getHistory(roomId: number, userId: number, cursor?: string, limit = 50) {
+  console.log(`📜 Lấy lịch sử roomId=${roomId}, userId=${userId}`);
 
-    const sellerId = room.seller_id;
-    const buyerId = room.buyer_id;
-
-    // 🔁 Lấy tin nhắn giữa 2 người bất kể chiều nào
-    const qb = this.messageRepo
-      .createQueryBuilder('m')
-      .where(
-        '(m.sender_id = :sellerId AND m.receiver_id = :buyerId) OR (m.sender_id = :buyerId AND m.receiver_id = :sellerId)',
-        { sellerId, buyerId },
-      )
-      .andWhere('m.conversation_id = :roomId', { roomId })
-      .orderBy('m.created_at', 'ASC')
-      .limit(limit);
-
-    if (cursor) qb.andWhere('m.created_at < :cursor', { cursor });
-
-    const msgs = await qb.getMany();
-    console.log('💾 Messages tìm thấy:', msgs.length);
-    return msgs;
+  // 1️⃣ Kiểm tra room tồn tại
+  const room = await this.roomRepo.findOne({
+    where: { id: roomId },
+    relations: ['participants'],
+  });
+  if (!room) {
+    console.log('⚠️ Không tìm thấy room');
+    return [];
   }
+
+  // 2️⃣ Kiểm tra user có tham gia room không
+  const isParticipant = room.participants.some((p) => p.user_id === userId);
+  if (!isParticipant) {
+    console.log('⚠️ User không thuộc room này');
+    return [];
+  }
+
+  // 3️⃣ Lấy tin nhắn theo conversation_id
+  const qb = this.messageRepo
+    .createQueryBuilder('m')
+    .where('m.conversation_id = :roomId', { roomId })
+    .orderBy('m.created_at', 'ASC')
+    .limit(limit);
+
+  if (cursor) qb.andWhere('m.created_at < :cursor', { cursor });
+
+  const msgs = await qb.getMany();
+  console.log('💾 Messages tìm thấy:', msgs.length);
+  return msgs;
+}
+
  /** 🔢 Đếm số người (conversation) có tin nhắn chưa đọc */
 async countUnreadMessages(userId: number): Promise<number> {
   const result = await this.messageRepo
@@ -382,27 +400,18 @@ async getHistoryAround(
 }
 /** 🧩 Lấy meta của 1 room (giống shape trong chatList) */
 async getRoomMetaData(userId: number, roomId: number) {
-  // Lấy room + các liên kết cần thiết
-  const room = await this.roomRepo
-    .createQueryBuilder('r')
-    .leftJoinAndSelect('r.seller', 'seller')
-    .leftJoinAndSelect('r.buyer', 'buyer')
-    .leftJoinAndSelect('r.last_message', 'm')
-    .leftJoinAndSelect('r.last_product', 'p')
-    .where('r.id = :roomId', { roomId })
-    .getOne();
-
+  // 1️⃣ Lấy room + participants + last_message
+  const room = await this.roomRepo.findOne({
+    where: { id: roomId },
+    relations: ['participants', 'participants.user', 'last_message'],
+  });
   if (!room) return null;
 
-  // Xác thực quyền: user phải là participant hoặc là seller/buyer của room
-  const isPart = await this.partRepo.findOne({
-    where: { conversation_id: roomId, user_id: userId },
-  });
-  if (!isPart && room.seller_id !== userId && room.buyer_id !== userId) {
-    return null;
-  }
+  // 2️⃣ Kiểm tra quyền: user phải là participant
+  const isPart = room.participants.some((p) => p.user_id === userId);
+  if (!isPart) return null;
 
-  // Đếm tin chưa đọc trong room dành cho user này
+  // 3️⃣ Đếm tin chưa đọc
   const unreadRaw = await this.messageRepo
     .createQueryBuilder('msg')
     .select('COUNT(msg.id)', 'count')
@@ -413,23 +422,28 @@ async getRoomMetaData(userId: number, roomId: number) {
 
   const unreadCount = Number(unreadRaw?.count || 0);
 
-  // Map meta giống getChatList
+  // 4️⃣ Map partner (chat 1-1)
+  const partners = room.participants.filter((p) => p.user_id !== userId);
+
   const meta = {
     room_id: room.id,
     last_message: room.last_message?.content || '',
     last_message_at: room.last_message_at,
     unread_count: unreadCount,
-    product: room.last_product
-      ? { id: room.last_product.id, name: (room.last_product as any)['name'] }
-      : null,
+    product: null, // last_product đã xóa
     partner:
-      room.seller_id === userId
-        ? { id: room.buyer?.id, name: room.buyer?.fullName, avatar: room.buyer?.image }
-        : { id: room.seller?.id, name: room.seller?.fullName, avatar: room.seller?.image },
+      partners.length > 0
+        ? {
+            id: partners[0].user.id,
+            name: partners[0].user.fullName,
+            avatar: partners[0].user.image,
+          }
+        : null,
   };
 
   return meta;
 }
+
 
   async getUnreadMessages(userId: number) {
     const unreadMessages = await this.messageRepo.find({
@@ -450,4 +464,35 @@ async getRoomMetaData(userId: number, roomId: number) {
     return unreadMessages;
   }
 
+  async createRoomGroup(groupId: number) {
+      const group = await this.groupRepo.findOne({where: {id: groupId}, relations: ['members']})
+      if(!group) {
+        throw new Error('Group not found');
+      }
+
+      //2 Lấy tất cả member 
+      const members = await this.groupMembersRepo.find({where: {group_id: groupId}})
+      if(members.length === 0) {
+        throw new Error('Group has no members')
+      }
+
+      //3 Tạo conversation_room 
+      const room = this.roomRepo.create({
+        room_type: 'GROUP',
+        participants_count: members.length,
+      })
+      const savedRoom = await this.roomRepo.save(room)
+      
+     // 4. Insert tất cả user vào conversation_participants
+    const participants = members.map((m) =>
+      this.partRepo.create({
+        conversation_id: savedRoom.id,
+        user_id: m.user_id,
+        role: 'MEMBER',
+      }),
+    );
+      await this.partRepo.save(participants)
+      return savedRoom
+  }
+  
 }

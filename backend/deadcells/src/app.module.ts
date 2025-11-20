@@ -45,6 +45,8 @@ import { ProductStatus } from './entities/product-status.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { ProductStatusModule } from './product-statuses/product-status.module';
 import { AdminModule } from './admin/admin.module';
+import { NotificationModule } from './notification/notification.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -92,6 +94,7 @@ import { AdminModule } from './admin/admin.module';
     RamOptionModule,
     StorageTypeModule,
     GraphicsCardModule,
+    NotificationModule,
     BreedModule,
     AgeRangeModule,
     GenderModule,

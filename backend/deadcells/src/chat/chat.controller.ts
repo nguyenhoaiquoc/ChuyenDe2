@@ -24,6 +24,7 @@ import { Repository } from 'typeorm';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
 import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
+import { OpenRoomDto } from './dto/open-room.dto';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
@@ -41,21 +42,11 @@ export class ChatController {
    */
 @Post('room')
 async openOrCreateRoom(
-  @Body() body: { seller_id: number; buyer_id?: number; product_id?: number },
-  @Req() req: Request,
+  @Body() dto: OpenRoomDto,
+  @Req() req: any,  // có thể lấy currentUser từ JWT
 ) {
-  const user = req['user'];
-  const buyerId = body.buyer_id || user.id;
-
-  if (buyerId === body.seller_id)
-    throw new HttpException('Không thể tự chat với chính mình', HttpStatus.BAD_REQUEST);
-
-  const room = await this.chatService.openOrCreateRoom(
-    body.seller_id,
-    buyerId,
-    body.product_id,      // ✅ thêm dòng này
-  );
-  return { room };
+      const currentUserId = req.user.id; // người đang đăng nhập
+  return this.chatService.openOrCreateRoom(currentUserId, dto.userId, dto.productId)
 }
 
 
@@ -246,4 +237,5 @@ async getUnreadMessages(@Req() req: Request) {
     );
   }
 }
+  
 }

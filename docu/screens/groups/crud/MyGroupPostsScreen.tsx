@@ -2,148 +2,197 @@ import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
-  FlatList,
   TouchableOpacity,
+  FlatList,
   Image,
   ActivityIndicator,
-  Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../../types";
 import { path } from "../../../config";
 
-type MyGroupPostsScreenProps = NativeStackScreenProps<
-  RootStackParamList,
-  "MyGroupPostsScreen"
->;
+type Props = NativeStackScreenProps<RootStackParamList, "MyGroupPostsScreen">;
 
-export default function MyGroupPostsScreen({
-  navigation,
-  route,
-}: MyGroupPostsScreenProps) {
+export default function MyGroupPostsScreen({ navigation, route }: Props) {
   const { groupId } = route.params;
 
+  const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0 });
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchMyPosts = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const res = await axios.get(`${path}/groups/${groupId}/my-posts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setStats({
+        total: res.data.total,
+        approved: res.data.approved,
+        pending: res.data.pending,
+      });
+      setPosts(res.data.posts || []);
+    } catch (error: any) {
+      console.error("Lỗi tải bài viết:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     fetchMyPosts();
   }, []);
 
-  const fetchMyPosts = async () => {
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      const res = await axios.get(`${path}/groups/${groupId}/my-posts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setStats(res.data);
-    } catch (error: any) {
-      console.error("Lỗi tải bài viết:", error);
-      Alert.alert("Lỗi", "Không thể tải danh sách bài viết");
-    } finally {
-      setLoading(false);
-    }
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchMyPosts();
   };
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-gray-100">
+      <SafeAreaView className="flex-1 items-center justify-center bg-white">
         <ActivityIndicator size="large" color="#3B82F6" />
+        <Text className="mt-4 text-gray-600">Đang tải...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
+    <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="bg-white px-4 py-3 flex-row items-center border-b border-gray-200">
+      <View className="flex-row items-center p-4 bg-white border-b border-gray-200">
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color="black" />
         </TouchableOpacity>
-        <Text className="text-lg font-semibold ml-3">
-          Quản lý nội dung của bạn
-        </Text>
+        <Text className="text-lg font-semibold ml-4">Bài viết của bạn</Text>
       </View>
 
       {/* Stats */}
-      <View className="bg-white mx-4 mt-4 p-4 rounded-lg">
-        <View className="flex-row justify-around">
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-blue-600">
-              {stats?.total || 0}
-            </Text>
-            <Text className="text-gray-600 text-sm">Tổng bài viết</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-green-600">
-              {stats?.approved || 0}
-            </Text>
-            <Text className="text-gray-600 text-sm">Đã duyệt</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-orange-600">
-              {stats?.pending || 0}
-            </Text>
-            <Text className="text-gray-600 text-sm">Chờ duyệt</Text>
-          </View>
+      <View className="flex-row bg-white border-b border-gray-200 p-4">
+        <View className="flex-1 items-center">
+          <Text className="text-2xl font-bold text-gray-900">
+            {stats.total}
+          </Text>
+          <Text className="text-sm text-gray-500 mt-1">Tổng số</Text>
+        </View>
+        <View className="flex-1 items-center border-l border-gray-200">
+          <Text className="text-2xl font-bold text-green-600">
+            {stats.approved}
+          </Text>
+          <Text className="text-sm text-gray-500 mt-1">Đã duyệt</Text>
+        </View>
+        <View className="flex-1 items-center border-l border-gray-200">
+          <Text className="text-2xl font-bold text-yellow-600">
+            {stats.pending}
+          </Text>
+          <Text className="text-sm text-gray-500 mt-1">Chờ duyệt</Text>
         </View>
       </View>
 
       {/* Posts List */}
       <FlatList
-        data={stats?.posts || []}
-        keyExtractor={(item: any) => String(item.id)}
+        data={posts}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ProductDetail", { product: item })}
-            className="bg-white mb-3 rounded-lg p-3"
-          >
-            <View className="flex-row">
-              <Image
-                source={{ uri: item.thumbnail_url || item.images?.[0]?.image_url }}
-                className="w-20 h-20 rounded-lg"
-              />
-              <View className="flex-1 ml-3">
-                <Text className="font-semibold text-gray-900">{item.name}</Text>
-                <Text className="text-sm text-gray-500 mt-1">
-                  {item.price === 0
-                    ? "Miễn phí"
-                    : item.price
-                      ? `${item.price.toLocaleString()} đ`
-                      : "Trao đổi"}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#3B82F6"]}
+            tintColor="#3B82F6"
+          />
+        }
+        renderItem={({ item }) => {
+          const imageUrl =
+            item.thumbnail_url ||
+            (item.images?.length > 0 ? item.images[0].image_url : null);
+
+          const priceFormat =
+            item.price === 0
+              ? "Miễn phí"
+              : item.price == null
+                ? "Trao đổi"
+                : `${item.price.toLocaleString()} đ`;
+
+          const isPending = item.productStatus?.id === 1;
+
+          return (
+            <TouchableOpacity
+              onPress={() =>
+                navigation.navigate("ProductDetail", { product: item })
+              }
+              className="mb-4 bg-white rounded-lg shadow-sm overflow-hidden"
+            >
+              {/* Status Badge */}
+              <View
+                className={`absolute top-2 right-2 z-10 px-3 py-1 rounded-full ${
+                  isPending ? "bg-yellow-500" : "bg-green-500"
+                }`}
+              >
+                <Text className="text-xs font-semibold text-white">
+                  {isPending ? "Chờ duyệt" : "Đã duyệt"}
                 </Text>
-                <View className="flex-row items-center mt-2">
-                  {item.productStatus?.id === 2 ? (
-                    <>
-                      <Feather name="check-circle" size={14} color="green" />
-                      <Text className="text-xs text-green-600 ml-1">
-                        Đã duyệt
+              </View>
+
+              <View className="flex-row">
+                {/* Image */}
+                {imageUrl && (
+                  <Image
+                    source={{ uri: imageUrl }}
+                    className="w-28 h-28 bg-gray-100"
+                    resizeMode="cover"
+                  />
+                )}
+
+                {/* Content */}
+                <View className="flex-1 p-3">
+                  <Text
+                    className="font-bold text-base text-gray-900 mb-1"
+                    numberOfLines={2}
+                  >
+                    {item.name}
+                  </Text>
+
+                  <Text className="text-red-500 font-semibold mb-2">
+                    {priceFormat}
+                  </Text>
+
+                  {item.location && (
+                    <View className="flex-row items-center mb-1">
+                      <Feather name="map-pin" size={12} color="#6b7280" />
+                      <Text
+                        className="text-xs text-gray-500 ml-1"
+                        numberOfLines={1}
+                      >
+                        {item.location}
                       </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Feather name="clock" size={14} color="orange" />
-                      <Text className="text-xs text-orange-600 ml-1">
-                        Chờ duyệt
-                      </Text>
-                    </>
+                    </View>
                   )}
+
+                  <View className="flex-row items-center">
+                    <Feather name="clock" size={12} color="#6b7280" />
+                    <Text className="text-xs text-gray-500 ml-1">
+                      {new Date(item.created_at).toLocaleDateString("vi-VN")}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          );
+        }}
         ListEmptyComponent={
-          <View className="items-center justify-center mt-10">
-            <Feather name="inbox" size={48} color="#9CA3AF" />
-            <Text className="text-gray-500 mt-4">
-              Bạn chưa đăng bài viết nào
+          <View className="items-center justify-center mt-20">
+            <Feather name="file-text" size={48} color="#9CA3AF" />
+            <Text className="text-gray-500 mt-4 text-center">
+              Bạn chưa có bài viết nào trong nhóm này
             </Text>
           </View>
         }

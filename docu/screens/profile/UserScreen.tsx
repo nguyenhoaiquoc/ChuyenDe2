@@ -8,72 +8,82 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
 import Menu from "../../components/Menu";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
-import { io } from "socket.io-client";
 import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import React from "react";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null); 
 
- 
-  useFocusEffect(
-    useCallback(() => {
-      // Hàm này sẽ chạy mỗi khi màn hình được focus
-      const fetchUser = async () => {
-        console.log("... UserScreen is focused, loading local data FIRST...");
+  // GỘP USER VÀO 1 OBJECT
+  const [user, setUser] = useState<{
+    id: string;
+    name: string;
+    avatar: string | null;
+    roleId: string | null;
+  }>({
+    id: "",
+    name: "",
+    avatar: null,
+    roleId: null,
+  });
 
-        // 1. LUÔN LUÔN đọc từ AsyncStorage TRƯỚC
-        // (Đây là dữ liệu "Tên Mới" bạn vừa lưu ở trang Chỉnh sửa)
-        const localName = await AsyncStorage.getItem("userName");
-        const localAvatar = await AsyncStorage.getItem("userAvatar");
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userId = await AsyncStorage.getItem("userId");
+        const token = await AsyncStorage.getItem("token");
 
-        // 2. Hiển thị ngay lập tức (dữ liệu vừa sửa)
-        if (localName) setName(localName);
-        if (localAvatar) setAvatar(localAvatar);
+        if (!userId || !token) {
+          const localName = await AsyncStorage.getItem("userName");
+          const localAvatar = await AsyncStorage.getItem("userAvatar");
+          const localRoleId = await AsyncStorage.getItem("role_id");
 
-        // 3. SAU ĐÓ, vẫn gọi API để đồng bộ ngầm
-        // (Phòng trường hợp tài khoản này được cập nhật từ một nơi khác)
-        try {
-          const userId = await AsyncStorage.getItem("userId");
-          const token = await AsyncStorage.getItem("token");
-          if (!userId) return;
-          const res = await axios.get(`${path}/users/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` },
+          setUser({
+            id: userId || "",
+            name: localName || "",
+            avatar: localAvatar || null,
+            roleId: localRoleId || null,
           });
-
-          const serverName = res.data.nickname || res.data.name || "";
-          const serverImage = res.data.image || null;
-
-          // 4. Cập nhật state một lần nữa VỚI DỮ LIỆU MỚI TỪ SERVER
-          // (Nếu server có dữ liệu mới hơn, giao diện sẽ cập nhật)
-          setName(serverName);
-          setAvatar(serverImage);
-
-          // 5. Cập nhật lại local storage
-          await AsyncStorage.setItem("userName", serverName);
-          if (serverImage) await AsyncStorage.setItem("userAvatar", serverImage);
-
-        } catch (err) {
-          console.log("API sync failed, sticking with local data:", err);
-          // Không cần làm gì ở đây, vì local data đã được load ở bước 1.
+          return;
         }
-      };
 
-      fetchUser();
-    }, []) // Mảng rỗng cho useCallback
-  );
+        const res = await axios.get(`${path}/users/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const fullName = res.data.fullName || res.data.name || "";
+        const image = res.data.image || null;
+        const apiRoleId =
+          res.data.roleId != null ? String(res.data.roleId) : null;
+
+        setUser({
+          id: userId,
+          name: fullName,
+          avatar: image,
+          roleId: apiRoleId,
+        });
+
+        await AsyncStorage.multiSet([
+          ["userName", fullName],
+          ["userAvatar", image || ""],
+          ["role_id", apiRoleId || ""],
+        ]);
+      } catch (err) {
+        console.log("Lỗi fetchUser:", err);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -84,8 +94,9 @@ export default function UserScreen() {
         >
           {/* Avatar */}
           <TouchableOpacity
-            // <<< LƯU Ý: Bạn đang navigate đến UserInforScreen khi nhấn avatar
-            onPress={() => navigation.navigate("UserInforScreen")}
+            onPress={() =>
+              navigation.navigate("UserInforScreen", { userId: user.id })
+            }
           >
             <View
               style={{
@@ -105,23 +116,21 @@ export default function UserScreen() {
               }}
             >
               <Image
-                key={avatar}
-                className="w-full h-full object-cover rounded-full"
                 source={
-                  avatar
+                  user.avatar
                     ? {
-                     
-                      uri: (avatar.startsWith("http")
-                        ? avatar
-                        : `${path}/${avatar.replace(/\\/g, '/')}`) + `?t=${Date.now()}`
-                    }
-                    : undefined
+                        uri: user.avatar.startsWith("http")
+                          ? user.avatar
+                          : `${path}${user.avatar}`,
+                      }
+                    : require("../../assets/meo.jpg")
                 }
-                style={{ backgroundColor: '#d1d5db' }}
+                style={{ width: "100%", height: "100%", borderRadius: 48 }}
               />
             </View>
           </TouchableOpacity>
-          {/* Tên và thông tin*/}
+
+          {/* Tên */}
           <Text
             style={{
               fontSize: 20,
@@ -130,20 +139,11 @@ export default function UserScreen() {
               color: "#1f2937",
             }}
           >
-            {name || "Đang tải..."}
+            {user.name || "Đang tải..."}
           </Text>
-          <View style={{ flexDirection: "row", marginTop: 4 }}>
-            <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 6 }}>
-              Người theo dõi 0
-            </Text>
-            <Text style={{ color: "#6b7280", fontSize: 14 }}>
-              Đang theo dõi 0
-            </Text>
-          </View>
-
         </View>
 
-        {/* --- Phần Tiện ích --- */}
+        {/* --- Tiện ích --- */}
         <View style={{ paddingHorizontal: 16 }}>
           <Text
             style={{
@@ -155,6 +155,7 @@ export default function UserScreen() {
           >
             Tiện ích
           </Text>
+
           <View
             style={{
               backgroundColor: "white",
@@ -169,8 +170,24 @@ export default function UserScreen() {
             <UtilityItem
               icon="person-outline"
               title="Tài khoản của tôi"
-              
-              onPress={() => navigation.navigate("ViewHistory")}
+              onPress={() =>
+                navigation.navigate("UserInforScreen", { userId: user.id })
+              }
+            />
+
+            {user.roleId === "1" && (
+              <UtilityItem
+                icon="shield-checkmark-outline"
+                title="Quản lý Admin"
+                color="#3b82f6"
+                onPress={() => navigation.navigate("HomeAdminScreen")}
+              />
+            )}
+
+            <UtilityItem
+              icon="newspaper-outline"
+              title="Quản lý tin"
+              onPress={() => navigation.navigate("ManagePostsScreen")}
             />
             <UtilityItem
               icon="heart-outline"
@@ -185,7 +202,6 @@ export default function UserScreen() {
             <UtilityItem
               icon="time-outline"
               title="Lịch sử xem tin"
-              // <<< LƯU Ý: Bạn đang navigate đến SavedPosts, có thể bạn muốn ViewHistory?
               onPress={() => navigation.navigate("SavedPosts")}
             />
             <UtilityItem
@@ -196,29 +212,27 @@ export default function UserScreen() {
             <UtilityItem
               icon="log-out-outline"
               title="Đăng xuất"
-              isLast={true}
+              isLast
               color="red"
               onPress={async () => {
                 try {
                   const socket = getSocket();
                   if (socket) {
-                    console.log(" Gửi sự kiện logout");
-                    socket.emit("logout");  // Gửi sự kiện logout đến backend
-                    disconnectSocket();     // Ngắt kết nối socket hiện tại
-                    console.log(" Socket đã ngắt kết nối!");
+                    socket.emit("logout");
+                    disconnectSocket();
                   }
                 } catch (err) {
-                  console.log(" Lỗi khi gửi sự kiện logout:", err);
+                  console.log("Lỗi socket logout:", err);
                 }
 
-                // ✨ 3. CẬP NHẬT LOGIC ĐĂNG XUẤT (THÊM "role_id") ✨
                 await AsyncStorage.multiRemove([
                   "token",
                   "userId",
                   "userName",
                   "userAvatar",
-                  "role_id", // 👈 PHẢI THÊM CÁI NÀY
+                  "role_id",
                 ]);
+
                 navigation.reset({
                   index: 0,
                   routes: [{ name: "LoginScreen" }],
@@ -232,6 +246,7 @@ export default function UserScreen() {
     </SafeAreaView>
   );
 }
+
 function UtilityItem({
   icon,
   title,
@@ -267,7 +282,7 @@ function UtilityItem({
         <Ionicons name={icon} size={24} color={iconColor} />
         <Text
           style={[
-            { marginLeft: 16, fontSize: 16, color: textColor }, 
+            { marginLeft: 16, fontSize: 16, color: textColor },
             textStyle,
           ]}
         >

@@ -14,7 +14,7 @@ import { useNavigation, useIsFocused } from "@react-navigation/native";
 import {
   RootStackParamList,
   Product,
-  ManageProductsScreenNavigationProp,
+  ManageGroupPostsScreenNavigationProp,
 } from "../../types";
 import axios from "axios";
 import { path } from "../../config";
@@ -29,7 +29,7 @@ const TABS = {
   HIDDEN: "Đã ẩn",
 };
 
-type NavProps = ManageProductsScreenNavigationProp;
+type NavProps = ManageGroupPostsScreenNavigationProp;
 
 // Map product
 const mapProductData = (item: any): Product => {
@@ -42,10 +42,12 @@ const mapProductData = (item: any): Product => {
     product_status_id: item.product_status_id
       ? parseInt(item.product_status_id, 10)
       : 1,
+    // Đảm bảo group được map
+    group: item.group || null, 
   } as Product;
 };
 
-export default function ManageProductsScreen() {
+export default function ManageGroupPostsScreen() {
   const navigation = useNavigation<NavProps>();
   const isFocused = useIsFocused();
   const [isLoading, setIsLoading] = useState(true);
@@ -57,14 +59,16 @@ export default function ManageProductsScreen() {
   const fetchAllPosts = async () => {
     try {
       const response = await axios.get(`${path}/products/admin/all`);
-      const publicPosts = response.data.filter(
-        (item: any) => item.visibility_type == "0"
+      
+      // ⚠️ LỌC TIN TRONG NHÓM
+      const groupPosts = response.data.filter(
+        (item: any) => item.visibility_type == "1"
       );
-      const mappedData = publicPosts.map(mapProductData);
+      const mappedData = groupPosts.map(mapProductData);
       setAllPosts(mappedData);
     } catch (error: any) {
-      console.error("Lỗi tải tin đăng (admin):", error.message);
-      Alert.alert("Lỗi", "Không thể tải danh sách tin đăng.");
+      console.error("Lỗi tải tin đăng (admin/nhóm):", error.message);
+      Alert.alert("Lỗi", "Không thể tải danh sách tin đăng nhóm.");
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -83,6 +87,7 @@ export default function ManageProductsScreen() {
     fetchAllPosts();
   }, []);
 
+  // Logic lọc tab
   useEffect(() => {
     let posts: Product[] = [];
     if (activeTab === TABS.PENDING)
@@ -96,6 +101,7 @@ export default function ManageProductsScreen() {
     setFilteredPosts(posts);
   }, [activeTab, allPosts]);
 
+  // Logic duyệt/từ chối
   const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
     const newStatus = {
       product_status_id: isApproved ? 2 : 3, // 2 = Đã duyệt, 3 = Bị từ chối
@@ -129,6 +135,12 @@ export default function ManageProductsScreen() {
         >
           {item.name}
         </Text>
+        
+        {/* THÊM TÊN NHÓM */}
+        <Text className="text-sm text-indigo-600 font-medium">
+          Nhóm: {item.group?.name || `ID: ${item.group_id}` || "Không rõ"}
+        </Text>
+
         <Text className="text-sm text-gray-600">
           Người đăng: {item.authorName}
         </Text>
@@ -136,10 +148,10 @@ export default function ManageProductsScreen() {
           {item.dealType?.name === "Miễn phí"
             ? "Miễn phí"
             : item.dealType?.name === "Trao đổi"
-              ? "Trao đổi"
-              : item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-                : "Liên hệ"}
+            ? "Trao đổi"
+            : item.price
+            ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+            : "Liên hệ"}
         </Text>
 
         {activeTab === TABS.PENDING && (
@@ -170,7 +182,7 @@ export default function ManageProductsScreen() {
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
         <Text className="text-lg font-semibold text-gray-800">
-          Quản lý Tin đăng
+          Duyệt Tin Trong Nhóm
         </Text>
         <View className="w-6" />
       </View>
