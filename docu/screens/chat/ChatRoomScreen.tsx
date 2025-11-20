@@ -18,6 +18,7 @@ import * as Clipboard from "expo-clipboard";
 import { io, Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { path } from "../../config";
+import React from "react";
 
 type Props = { navigation: any; route: any };
 

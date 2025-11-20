@@ -17,25 +17,8 @@ import { HouseCategory } from 'src/entities/categories/house-category.entity';
 import { VehicleCategory } from 'src/entities/categories/vehicle-category.entity';
 import { PostType } from 'src/entities/post-type.entity';
 import { User } from 'src/entities/user.entity';
-import { ProductType } from 'src/entities/product_types.entity';
 import { GroupModule } from 'src/groups/group.module';
 import { NotificationModule } from 'src/notification/notification.module';
-import { Origin } from 'src/entities/origin.entity';
-import { Material } from 'src/entities/material.entity';
-import { Size } from 'src/entities/size.entity';
-import { Brand } from 'src/entities/brand.entity';
-import { Color } from 'src/entities/color.entity';
-import { Warranty } from 'src/entities/warranty.entity';
-import { Capacity } from 'src/entities/capacity.entity';
-import { ProductModel } from 'src/entities/product-model.entity';
-import { Processor } from 'src/entities/processor.entity';
-import { RamOption } from 'src/entities/ram-option.entity';
-import { StorageType } from 'src/entities/storage-type.entity';
-import { GraphicsCard } from 'src/entities/graphics-card.entity';
-import { Breed } from 'src/entities/breed.entity';
-import { AgeRange } from 'src/entities/age-range.entity';
-import { Gender } from 'src/entities/gender.entity';
-import { EngineCapacity } from 'src/entities/engine-capacity.entity';
 import { SizeModule } from 'src/size/size.module';
 import { BrandModule } from 'src/brands/brand.module';
 import { OriginModule } from 'src/origin/origin.module';
@@ -57,7 +40,7 @@ import { ProductStatusModule } from 'src/product-statuses/product-status.module'
 import { GroupMember } from 'src/entities/group-member.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { Favorite } from 'src/entities/favorite.entity';
-
+import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -67,7 +50,7 @@ import { Favorite } from 'src/entities/favorite.entity';
       DealType,
       Condition,
       SubCategory,
-      Category, 
+      Category,
       FashionCategory,
       GameCategory,
       AcademicCategory,
@@ -77,9 +60,10 @@ import { Favorite } from 'src/entities/favorite.entity';
       VehicleCategory,
       PostType,
       GroupMember,
-      Favorite
+      Favorite,
     ]),
-
+    
+    ScheduleModule.forRoot(),
     NotificationModule,
     forwardRef(() => GroupModule),
     SizeModule,

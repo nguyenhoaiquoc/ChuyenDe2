@@ -13,6 +13,7 @@ import { Role } from './role.entity';
 import { Status } from './status.entity';
 import { Report } from './report.entity';
 import { Comment } from './comment.entity';
+import { Product } from './product.entity';
 
 @Entity('users')
 export class User {
@@ -20,6 +21,7 @@ export class User {
   id: number;
 
   /** --------- Quan hệ & FK rõ ràng --------- */
+
   @ManyToOne(() => Role, { nullable: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;
@@ -35,6 +37,12 @@ export class User {
   statusId: number;
 
   /** --------- Hồ sơ cơ bản --------- */
+  @Column({ type: 'varchar', length: 191, nullable: true })
+  fullName: string;
+
+  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
+  gender: string;
+
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })
@@ -42,10 +50,6 @@ export class User {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   nickname: string; // Tên gợi nhớ
-
-
-  @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
-  gender: string;
 
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
   @Column({ type: 'varchar', length: 20, nullable: true })
@@ -71,12 +75,17 @@ export class User {
   @Column({ type: 'varchar', length: 191, nullable: true })
   coverImage: string | null; // ảnh bìa
 
-
-
   @Column({ type: 'json', nullable: true })
   address_json: object;
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
+
+  @Column({ nullable: true })
+  hometown?: string;
+
+  @Column({ default: false })
+  is_cccd_verified: boolean;
+
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */
@@ -116,19 +125,11 @@ export class User {
   @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt?: Date | null;
 
-  @Column({ type: 'varchar', length: 191, nullable: true })
-  fullName: string;// ✅ họ và tên
-
   @Column({ default: false })
   is_verified: boolean;
-  @Column({ nullable: true })
-  hometown?: string;
-  @Column({ default: false })
-  is_cccd_verified: boolean;
   @Column({ type: 'json', nullable: true })
   cccd_verified_data: any;
 
   @Column({ type: 'json', nullable: true })
   cccd_pending_data: any;
-
 }

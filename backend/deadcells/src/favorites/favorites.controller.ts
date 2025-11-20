@@ -4,23 +4,24 @@ import {
   Get,
   Param,
   ParseIntPipe,
-  Body,
   Query,
-  HttpCode,
-  HttpStatus,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import { FavoritesService } from './favorites.service';
-
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('favorites')
 export class FavoritesController {
     constructor(private readonly favoritesService: FavoritesService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Post('toggle/:productId')
   toggleFavorite(
+    @Req() req,
     @Param('productId', ParseIntPipe) productId: number,
-    @Body('userId', ParseIntPipe) userId: number,
   ) {
+    const userId = req.user.id;
     return this.favoritesService.toggleFavorite(userId, productId);
   }
 
@@ -46,9 +47,8 @@ export class FavoritesController {
 
   @Get('my-list')
   async getFavoriteProductsByUser(
-    @Query('userId', ParseIntPipe) userId: number, 
+    @Query('userId', ParseIntPipe) userId: number,
   ) {
     return this.favoritesService.getFavoriteProductsByUser(userId);
   }
-  
 }

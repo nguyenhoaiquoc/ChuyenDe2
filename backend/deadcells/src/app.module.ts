@@ -44,6 +44,7 @@ import { EngineCapacityModule } from './engine-capacities/engine-capacity.module
 import { ProductStatus } from './entities/product-status.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { ProductStatusModule } from './product-statuses/product-status.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { ProductStatusModule } from './product-statuses/product-status.module';
     RamOptionModule,
     StorageTypeModule,
     GraphicsCardModule,
+    NotificationModule,
     BreedModule,
     AgeRangeModule,
     GenderModule,

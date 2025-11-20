@@ -13,12 +13,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module'; 
+import { GroupMember } from 'src/entities/group-member.entity';
 
 @Module({
   imports: [
    forwardRef(() => UsersModule),
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([User, Role, Status, OtpVerification]),
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),
 
     // ✅ import PassportModule
     PassportModule.register({ defaultStrategy: 'jwt' }),

@@ -1,3 +1,4 @@
+import { format, isValid, parseISO } from 'date-fns';
 import {
   Controller,
   Get,
@@ -14,15 +15,19 @@ import {
   UnauthorizedException,
   ForbiddenException,
   Logger,
+  Query,
+  Delete,
 } from '@nestjs/common';
-import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import * as fs from 'fs';
-import { UsersService } from './users.service';
 import { User } from 'src/entities/user.entity';
 import { AuthGuard } from '@nestjs/passport';
-import { parseISO, isValid, format } from 'date-fns';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UsersService } from './users.service';
+import { CloudinaryMulter } from 'src/cloudinary/cloudinary.config';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+
 @Controller('users')
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
@@ -32,6 +37,13 @@ export class UsersController {
   /**
    * Lấy thông tin user theo ID
    */
+  @Get('search')
+  @UseGuards(JwtAuthGuard)
+  async searchUsers(@Req() req, @Query('q') search?: string) {
+    const currentUserId = req.user.id;
+    return this.usersService.searchUsersForInvite(currentUserId, search);
+  }
+
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return this.usersService.findOne(+id);
@@ -213,5 +225,50 @@ async updateUser(
     
   }
 
-  
+  /** Đánh giá user */
+  @Post(':userId/rate')
+  @UseGuards(JwtAuthGuard)
+  async rateUser(
+    @Req() req,
+    @Param('userId') userId: number,
+    @Body() data: { stars: number; content?: string },
+  ) {
+    return this.usersService.rateUser(
+      req.user.id,
+      userId,
+      data.stars,
+      data.content,
+    );
+  }
+
+  /** Lấy danh sách đánh giá của user */
+  @Get(':userId/ratings')
+  async getUserRatings(@Param('userId') userId: number) {
+    return this.usersService.getUserRatings(userId);
+  }
+
+  /** Lấy rating trung bình */
+  @Get(':userId/rating-average')
+  async getUserAverageRating(@Param('userId') userId: number) {
+    return this.usersService.getUserAverageRating(userId);
+  }
+
+  /** Kiểm tra đã đánh giá chưa */
+  @Get(':userId/check-rating')
+  @UseGuards(JwtAuthGuard)
+  async checkUserRating(@Req() req, @Param('userId') userId: number) {
+    return this.usersService.checkUserRating(req.user.id, userId);
+  }
+
+  @Delete(':userId/rate')
+  @UseGuards(JwtAuthGuard)
+  async deleteRating(@Req() req, @Param('userId') userId: number) {
+    return this.usersService.deleteRating(req.user.id, userId);
+  }
+
+  @Get('my-ratings')
+  @UseGuards(JwtAuthGuard)
+  async getMyRatings(@Req() req) {
+    return this.usersService.getMyRatings(req.user.id);
+  }
 }

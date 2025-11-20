@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,28 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 
 const { width } = Dimensions.get("window");
-
-// Base URL cho API mới
 const API_BASE = "https://vn-public-apis.fpo.vn";
+
+// Kiểu dữ liệu cho các phần địa chỉ được tách ra
+interface InitialAddressParts {
+  village: string;
+  wardName: string;
+  districtName: string;
+  provinceName: string;
+}
 
 export default function AddressPicker({
   onChange,
+  initialValue,
 }: {
   onChange: (fullAddress: string) => void;
+  initialValue?: string;
 }) {
   const [provinces, setProvinces] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
@@ -28,97 +37,238 @@ export default function AddressPicker({
 
   const [selectedProvince, setSelectedProvince] = useState<any>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<any>(null);
-  const [selectedWard, setSelectedWard] = useState<any>(null);
-  const [village, setVillage] = useState("");
+  const [selectedWard, setSelectedWard] = useState<any>(null); // State cho text hiển thị
+
+  const [provinceText, setProvinceText] = useState("Chọn tỉnh/thành phố");
+  const [districtText, setDistrictText] = useState("Chọn quận/huyện");
+  const [wardText, setWardText] = useState("Chọn xã/phường");
+  const [village, setVillage] = useState(""); // State cho modal
 
   const [showProvinceModal, setShowProvinceModal] = useState(false);
   const [showDistrictModal, setShowDistrictModal] = useState(false);
-  const [showWardModal, setShowWardModal] = useState(false);
+  const [showWardModal, setShowWardModal] = useState(false); // State loading
+
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(true);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [isLoadingWards, setIsLoadingWards] = useState(false); // Ref để lưu các phần địa chỉ ban đầu và tránh gọi lại
+
+  const initialParts = useRef<InitialAddressParts | null>(null);
+  const isAutoSelecting = useRef(false); // 1. Tách chuỗi initialValue (Chỉ chạy 1 lần)
 
   useEffect(() => {
+    if (initialValue && !initialParts.current) {
+      const parts = initialValue.split(",").map((s) => s.trim());
+      let parsed: InitialAddressParts | null = null;
+
+      if (parts.length >= 4) {
+        // "Thôn/Xóm, Xã, Huyện, Tỉnh"
+        parsed = {
+          village: parts[0],
+          wardName: parts[1],
+          districtName: parts[2],
+          provinceName: parts[3],
+        };
+      } else if (parts.length === 3) {
+        // "Xã, Huyện, Tỉnh" (Không có thôn/xóm)
+        parsed = {
+          village: "",
+          wardName: parts[0],
+          districtName: parts[1],
+          provinceName: parts[2],
+        };
+      }
+
+      if (parsed) {
+        initialParts.current = parsed;
+        isAutoSelecting.current = true; // Bắt đầu quá trình tự động chọn
+        // Cập nhật text hiển thị ngay lập tức
+        setVillage(parsed.village);
+        setProvinceText(parsed.provinceName);
+        setDistrictText(parsed.districtName);
+        setWardText(parsed.wardName);
+      } else {
+        // Nếu không thể tách, giữ nguyên hành vi cũ (dồn vào thôn/xóm)
+        setVillage(initialValue);
+      }
+    }
+  }, [initialValue]); // 2. Tải danh sách Tỉnh (Chạy 1 lần)
+
+  useEffect(() => {
+    setIsLoadingProvinces(true);
     fetch(`${API_BASE}/provinces/getAll?limit=-1`)
       .then((res) => res.json())
       .then((data) => {
-        console.log("Response tỉnh:", data);
+        const allProvinces = data.data?.data || [];
+        setProvinces(allProvinces); // 3. Tự động chọn Tỉnh (nếu có)
 
-        // FIX: Lấy data.data.data
-        setProvinces(data.data?.data || []);
+        if (isAutoSelecting.current && initialParts.current) {
+          const foundProvince = allProvinces.find(
+            (p: any) =>
+              p.nameWithType === initialParts.current?.provinceName ||
+              p.name === initialParts.current?.provinceName
+          );
+          if (foundProvince) {
+            handleSelectProvince(foundProvince); // Bắt đầu chuỗi tải
+          } else {
+            isAutoSelecting.current = false; // Không tìm thấy, dừng lại
+          }
+        }
       })
-      .catch((err) => console.log("Lỗi lấy tỉnh:", err));
-  }, []);
+      .catch((err) => console.log("Lỗi lấy tỉnh:", err))
+      .finally(() => setIsLoadingProvinces(false));
+  }, []); // Chỉ chạy 1 lần
+  // 4. Hàm chọn Tỉnh
 
   const handleSelectProvince = async (province: any) => {
     setSelectedProvince(province);
+    setProvinceText(province.nameWithType || province.name);
+    setShowProvinceModal(false); // Reset Huyện và Xã
+
     setSelectedDistrict(null);
     setSelectedWard(null);
     setWards([]);
-    setShowProvinceModal(false);
+    if (!isAutoSelecting.current) {
+      setDistrictText("Chọn quận/huyện");
+      setWardText("Chọn xã/phường");
+      setVillage(""); // Xóa thôn/xóm cũ nếu người dùng TỰ CHỌN tỉnh
+    }
 
+    setIsLoadingDistricts(true);
     try {
-      // Lấy huyện theo code tỉnh
       const res = await axios.get(
-  `${API_BASE}/districts/getByProvince?provinceCode=${province.code}&limit=-1`
-);
-setDistricts(res.data.data?.data || []); // <-- Thêm .data.data
+        `${API_BASE}/districts/getByProvince?provinceCode=${province.code}&limit=-1`
+      );
+      const allDistricts = res.data.data?.data || [];
+      setDistricts(allDistricts); // 5. Tự động chọn Huyện (nếu có)
 
-      // Lấy tất cả xã từ tất cả huyện (tương tự code cũ, nếu cần)
-      // Nhưng để chính xác, ta sẽ lấy khi chọn huyện
+      if (isAutoSelecting.current && initialParts.current) {
+        const foundDistrict = allDistricts.find(
+          (d: any) =>
+            d.nameWithType === initialParts.current?.districtName ||
+            d.name === initialParts.current?.districtName
+        );
+        if (foundDistrict) {
+          handleSelectDistrict(foundDistrict);
+        } else {
+          isAutoSelecting.current = false; // Không tìm thấy, dừng lại
+        }
+      }
     } catch (err) {
       console.log("Lỗi lấy huyện:", err);
+      isAutoSelecting.current = false;
+    } finally {
+      setIsLoadingDistricts(false);
     }
-  };
+  }; // 6. Hàm chọn Huyện
 
   const handleSelectDistrict = async (district: any) => {
     setSelectedDistrict(district);
-    setSelectedWard(null);
-    setShowDistrictModal(false);
+    setDistrictText(district.nameWithType || district.name);
+    setShowDistrictModal(false); // Reset Xã
 
+    setSelectedWard(null);
+    if (!isAutoSelecting.current) {
+      setWardText("Chọn xã/phường");
+    }
+
+    setIsLoadingWards(true);
     try {
-      // Lấy xã theo code huyện
       const res = await axios.get(
-  `${API_BASE}/wards/getByDistrict?districtCode=${district.code}&limit=-1`
-);
-setWards(res.data.data?.data || []); // <-- Thêm .data.data
+        `${API_BASE}/wards/getByDistrict?districtCode=${district.code}&limit=-1`
+      );
+      const allWards = res.data.data?.data || [];
+      setWards(allWards); // 7. Tự động chọn Xã (nếu có)
+
+      if (isAutoSelecting.current && initialParts.current) {
+        const foundWard = allWards.find(
+          (w: any) =>
+            w.nameWithType === initialParts.current?.wardName ||
+            w.name === initialParts.current?.wardName
+        );
+        if (foundWard) {
+          handleSelectWard(foundWard);
+        }
+        isAutoSelecting.current = false; // Dừng lại dù tìm thấy hay không
+      }
     } catch (err) {
       console.log("Lỗi lấy xã:", err);
       setWards([]);
+      isAutoSelecting.current = false;
+    } finally {
+      setIsLoadingWards(false);
     }
-  };
+  }; // 8. Hàm chọn Xã
 
   const handleSelectWard = (ward: any) => {
     setSelectedWard(ward);
-    setShowWardModal(false);
-  };
+    setWardText(ward.nameWithType || ward.name);
+    setShowWardModal(false); // Nếu người dùng tự chọn, dừng autoSelect
+
+    if (isAutoSelecting.current) {
+      isAutoSelecting.current = false;
+    }
+  }; // 9. Gửi trả địa chỉ đầy đủ khi CÓ THAY ĐỔI
 
   useEffect(() => {
-    if (selectedProvince && selectedDistrict && selectedWard && village) {
-      const fullAddress = `${village}, ${selectedWard.nameWithType || selectedWard.name}, ${selectedDistrict.nameWithType || selectedDistrict.name}, ${selectedProvince.nameWithType || selectedProvince.name}`;
+    // Chỉ gọi onChange nếu 3 cấp đều đã được chọn
+    if (selectedProvince && selectedDistrict && selectedWard) {
+      const parts = [];
+      if (village.trim()) {
+        parts.push(village.trim());
+      }
+      parts.push(selectedWard.nameWithType || selectedWard.name);
+      parts.push(selectedDistrict.nameWithType || selectedDistrict.name);
+      parts.push(selectedProvince.nameWithType || selectedProvince.name);
+
+      const fullAddress = parts.join(", ");
       onChange(fullAddress);
-    } else if (selectedProvince && selectedDistrict && selectedWard) {
-      // Nếu không có village, vẫn tạo address cơ bản
-      const fullAddress = `${selectedWard.nameWithType || selectedWard.name}, ${selectedDistrict.nameWithType || selectedDistrict.name}, ${selectedProvince.nameWithType || selectedProvince.name}`;
+    } else if (
+      initialParts.current &&
+      village !== initialParts.current.village
+    ) {
+      // Nếu người dùng chỉ sửa thôn/xóm (và các cấp khác đã được điền từ initialValue)
+      const fullAddress = `${village.trim()}, ${
+        initialParts.current.wardName
+      }, ${initialParts.current.districtName}, ${
+        initialParts.current.provinceName
+      }`;
       onChange(fullAddress);
     }
-  }, [selectedProvince, selectedDistrict, selectedWard, village]);
+  }, [selectedProvince, selectedDistrict, selectedWard, village]); // Xử lý khi người dùng TỰ CHỌN (clear auto-select)
+
+  const handleManualSelectProvince = (province: any) => {
+    isAutoSelecting.current = false;
+    handleSelectProvince(province);
+  };
+  const handleManualSelectDistrict = (district: any) => {
+    isAutoSelecting.current = false;
+    handleSelectDistrict(district);
+  };
+  const handleManualSelectWard = (ward: any) => {
+    isAutoSelecting.current = false;
+    handleSelectWard(ward);
+  };
+  const handleVillageChange = (text: string) => {
+    isAutoSelecting.current = false;
+    setVillage(text);
+  };
 
   return (
     <View style={styles.container}>
       {/* Chọn tỉnh */}
       <TouchableOpacity
-        style={[styles.dropdown, !selectedProvince && styles.dropdownDisabled]}
+        style={styles.dropdown}
         onPress={() => setShowProvinceModal(true)}
-        disabled={!selectedProvince && false}
       >
         <View style={styles.dropdownContent}>
-          <Text style={styles.dropdownText}>
-            {selectedProvince?.nameWithType ||
-              selectedProvince?.name ||
-              "Chọn tỉnh/thành phố"}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          <Text style={styles.dropdownText}>{provinceText}</Text>
+          {isLoadingProvinces ? (
+            <ActivityIndicator size="small" color="#8c7ae6" />
+          ) : (
+            <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          )}
         </View>
       </TouchableOpacity>
-
       {/* Chọn huyện */}
       <TouchableOpacity
         style={[styles.dropdown, !selectedProvince && styles.dropdownDisabled]}
@@ -126,15 +276,14 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
         disabled={!selectedProvince}
       >
         <View style={styles.dropdownContent}>
-          <Text style={styles.dropdownText}>
-            {selectedDistrict?.nameWithType ||
-              selectedDistrict?.name ||
-              "Chọn quận/huyện"}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          <Text style={styles.dropdownText}>{districtText}</Text>
+          {isLoadingDistricts ? (
+            <ActivityIndicator size="small" color="#8c7ae6" />
+          ) : (
+            <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          )}
         </View>
       </TouchableOpacity>
-
       {/* Chọn xã */}
       <TouchableOpacity
         style={[styles.dropdown, !selectedDistrict && styles.dropdownDisabled]}
@@ -142,23 +291,22 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
         disabled={!selectedDistrict}
       >
         <View style={styles.dropdownContent}>
-          <Text style={styles.dropdownText}>
-            {selectedWard?.nameWithType ||
-              selectedWard?.name ||
-              "Chọn xã/phường"}
-          </Text>
-          <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          <Text style={styles.dropdownText}>{wardText}</Text>
+          {isLoadingWards ? (
+            <ActivityIndicator size="small" color="#8c7ae6" />
+          ) : (
+            <Ionicons name="chevron-down" size={20} color="#8c7ae6" />
+          )}
         </View>
       </TouchableOpacity>
-
       {/* Nhập thôn */}
       <TextInput
         style={styles.input}
-        placeholder="Thôn/xóm (tùy chọn)"
+        placeholder="Số nhà, Tên đường, Thôn/xóm..."
         value={village}
-        onChangeText={setVillage}
+        onChangeText={handleVillageChange}
       />
-
+      {/* === MODALS === */}
       {/* Modal tỉnh */}
       <Modal visible={showProvinceModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -173,7 +321,7 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
               {provinces.map((p) => (
                 <TouchableOpacity
                   key={p.code}
-                  onPress={() => handleSelectProvince(p)}
+                  onPress={() => handleManualSelectProvince(p)}
                   style={[
                     styles.modalItem,
                     selectedProvince?.code === p.code &&
@@ -192,7 +340,6 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
           </View>
         </View>
       </Modal>
-
       {/* Modal huyện */}
       <Modal visible={showDistrictModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -208,14 +355,14 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
                 <View style={styles.emptyState}>
                   <Ionicons name="location" size={48} color="#cbd5e1" />
                   <Text style={styles.emptyText}>
-                    Chưa có dữ liệu quận/huyện.
+                    Vui lòng chọn Tỉnh/Thành phố trước.
                   </Text>
                 </View>
               ) : (
                 districts.map((d) => (
                   <TouchableOpacity
                     key={d.code}
-                    onPress={() => handleSelectDistrict(d)}
+                    onPress={() => handleManualSelectDistrict(d)}
                     style={[
                       styles.modalItem,
                       selectedDistrict?.code === d.code &&
@@ -235,7 +382,6 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
           </View>
         </View>
       </Modal>
-
       {/* Modal xã */}
       <Modal visible={showWardModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -251,14 +397,14 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
                 <View style={styles.emptyState}>
                   <Ionicons name="location" size={48} color="#cbd5e1" />
                   <Text style={styles.emptyText}>
-                    Không có xã/phường nào trong quận/huyện này.
+                    Vui lòng chọn Quận/Huyện trước.
                   </Text>
                 </View>
               ) : (
                 wards.map((w) => (
                   <TouchableOpacity
                     key={w.code}
-                    onPress={() => handleSelectWard(w)}
+                    onPress={() => handleManualSelectWard(w)}
                     style={[
                       styles.modalItem,
                       selectedWard?.code === w.code && styles.modalItemSelected,
@@ -281,7 +427,6 @@ setWards(res.data.data?.data || []); // <-- Thêm .data.data
   );
 }
 
-// Styles giữ nguyên
 const styles = StyleSheet.create({
   container: {
     marginVertical: 8,

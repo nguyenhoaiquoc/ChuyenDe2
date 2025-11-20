@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Alert,
   Linking,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRoute, RouteProp } from "@react-navigation/native";
@@ -27,6 +28,7 @@ import {
   ProductImage,
   User,
 } from "../../types";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width } = Dimensions.get("window");
 
@@ -59,22 +61,35 @@ export default function ProductDetailScreen() {
   const route = useRoute<ProductDetailScreenRouteProp>();
   const navigation = useNavigation<ProductDetailScreenNavigationProp>();
 
-  const { product: routeProduct, isApproved: routeIsApproved } =
-    route.params || {};
+  const { bottom } = useSafeAreaInsets();
+
+  const { product: routeProduct } = route.params || {};
   const product: Product = routeProduct || ({} as Product);
-  // Mặc định là 'true' nếu không được truyền (cho các màn hình khác)
-  const isApproved = routeIsApproved ?? true;
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [comment, setComment] = useState("");
   const [isSending, setIsSending] = useState(false);
 
+  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
 
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
+
+  const [showMenuFor, setShowMenuFor] = useState<number | null>(null);
+
+  const openMenu = (commentId: number) => {
+    setShowMenuFor(commentId);
+  };
+
+  const closeMenu = () => {
+    setShowMenuFor(null);
+  };
+
   useEffect(() => {
     const fetchFavoriteData = async () => {
       try {
@@ -96,71 +111,108 @@ export default function ProductDetailScreen() {
       }
     };
 
-    if (product.id && isApproved) {
+    const isProductApproved = product.productStatus?.id === 2;
+
+    if (product.id && isProductApproved) {
       fetchFavoriteData();
     }
-  }, [product.id, currentUser, isApproved]);
+  }, [product.id, currentUser, product.productStatus?.id]);
+
+  const fetchComments = useCallback(async () => {
+    if (!product.id) return; // Thêm kiểm tra
+    try {
+      setLoadingComments(true);
+      const res = await axios.get(`${path}/comments/${product.id}`);
+      setComments(res.data);
+    } catch (error) {
+      console.error("Lỗi khi tải bình luận:", error);
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [product.id]); // Phụ thuộc vào product.id
+
+  // Hàm fetch sản phẩm liên quan
+  const fetchRelatedProducts = useCallback(async () => {
+    if (!product.id) return; // Thêm kiểm tra
+    try {
+      setLoadingRelated(true);
+      const res = await axios.get(`${path}/products/${product.id}/related`);
+      const formattedData = (res.data || []).map((item: any) => ({
+        ...item,
+        authorName: item.author_name || item.authorName || "Người bán",
+      }));
+      setRelatedProducts(formattedData);
+    } catch (error) {
+      console.error("Lỗi khi tải sản phẩm liên quan:", error);
+    } finally {
+      setLoadingRelated(false);
+    }
+  }, [product.id]); // Phụ thuộc vào product.id
+
+  // Hàm xử lý xóa
+  const handleDeleteComment = useCallback(
+    async (commentId: string) => {
+      if (!currentUser?.id) {
+        Alert.alert("Lỗi", "Không thể xác thực người dùng.");
+        return;
+      }
+
+      try {
+        await axios.delete(
+          `${path}/comments/${commentId}?user_id=${currentUser.id}`
+        );
+        Alert.alert("Thành công", "Đã xóa bình luận.");
+        fetchComments(); // 👈 GỌI HÀM (BÂY GIỜ ĐÃ HỢP LỆ)
+      } catch (err: any) {
+        console.error("Lỗi xóa bình luận:", err.response?.data);
+        Alert.alert(
+          "Lỗi",
+          err.response?.data?.message || "Không thể xóa bình luận."
+        );
+      }
+    },
+    [currentUser, fetchComments] // Phụ thuộc vào currentUser và fetchComments
+  );
 
   const handleToggleFavorite = async () => {
-    if (!currentUser?.id) {
-      Alert.alert("Thông báo", "Vui lòng đăng nhập để yêu thích sản phẩm.");
-      return;
-    }
+    if (!currentUser) return;
+
+    // Đổi local state trước
+    setIsFavorite((prev) => !prev);
+    setFavoriteCount((prev) => prev + (isFavorite ? -1 : 1));
 
     try {
-      await axios.post(`${path}/favorites/toggle/${product.id}`, {
-        userId: currentUser.id,
-      });
+      const token = await AsyncStorage.getItem("token");
+      await axios.post(
+        `${path}/favorites/toggle/${product.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const [countRes, statusRes] = await Promise.all([
-        axios.get(`${path}/favorites/${product.id}/count`),
-        axios.get(
-          `${path}/favorites/check/${product.id}?userId=${currentUser.id}`
-        ),
-      ]);
-
+      // Optionally fetch lại count chính xác từ server
+      const countRes = await axios.get(`${path}/favorites/${product.id}/count`);
       setFavoriteCount(countRes.data.count || 0);
-      setIsFavorite(statusRes.data.isFavorite || false);
     } catch (err) {
-      console.log("Lỗi toggle yêu thích detail:", err);
+      // Nếu có lỗi, rollback lại
+      setIsFavorite((prev) => !prev);
+      setFavoriteCount((prev) => prev + (isFavorite ? 1 : -1));
+      console.log("Lỗi toggle yêu thích:", err);
     }
   };
 
   useEffect(() => {
-    const fetchComments = async () => {
-      try {
-        setLoadingComments(true);
-        const res = await axios.get(`${path}/comments/${product.id}`);
-        setComments(res.data);
-      } catch (error) {
-        console.error("Lỗi khi tải bình luận:", error);
-      } finally {
-        setLoadingComments(false);
-      }
-    };
+    const isProductApproved = product.productStatus?.id === 2;
 
-    const fetchRelatedProducts = async () => {
-      try {
-        setLoadingRelated(true);
-        const res = await axios.get(`${path}/products/${product.id}/related`);
-        const formattedData = (res.data || []).map((item: any) => ({
-          ...item,
-          authorName: item.author_name || item.authorName || "Người bán",
-        }));
-        setRelatedProducts(formattedData);
-      } catch (error) {
-        console.error("Lỗi khi tải sản phẩm liên quan:", error);
-      } finally {
-        setLoadingRelated(false);
-      }
-    };
-
-    if (product.id && isApproved) {
+    if (product.id && isProductApproved) {
       fetchComments();
       fetchRelatedProducts();
     }
-    if (product.id && isApproved) fetchComments();
-  }, [product.id, isApproved]);
+  }, [
+    product.id,
+    product.productStatus?.id,
+    fetchComments,
+    fetchRelatedProducts,
+  ]);
 
   useEffect(() => {}, [product]);
 
@@ -177,19 +229,19 @@ export default function ProductDetailScreen() {
     }
   };
 
-  // ✅ Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
+  // Hiển thị hết ảnh từ product.images (4 ảnh nếu có), fallback thumbnail nếu rỗng
   const productImages: ProductImage[] =
     product.images && product.images.length > 0
-      ? product.images.map((img,index) => ({
+      ? product.images.map((img) => ({
           ...img,
-            id: img.id ? String(img.id) : `fallback-${index}`,
-         product_id: img.product_id ? String(img.product_id) : String(product.id ?? "1"),
-          // ✅ Fix URL: file:// local OK, relative prepend path nếu cần
-         image_url:
-          img.image_url?.startsWith("http") || img.image_url?.startsWith("file://")
-            ? img.image_url
-            : `${path}${img.image_url ?? ""}`,
-              created_at: img.created_at ?? new Date().toISOString(),
+          id: img.id.toString(),
+          product_id: img.product_id.toString(),
+          // Fix URL: file:// local OK, relative prepend path nếu cần
+          image_url:
+            img.image_url.startsWith("file://") ||
+            img.image_url.startsWith("http")
+              ? img.image_url
+              : `${path}${img.image_url}`, // Prepend nếu /uploads/...
         })) // Cast string nếu cần
       : [
           {
@@ -204,56 +256,219 @@ export default function ProductDetailScreen() {
         ];
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (isSending || comment.trim() === "") return;
 
-    if (!product?.id) {
-      Alert.alert("Lỗi", "Không xác định được sản phẩm để bình luận.");
+    const userIdStr = await AsyncStorage.getItem("userId");
+    if (!userIdStr) {
+      Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
       return;
     }
+    const userId = Number(userIdStr);
 
     try {
-      setIsSending(true); // 🟡 Bắt đầu gửi
+      setIsSending(true);
 
-      // Lấy user_id từ AsyncStorage
-      const userIdStr = await AsyncStorage.getItem("userId");
-      if (!userIdStr) {
-        Alert.alert("Thông báo", "Bạn phải đăng nhập để bình luận.");
-        setIsSending(false);
-        return;
+      // 🚀 LOGIC MỚI: KIỂM TRA XEM ĐANG SỬA HAY GỬI MỚI
+      if (editingComment) {
+        // --- ĐANG SỬA BÌNH LUẬN ---
+        await axios.patch(`${path}/comments/${editingComment.id}`, {
+          user_id: userId,
+          content: comment.trim(),
+        });
+        setEditingComment(null); // Tắt chế độ sửa
+      } else {
+        // --- ĐANG GỬI BÌNH LUẬN MỚI (hoặc TRẢ LỜI) ---
+        if (!product?.id) {
+          Alert.alert("Lỗi", "Không xác định được sản phẩm.");
+          setIsSending(false);
+          return;
+        }
+        const payload = {
+          product_id: Number(product.id),
+          user_id: userId,
+          content: comment.trim(),
+          parent_id: replyingTo ? String(replyingTo.id) : undefined,
+        };
+        await axios.post(`${path}/comments`, payload);
+        setReplyingTo(null); // Tắt chế độ trả lời
       }
-      const userId = Number(userIdStr);
 
-      const res = await axios.post(`${path}/comments`, {
-        product_id: Number(product.id),
-        user_id: userId, // dùng user thật
-        content: comment.trim(),
-      });
-
-      setComments((prev) => [...prev, res.data]);
-      setComment("");
-    } catch (error) {
-      Alert.alert("Lỗi", "Không gửi được bình luận. Vui lòng thử lại!");
-      console.error("Gửi bình luận lỗi:", error);
+      fetchComments(); // Tải lại toàn bộ bình luận
+      setComment(""); // Xóa nội dung ô input
+    } catch (error: any) {
+      Alert.alert(
+        "Lỗi",
+        error.response?.data?.message || "Không thể gửi bình luận."
+      );
+      console.error("Gửi/Sửa bình luận lỗi:", error);
     } finally {
-      setIsSending(false); // 🟢 Cho phép gửi lại
+      setIsSending(false);
     }
+  }, [
+    isSending,
+    comment,
+    product.id,
+    replyingTo,
+    editingComment,
+    fetchComments,
+  ]);
+
+  const goToUserProfile = (userId?: number | string) => {
+    if (!userId) {
+      Alert.alert("Lỗi", "Không tìm thấy ID người dùng.");
+      return;
+    }
+    const numericId = Number(userId);
+    const isOwner = currentUser && Number(currentUser.id) === numericId;
+
+    // Dẫn tới màn hình UserDetail, kèm product và flag isOwner
+    navigation.navigate("UserDetail", {
+      userId: numericId,
+      productId: product.id,
+      product,
+      isOwner, // màn hình UserDetail có thể đọc flag này để cho phép chỉnh sửa nếu cần
+    } as any);
   };
 
-  // ✅ Render dots indicator (cho tất cả ảnh)
-  const renderDots = () => (
-    <View className="flex-row items-center justify-center mt-2">
-      {productImages.map((_, index) => (
-        <View
-          key={index}
-          className={`w-2 h-2 rounded-full mx-1 ${index === currentImageIndex ? "bg-blue-500" : "bg-gray-300"}`}
-        />
-      ))}
-    </View>
-  );
-  // useEffect(() => {
-  //   console.log("Product detail:", product);
-  // }, []);
+  const renderCommentTree = (comment: Comment, depth: number = 0) => {
+    const canDelete =
+      currentUser && Number(comment.user?.id) === Number(currentUser.id);
+    const userImage = comment.user?.image
+      ? comment.user.image.startsWith("http")
+        ? comment.user.image
+        : `${path}${comment.user.image}`
+      : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+    return (
+      <View key={comment.id}>
+        {/* Render bình luận (cha hoặc con) */}
+        <View className="flex-row items-start mb-4">
+          <TouchableOpacity
+            onPress={() => goToUserProfile(comment.user?.id)}
+            activeOpacity={0.7}
+          >
+            <Image
+              source={{ uri: userImage }}
+              className="w-10 h-10 rounded-full"
+            />
+          </TouchableOpacity>
+
+          <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
+            <TouchableOpacity
+              onPress={() => goToUserProfile(comment.user?.id)}
+              activeOpacity={0.7}
+            >
+              <Text className="font-semibold text-sm">
+                {comment.user?.fullName || "Người dùng"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text className="text-gray-600 text-sm mt-1">
+              {comment.content}
+            </Text>
+            <Text className="text-gray-400 text-xs mt-1">
+              {new Date(
+                new Date(comment.created_at).getTime() + 7 * 60 * 60 * 1000
+              ).toLocaleString("vi-VN", {})}
+            </Text>
+
+            {depth === 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  setReplyingTo(comment);
+                  setEditingComment(null);
+                  setComment("");
+                }}
+              >
+                <Text className="text-blue-500 text-xs font-semibold mt-1">
+                  Trả lời
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Nút "Ba chấm" (Sửa/Xóa) */}
+          {canDelete && (
+            <TouchableOpacity
+              className="p-2 -ml-2"
+              onPress={() => openMenu(Number(comment.id))}
+            >
+              <Ionicons name="ellipsis-vertical" size={18} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {showMenuFor === Number(comment.id) && (
+          <Modal
+            transparent
+            animationType="slide"
+            visible={showMenuFor === Number(comment.id)}
+            onRequestClose={closeMenu}
+          >
+            {/* 1. Lớp mờ (Backdrop) */}
+            <TouchableOpacity
+              className="flex-1 bg-black/40"
+              onPress={closeMenu}
+              activeOpacity={1}
+            />
+
+            <View
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl"
+              style={{ paddingBottom: 16 + bottom }}
+            >
+              {/* Nút Chỉnh sửa */}
+              <TouchableOpacity
+                className="py-4 border-b border-gray-200"
+                onPress={() => {
+                  closeMenu();
+                  setEditingComment(comment);
+                  setComment(comment.content);
+                  setReplyingTo(null);
+                }}
+              >
+                <Text className="text-blue-600 font-semibold text-center text-lg">
+                  Chỉnh sửa
+                </Text>
+              </TouchableOpacity>
+
+              {/* Nút Xóa */}
+              <TouchableOpacity
+                className="py-4"
+                onPress={() => {
+                  closeMenu();
+                  handleDeleteComment(String(comment.id));
+                }}
+              >
+                <Text className="text-red-500 font-semibold text-center text-lg">
+                  Xóa
+                </Text>
+              </TouchableOpacity>
+
+              {/* 3. Nút Hủy (Tách biệt) */}
+              <TouchableOpacity
+                className="py-4 border-t-2 border-gray-200 mt-2"
+                onPress={closeMenu}
+              >
+                <Text className="text-gray-700 font-bold text-center text-lg">
+                  Hủy
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Modal>
+        )}
+
+        {/* Render các con (replies) - Tăng độ sâu (depth) lên 1 */}
+        {comment.children && comment.children.length > 0 && (
+          <View className="ml-8">
+            {comment.children.map(
+              (reply) => renderCommentTree(reply, depth + 1) // 👈 Truyền depth + 1
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const handleChatPress = async () => {
     try {
@@ -276,13 +491,13 @@ export default function ProductDetailScreen() {
         seller_id: sellerId,
         buyer_id: buyerId,
         room_type: "PAIR",
-        product_id: String(product.id), // ✅ backend giờ nhận product_id
+        product_id: String(product.id), // backend giờ nhận product_id
       });
 
       const room = response.room ?? response;
       console.log("🟢 Room nhận được:", room);
 
-      // ✅ Xác định người còn lại trong phòng (người bán)
+      // Xác định người còn lại trong phòng (người bán)
       const otherUserId =
         sellerId === String(currentUser.id) ? buyerId : sellerId;
       const otherUserName = product.authorName || "Người bán";
@@ -310,9 +525,9 @@ export default function ProductDetailScreen() {
     }
   };
 
-  // ✅ Render item ảnh (hiển thị từng ảnh trong array)
+  // Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
-    const imageSource = { uri: item.image_url }; // ✅ URL đã fix ở trên
+    const imageSource = { uri: item.image_url }; // URL đã fix ở trên
     return (
       <View style={{ width, height: 280 }}>
         <Image
@@ -396,7 +611,6 @@ export default function ProductDetailScreen() {
         onPress={() =>
           navigation.push("ProductDetail", {
             product: item,
-            isApproved: true,
           })
         }
         className="w-40 bg-white border border-gray-200 rounded-lg shadow-sm mr-3 overflow-hidden"
@@ -478,7 +692,7 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
           {/* Nút Lưu */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <TouchableOpacity
               onPress={handleToggleFavorite}
               className="absolute top-3 right-3 bg-white px-3 py-1 rounded-full flex-row items-center border border-gray-300"
@@ -514,7 +728,7 @@ export default function ProductDetailScreen() {
             </Text>
 
             {/* Tim */}
-            {isApproved && (
+            {product.productStatus?.id === 2 && (
               <TouchableOpacity
                 className="flex-row items-center"
                 onPress={handleToggleFavorite}
@@ -553,10 +767,8 @@ export default function ProductDetailScreen() {
           <TouchableOpacity
             onPress={() => {
               if (product.user_id) {
-                navigation.navigate("UserDetail", {
+                navigation.navigate("UserInforScreen", {
                   userId: product.user_id,
-                  productId: product.id,
-                  product: product,
                 });
               } else {
                 Alert.alert("Lỗi", "Không tìm thấy ID người bán.");
@@ -1005,51 +1217,48 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Bình luận */}
-          {isApproved && (
-            <View className="mb-6">
+          {product.productStatus?.id === 2 && (
+            <View className="mb-6 px-4">
               <Text className="text-lg font-bold mb-3">Bình luận</Text>
 
+              {/* 🚀 SỬ DỤNG HÀM RENDER CÂY MỚI (Thêm , 0) */}
               {loadingComments ? (
                 <Text>Đang tải bình luận...</Text>
               ) : comments.length > 0 ? (
-                comments.map((c) => (
-                  <View key={c.id} className="flex-row items-start mb-4">
-                    <Image
-                      source={{
-                        uri: c.user?.image
-                          ? c.user.image.startsWith("http")
-                            ? c.user.image
-                            : `${path}${c.user.image}`
-                          : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-                      }}
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <View className="ml-3 flex-1 bg-gray-100 px-3 py-2 rounded-2xl">
-                      <Text className="font-semibold text-sm">
-                        {c.user?.fullName || "Người dùng"}
-                      </Text>
-                      <Text className="text-gray-600 text-sm mt-1">
-                        {c.content}
-                      </Text>
-                      <Text className="text-gray-400 text-xs mt-1">
-                        {new Date(
-                          new Date(c.created_at).getTime() + 7 * 60 * 60 * 1000
-                        ).toLocaleString("vi-VN", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                ))
+                comments.map((c) => renderCommentTree(c, 0)) // 👈 SỬA Ở ĐÂY
               ) : (
                 <Text className="text-gray-500 text-sm mb-4">
                   Chưa có bình luận nào. Hãy là người đầu tiên!
                 </Text>
+              )}
+
+              {/* 🚀 THÊM UI "ĐANG CHỈNH SỬA..." */}
+              {editingComment && (
+                <View className="flex-row items-center justify-between mb-2 p-2 bg-yellow-100 rounded-lg">
+                  <Text className="text-gray-700 text-sm">
+                    Đang sửa bình luận...
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditingComment(null);
+                      setComment("");
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* UI "ĐANG TRẢ LỜI..." (ẩn đi nếu đang sửa) */}
+              {replyingTo && !editingComment && (
+                <View className="flex-row items-center justify-between mb-2 p-2 bg-gray-100 rounded-lg">
+                  <Text className="text-gray-600 text-sm">
+                    Đang trả lời {replyingTo.user?.fullName || "Người dùng"}
+                  </Text>
+                  <TouchableOpacity onPress={() => setReplyingTo(null)}>
+                    <Ionicons name="close-circle" size={20} color="#999" />
+                  </TouchableOpacity>
+                </View>
               )}
 
               {/* Ô nhập + nút gửi */}
@@ -1057,11 +1266,17 @@ export default function ProductDetailScreen() {
                 <TextInput
                   value={comment}
                   onChangeText={setComment}
-                  placeholder="Bình luận..."
+                  // 🚀 Sửa placeholder
+                  placeholder={
+                    editingComment
+                      ? "Sửa bình luận..."
+                      : replyingTo
+                        ? "Viết trả lời..."
+                        : "Bình luận..."
+                  }
                   editable={!isSending}
                   className="flex-1 px-2 text-sm"
                 />
-
                 <TouchableOpacity
                   onPress={handleSend}
                   disabled={isSending}
@@ -1071,11 +1286,12 @@ export default function ProductDetailScreen() {
                 >
                   {isSending ? (
                     <Text className="text-white font-semibold text-sm">
-                      Đang gửi...
+                      ...
                     </Text>
                   ) : (
+                    // 🚀 Sửa text nút
                     <Text className="text-white font-semibold text-sm">
-                      Gửi
+                      {editingComment ? "Cập nhật" : "Gửi"}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -1084,7 +1300,7 @@ export default function ProductDetailScreen() {
           )}
 
           {/* Sản phẩm liên quan */}
-          {isApproved && (
+          {product.productStatus?.id === 2 && (
             <View className="px-4">
               <Text className="text-xl font-bold mb-4">Sản phẩm liên quan</Text>
               {loadingRelated ? (
@@ -1108,31 +1324,34 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Chỉ hiển thị thanh bar nếu KHÔNG PHẢI sản phẩm của mình */}
-      {currentUser && Number(product.user_id) !== Number(currentUser.id) && (
-        <View className="flex-row border-t border-gray-200 bg-white p-2 shadow-lg">
-          
-          {/* Nút Gọi Ngay */}
-          <TouchableOpacity
-            onPress={handleCall} // Gọi thẳng hàm handleCall
-            disabled={!product.phone} // Vô hiệu hóa nếu không có SĐT
-            className={`flex-1 flex-row items-center justify-center rounded-lg py-3 mr-1.5 ${
-              !product.phone ? "bg-gray-300" : "bg-blue-500"
-            }`}
-          >
-            <Ionicons name="call-outline" size={18} color="white" />
-            <Text className="text-white font-bold ml-2 text-base">Gọi ngay</Text>
-          </TouchableOpacity>
+      {product.productStatus?.id === 2 &&
+        currentUser &&
+        Number(product.user_id) !== Number(currentUser.id) && (
+          <View className="flex-row border-t border-gray-200 bg-white p-2 shadow-lg">
+            {/* Nút Gọi Ngay */}
+            <TouchableOpacity
+              onPress={handleCall} // Gọi thẳng hàm handleCall
+              disabled={!product.phone} // Vô hiệu hóa nếu không có SĐT
+              className={`flex-1 flex-row items-center justify-center rounded-lg py-3 mr-1.5 ${
+                !product.phone ? "bg-gray-300" : "bg-blue-500"
+              }`}
+            >
+              <Ionicons name="call-outline" size={18} color="white" />
+              <Text className="text-white font-bold ml-2 text-base">
+                Gọi ngay
+              </Text>
+            </TouchableOpacity>
 
-          {/* Nút Chat */}
-          <TouchableOpacity
-            onPress={handleChatPress}
-            className="flex-1 flex-row items-center justify-center rounded-lg bg-green-500 py-3 ml-1.5"
-          >
-            <Ionicons name="chatbubbles-outline" size={18} color="white" />
-            <Text className="text-white font-bold ml-2 text-base">Chat</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+            {/* Nút Chat */}
+            <TouchableOpacity
+              onPress={handleChatPress}
+              className="flex-1 flex-row items-center justify-center rounded-lg bg-green-500 py-3 ml-1.5"
+            >
+              <Ionicons name="chatbubbles-outline" size={18} color="white" />
+              <Text className="text-white font-bold ml-2 text-base">Chat</Text>
+            </TouchableOpacity>
+          </View>
+        )}
     </View>
   );
 }

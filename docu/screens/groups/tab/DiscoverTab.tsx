@@ -5,7 +5,6 @@ import {
   ScrollView,
   ImageBackground,
   TouchableOpacity,
-  Image,
   Alert,
   RefreshControl,
   ActivityIndicator,
@@ -19,19 +18,13 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-// local extended type includes joinStatus so TS ko complain
 type JoinStatus = "none" | "pending" | "joined";
-type GroupWithStatus = GroupType & {
-  joinStatus: JoinStatus;
-  memberCount: number | string;
-};
 
 const GroupSuggestionCard = ({
   group,
   onJoin,
 }: {
-  group: GroupWithStatus;
+  group: GroupType;
   onJoin: (groupId: number) => void;
 }) => {
   const navigation = useNavigation<NavigationProp>();
@@ -59,7 +52,12 @@ const GroupSuggestionCard = ({
   return (
     <View className="w-[48%] mb-4 bg-white rounded-lg border border-gray-200 overflow-hidden">
       <TouchableOpacity
-        onPress={() => navigation.navigate("GroupDetailScreen", { group })}
+        onPress={() =>
+          navigation.navigate("GroupDetailScreen", {
+            groupId: group.id,
+            initialJoinStatus: group.joinStatus,
+          })
+        }
       >
         <ImageBackground
           source={
@@ -76,7 +74,6 @@ const GroupSuggestionCard = ({
         </Text>
         <Text className="text-xs text-gray-500 mt-1">
           {group.isPublic ? "Nhóm Công khai" : "Nhóm Riêng tư"} ·{" "}
-          {group.memberCount} thành viên
         </Text>
 
         {renderBadge()}
@@ -84,10 +81,21 @@ const GroupSuggestionCard = ({
         {group.joinStatus === "none" && (
           <TouchableOpacity
             className="bg-blue-100 mt-3 py-2 rounded-md"
-            onPress={() => onJoin(Number(group.id))}
+            onPress={() => onJoin(group.id)}
           >
             <Text className="text-blue-600 font-semibold text-center text-sm">
               {group.isPublic ? "Tham gia nhóm" : "Gửi yêu cầu"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {group.joinStatus === "pending" && (
+          <TouchableOpacity
+            className="bg-blue-100 mt-3 py-2 rounded-md"
+            onPress={() => onJoin(group.id)} // gọi lại handleJoin để hủy
+          >
+            <Text className="text-yellow-600 font-semibold text-center text-sm">
+              Hủy yêu cầu
             </Text>
           </TouchableOpacity>
         )}
@@ -97,48 +105,29 @@ const GroupSuggestionCard = ({
 };
 
 export default function DiscoverTab() {
-  const [suggestedGroups, setSuggestedGroups] = useState<GroupWithStatus[]>([]);
+  const [suggestedGroups, setSuggestedGroups] = useState<GroupType[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchSuggestedGroups = useCallback(async () => {
     setLoading(true);
     const token = await AsyncStorage.getItem("token");
+
     try {
       const res = await axios.get(`${path}/groups/suggestions`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      // map groups and fetch join status only if token exists
-      const mapped: GroupWithStatus[] = await Promise.all(
-        res.data.map(async (g: any) => {
-          let joinStatus: JoinStatus = "none";
-
-          if (token) {
-            try {
-              const statusRes = await axios.get(
-                `${path}/groups/${g.id}/join-status`,
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
-              const s = statusRes.data.status as JoinStatus;
-              joinStatus =
-                s === "none" || s === "pending" || s === "joined" ? s : "none";
-            } catch (err) {
-              // nếu thất bại khi check trạng thái, giữ 'none'
-              joinStatus = "none";
-            }
-          }
-
-          return {
-            ...g,
-            image: g.image || require("../../../assets/khi.png"),
-            memberCount: g.memberCount ?? 0,
-            joinStatus,
-          } as GroupWithStatus;
-        })
-      );
+      const mapped: GroupType[] = res.data.map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        image: g.image || require("../../../assets/defaultgroup.png"),
+        description: g.description || "",
+        memberCount: g.memberCount ?? 0,
+        joinStatus: g.joinStatus as JoinStatus,
+        isPublic: g.isPublic,
+        mustApprovePosts: g.mustApprovePosts ?? false,
+      }));
 
       setSuggestedGroups(mapped);
     } catch (err) {
@@ -161,24 +150,31 @@ export default function DiscoverTab() {
     }
 
     try {
+      // ✅ Tìm nhóm hiện tại để kiểm tra trạng thái
+      const currentGroup = suggestedGroups.find((g) => g.id === groupId);
+
+      // ✅ Nếu đang "pending" → Hủy yêu cầu
+      if (currentGroup?.joinStatus === "pending") {
+        await axios.delete(`${path}/groups/${groupId}/cancel-request`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Refresh danh sách
+        await fetchSuggestedGroups();
+        return;
+      }
+
+      // ✅ Nếu "none" → Gửi yêu cầu tham gia
       const res = await axios.post(
         `${path}/groups/${groupId}/join`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // backend nên trả về { joinStatus: 'joined' | 'pending', message }
-      const joinStatus = res.data.joinStatus as JoinStatus | undefined;
-      const message =
-        res.data.message ||
-        (joinStatus === "joined" ? "Bạn đã tham gia nhóm" : "Đã gửi yêu cầu");
-
-      Alert.alert("Thông báo", message);
-
-      // refresh danh sách / trạng thái
+      // Refresh danh sách
       await fetchSuggestedGroups();
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Không thể tham gia nhóm";
+      const msg = err.response?.data?.message || "Không thể thực hiện thao tác";
       Alert.alert("Lỗi", msg);
     }
   };

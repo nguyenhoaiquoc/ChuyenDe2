@@ -1,5 +1,5 @@
 // register-user.dto.ts
-import { IsEmail, IsNotEmpty, IsOptional, Matches, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsNumber, IsOptional, Matches, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
@@ -19,4 +19,8 @@ export class RegisterDto {
   @IsOptional()
   @Matches(/^[0-9]{10}$/, { message: 'Số điện thoại phải gồm đúng 10 chữ số' })
   phone?: string;
+
+    @IsNumber()
+    group_id: number; 
+
 }
