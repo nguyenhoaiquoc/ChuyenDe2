@@ -11,6 +11,8 @@ import {
   Alert,
   Modal,
   Pressable,
+  Platform,
+  ActionSheetIOS,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
@@ -309,45 +311,166 @@ export default function UserInforScreen({ navigation }: any) {
     ]);
   };
 
-  // TODO: Implement the actual Image and Upload functions
+  // --- LOGIC TẢI ẢNH (ĐÃ TÁCH RIÊNG) ---
+
+  // --- HÀM 1: UPLOAD ẢNH LÊN CLOUDINARY VÀ SERVER ---
   const uploadImage = async (
     field: "image" | "coverImage",
     fileUri: string
   ) => {
-    Alert.alert("Thông báo", `Chức năng upload ${field} chưa được cài đặt.`);
+    if (!fileUri) return alert("Lỗi: Không có đường dẫn ảnh!");
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId || !token) return alert("Vui lòng đăng nhập!");
+    setIsUploading(true);
+
+    try {
+      // 1️⃣ Upload lên Cloudinary
+      const cloudinaryUrl =
+        "https://api.cloudinary.com/v1_1/dagyeu6h2/image/upload";
+      const formData = new FormData();
+      formData.append("file", {
+        uri: fileUri,
+        name: "photo.jpg",
+        type: "image/jpeg",
+      } as any);
+      formData.append("upload_preset", "products");
+
+      const cloudinaryResponse = await axios.post(cloudinaryUrl, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const imageUrl = cloudinaryResponse.data.secure_url;
+      if (!imageUrl) throw new Error("Không nhận được URL từ Cloudinary");
+
+      // 2️ Gửi URL lên server của bạn
+      const serverResponse = await axios.patch(
+        `${path}/users/${userId}`,
+        { [field]: imageUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const updatedUser = serverResponse.data;
+      if (!updatedUser)
+        return alert("Upload thành công nhưng không nhận được dữ liệu user!");
+
+      // 3️ Cập nhật state local
+      if (field === "image") setAvatar(updatedUser.image);
+      if (field === "coverImage") setCoverImage(updatedUser.coverImage);
+      setUser(updatedUser);
+      alert("Cập nhật ảnh thành công!");
+    } catch (err: any) {
+      console.log("Upload Error:", err.response?.data || err.message || err);
+      alert("Upload thất bại! Kiểm tra kết nối hoặc cấu hình Cloudinary.");
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  // --- HÀM 2: PICK OR TAKE PHOTO ---
   const pickAndUpload = async (
     field: "image" | "coverImage",
     source: "camera" | "library"
   ) => {
-    Alert.alert(
-      "Thông báo",
-      `Chức năng chọn ảnh từ ${source} chưa được cài đặt.`
-    );
-  };
-  const deleteImage = async (field: "image" | "coverImage") => {
-    Alert.alert("Thông báo", `Chức năng xóa ${field} chưa được cài đặt.`);
-  };
-  const handleImageOptions = (field: "image" | "coverImage") => {
-    if (!isOwnProfile) return; // Chỉ cho phép chỉnh sửa ảnh bìa/avatar nếu là hồ sơ của mình
+    try {
+      let result;
+      const options: ImagePicker.ImagePickerOptions = {
+        allowsEditing: true,
+        quality: 0.8,
+        aspect: field === "image" ? [1, 1] : [16, 9],
+        mediaTypes: "images",
+      };
 
-    Alert.alert(
-      `Cập nhật ${field === "image" ? "Ảnh đại diện" : "Ảnh bìa"}`,
-      "Chọn hành động:",
-      [
-        { text: "Hủy" },
-        { text: "Chụp ảnh mới", onPress: () => pickAndUpload(field, "camera") },
+      if (source === "camera") {
+        const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+        if (!granted) return alert("Cần quyền camera để chụp ảnh!");
+        result = await ImagePicker.launchCameraAsync(options);
+      } else {
+        const { granted } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!granted) return alert("Cần quyền truy cập thư viện ảnh!");
+        result = await ImagePicker.launchImageLibraryAsync(options);
+      }
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      await uploadImage(field, uri);
+    } catch (err) {
+      console.log("Picker error:", err);
+      alert("Lỗi khi chọn/chụp ảnh!");
+    }
+  };
+
+  // --- HÀM 3: XOÁ ẢNH ---
+  const deleteImage = async (field: "image" | "coverImage") => {
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId) return alert("Vui lòng đăng nhập trước!");
+    if (isUploading) return;
+    setIsUploading(true);
+
+    try {
+      const res = await axios.patch(
+        `${path}/users/${userId}`,
+        { [field]: null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedUser = res.data;
+      if (field === "image") setAvatar(updatedUser.image);
+      if (field === "coverImage") setCoverImage(updatedUser.coverImage);
+      setUser(updatedUser);
+      alert("Đã xoá ảnh thành công!");
+    } catch (err: any) {
+      console.log("Delete Error:", err.response?.data || err);
+      alert("Xoá ảnh thất bại!");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // --- HÀM 4: HIỂN THỊ MENU CHỌN ẢNH ---
+  const handleImageOptions = (field: "image" | "coverImage") => {
+    if (isUploading) return;
+    const options = [
+      "Chụp ảnh",
+      "Chọn ảnh từ thư viện",
+      "Xoá ảnh hiện tại",
+      "Hủy",
+    ];
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
         {
-          text: "Chọn từ thư viện",
+          options,
+          cancelButtonIndex: 3,
+          destructiveButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) pickAndUpload(field, "camera");
+          if (index === 1) pickAndUpload(field, "library");
+          if (index === 2) deleteImage(field);
+        }
+      );
+    } else {
+      Alert.alert("Chọn hành động", "", [
+        { text: "Chụp ảnh", onPress: () => pickAndUpload(field, "camera") },
+        {
+          text: "Chọn ảnh từ thư viện",
           onPress: () => pickAndUpload(field, "library"),
         },
         {
-          text: "Xóa ảnh",
-          style: "destructive",
+          text: "Xoá ảnh hiện tại",
           onPress: () => deleteImage(field),
+          style: "destructive",
         },
-      ]
-    );
+        { text: "Hủy", style: "cancel" },
+      ]);
+    }
   };
 
   // Copy Link
@@ -504,17 +627,14 @@ export default function UserInforScreen({ navigation }: any) {
             <MaterialIcons name="verified-user" size={16} color="gray" />
             <Text className="text-xs text-gray-600">Đã xác thực:</Text>
             <View className="flex flex-row gap-2 items-center ml-1">
-              <MaterialIcons
-                name="school"
-                size={16}
-                color={user?.is_cccd_verified ? "#34a853" : "#9ca3af"}
-              />
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("VerifyStudentScreen")}
+              >
                 <Text
                   className={`text-xs ml-1 underline ${user?.is_cccd_verified ? "text-blue-500" : "text-red-500"}`}
                 >
                   {user?.is_cccd_verified
-                    ? "Đã xác thực"
+                    ? "Xác thực lại"
                     : "Xác thực sinh viên"}
                 </Text>
               </TouchableOpacity>

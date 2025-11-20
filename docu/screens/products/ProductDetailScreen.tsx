@@ -319,16 +319,10 @@ export default function ProductDetailScreen() {
       Alert.alert("Lỗi", "Không tìm thấy ID người dùng.");
       return;
     }
-    const numericId = Number(userId);
-    const isOwner = currentUser && Number(currentUser.id) === numericId;
-
     // Dẫn tới màn hình UserDetail, kèm product và flag isOwner
-    navigation.navigate("UserDetail", {
-      userId: numericId,
-      productId: product.id,
-      product,
-      isOwner, // màn hình UserDetail có thể đọc flag này để cho phép chỉnh sửa nếu cần
-    } as any);
+    navigation.navigate("UserInforScreen", {
+      userId: product.user_id,
+    });
   };
 
   const renderCommentTree = (comment: Comment, depth: number = 0) => {
