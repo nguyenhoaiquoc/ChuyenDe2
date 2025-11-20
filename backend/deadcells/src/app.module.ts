@@ -97,6 +97,7 @@ import { AdminModule } from './admin/admin.module';
     GenderModule,
     EngineCapacityModule,
     ProductStatusModule,
+    AdminModule,
   ],
   
   controllers: [AppController],

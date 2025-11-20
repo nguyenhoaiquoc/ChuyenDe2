@@ -170,7 +170,7 @@ export default function VerifyCCCDScreen({ navigation }: any) {
       ? `${path}/users/${userId}/verify-cccd`
       : `${path}/users/${userId}/verify-cccd`;
 
-    // 5️⃣ Chuẩn hóa DOB nếu cần
+    // 4️⃣ Chuẩn hóa DOB nếu có
     let dobIso: string | undefined;
     if (parsed?.dob) {
       if (/^\d{8}$/.test(parsed.dob)) {
@@ -183,7 +183,7 @@ export default function VerifyCCCDScreen({ navigation }: any) {
       }
     }
 
-    // 6️⃣ Tạo FormData
+    // 5️⃣ Tạo FormData
     const form = new FormData();
     if (photoUri) {
       form.append("citizenCard", { uri: photoUri, name: "cccd.jpg", type: "image/jpeg" } as any);
@@ -198,40 +198,39 @@ export default function VerifyCCCDScreen({ navigation }: any) {
       form.append("parsed", JSON.stringify(payload));
     }
 
-    // 7️⃣ Gửi request lên server
-    const res = await axios.post(endpoint, form, {
+    // 6️⃣ Gửi request lên server
+    await axios.post(endpoint, form, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${token}`,
       },
     });
 
-    // 8️⃣ Thông báo kết quả
+    // 7️⃣ Cập nhật AsyncStorage với trạng thái mới
+    await AsyncStorage.setItem("userInfo", JSON.stringify({
+      ...userInfo,
+      is_cccd_verified: true, // đảm bảo lần sau chọn đúng endpoint
+    }));
+
+    // 8️⃣ Thông báo thành công
     Alert.alert(
-      userInfo.is_verified
-        ? "Thông tin đang chờ admin phê duyệt"
-        : "Xác thực thành công",
-      userInfo.is_verified
+      isVerifiedBefore ? "Đã gửi chờ duyệt" : "Xác thực thành công",
+      isVerifiedBefore
         ? "Thông tin của bạn đang đợi admin phê duyệt."
         : "Thông tin đã được xác thực thành công."
     );
 
-    // 9️⃣ Cập nhật AsyncStorage
-    await AsyncStorage.setItem("userInfo", JSON.stringify({
-      ...userInfo,
-      is_verified: !userInfo.is_verified ? true : userInfo.is_verified,
-      pending_cccd: userInfo.is_verified ? true : false,
-    }));
-
     navigation.goBack();
 
   } catch (err: any) {
+    // 9️⃣ Hiển thị lỗi từ server nếu có
     const msg = err.response?.data?.message || err.response?.data?.error || "Không thể gửi dữ liệu. Vui lòng thử lại.";
     Alert.alert("Thông báo", msg);
   } finally {
     setLoading(false);
   }
 };
+
 
   /** UI - Permission check */
   if (!permission) {
