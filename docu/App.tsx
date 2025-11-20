@@ -53,6 +53,7 @@ import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
 import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
 import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
 
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
@@ -100,8 +101,6 @@ export default function App() {
           <Stack.Screen name="SearchResultScreen" component={SearchResultScreen} />
           <Stack.Screen name="VerifyStudentScreen" component={VerifyStudentScreen} />
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
-          <Stack.Screen name="NotificationScreen" component={NotificationScreen}     
-          />
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
            <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
         <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />

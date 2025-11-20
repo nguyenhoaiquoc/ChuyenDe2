@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   ScrollView,
   Text,
+  Modal,
   View,
   TextInput,
   Switch,
@@ -11,6 +12,7 @@ import {
   Platform,
 } from "react-native";
 import axios from "axios";
+import AddressPicker from "../../components/AddressPicker";
 import { MaterialIcons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -38,16 +40,20 @@ export default function EditProfileScreen({ navigation }: Props) {
   const [bio, setBio] = useState("");
   const [nickname, setNickname] = useState("");
   const [cccd, setCccd] = useState("");
-  const [gender, setGender] = useState("Khác");
-  const [dob, setDob] = useState(new Date());
+  const [gender, setGender] = useState("");
+  const [hometown, setHometown] = useState("");
+  const [dob, setDob] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [allowContact, setAllowContact] = useState(true);
-// Hàm kiểm tra số điện thoại Việt Nam
-const isValidPhone = (phone: string) => {
-  // Bắt đầu bằng 0 hoặc +84, đủ 10 số (không tính +)
-  const regex = /^(0|\+84)[0-9]{9}$/;
-  return regex.test(phone);
-};
+  const [showAddressPickerModal, setShowAddressPickerModal] = useState(false);
+  const isCCCDVerified = Boolean(cccd && cccd.trim() !== "");
+
+  // Hàm kiểm tra số điện thoại Việt Nam
+  const isValidPhone = (phone: string) => {
+    // Bắt đầu bằng 0 hoặc +84, đủ 10 số (không tính +)
+    const regex = /^(0|\+84)[0-9]{9}$/;
+    return regex.test(phone);
+  };
 
   // --- Lấy dữ liệu người dùng ---
   useEffect(() => {
@@ -81,19 +87,16 @@ const isValidPhone = (phone: string) => {
         setAddress(user.address_json?.full ?? user.address ?? "");
         setPhone(user.phone ?? "");
         setBio(user.bio ?? "");
+        setHometown(user.hometown ?? "");
         setNickname(user.nickname ?? "");
         setCccd(user.citizenId ?? "");
         setGender(
-          user.gender === 1
-            ? "Nam"
-            : user.gender === 2
-              ? "Nữ"
-              : "Khác"
+          user.gender
         );
-        setDob(user.dob ? new Date(user.dob) : new Date());
+        setDob(user.dob ?? "");
         setAllowContact(user.allowContact ?? true);
       } catch (error: any) {
-        console.error("❌ Lỗi tải user info:", error.response?.data || error.message);
+        console.error(" Lỗi tải user info:", error.response?.data || error.message);
         Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
       } finally {
         setInitialLoading(false);
@@ -103,16 +106,16 @@ const isValidPhone = (phone: string) => {
     fetchUserInfo();
   }, []);
 
-  // --- Xử lý chọn ngày ---
-  const onChangeDate = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === "android") setShowDatePicker(false);
-    if (selectedDate) setDob(selectedDate);
+  // Hàm xử lý sau khi AddressPicker chọn xong
+  const handleAddressChange = (fullAddress: string) => {
+    setAddress(fullAddress);
+    setShowAddressPickerModal(false); // Ẩn modal sau khi chọn xong
   };
-
   // --- Lưu thông tin ---
+
   const handleSave = async () => {
-    if (!name.trim()) return Alert.alert("Lỗi", "Họ và tên không được để trống!");
-     if (!isValidPhone(phone.trim())) return Alert.alert("Lỗi", "Số điện thoại không hợp lệ!"); // ✅
+
+    if (!isValidPhone(phone.trim())) return Alert.alert("Lỗi", "Số điện thoại không hợp lệ!"); // 
 
     setLoading(true);
     try {
@@ -123,18 +126,14 @@ const isValidPhone = (phone: string) => {
       const genderMap: Record<string, number> = { Nam: 1, Nữ: 2, Khác: 3 };
 
       const dataToSend = {
-        fullName: name,
+        nickname,
         phone,
         address_json: { full: address },
-        bio,
-        nickname,
-        citizenId: cccd,
-        gender: genderMap[gender],
-        dob: formatISODate(dob),
         allowContact,
+        address: address,
       };
 
-      console.log("📤 Sending update:", dataToSend);
+      console.log(" Sending update:", dataToSend);
 
       await axios.patch(`${path}/users/${userId}`, dataToSend, {
         headers: { Authorization: `Bearer ${token}` },
@@ -143,8 +142,8 @@ const isValidPhone = (phone: string) => {
       Alert.alert("Thành công", "Thông tin đã được cập nhật!");
       navigation.goBack();
     } catch (error: any) {
-      console.error("❌ Lỗi khi lưu:", error.response?.data || error.message);
-      Alert.alert("Lỗi", "Không thể lưu thông tin, vui lòng thử lại!");
+      console.error(" Lỗi khi lưu:", error.response?.data || error.message);
+      Alert.alert("Thông tin này đã được cập nhật !");
     } finally {
       setLoading(false);
     }
@@ -186,10 +185,42 @@ const isValidPhone = (phone: string) => {
       {/* Form */}
       <Text className="text-base font-bold mb-4">Thông tin cá nhân</Text>
 
-      {/* Họ tên */}
-      <FormInput label="Họ và tên *" value={name} onChangeText={setName} placeholder="Nhập họ tên" />
-      {/* Địa chỉ */}
-      <FormInput label="Địa chỉ" value={address} onChangeText={setAddress} placeholder="Nhập địa chỉ" />
+      {/* Tên gợi nhớ */}
+      <FormInput label="Tên gợi nhớ" value={nickname} onChangeText={setNickname} placeholder="Nhập tên gợi nhớ" />
+      {/* Địa chỉ - Dùng AddressPicker giống màn hình đăng tin */}
+      <View className="mb-6">
+        <Text className="text-xs text-gray-500 mb-2">Địa chỉ của bạn</Text>
+
+        <TouchableOpacity
+          className="flex flex-row justify-between items-center border border-gray-300 rounded-md px-3 py-3 bg-white"
+          activeOpacity={0.7}
+          onPress={() => setShowAddressPickerModal(true)}
+        >
+          <Text className={`text-sm ${address ? 'text-gray-800' : 'text-gray-400'}`}>
+            {address || "Chạm để chọn địa chỉ"}
+          </Text>
+          <MaterialIcons name="chevron-right" size={20} color="gray" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={showAddressPickerModal}
+        animationType="slide"
+        onRequestClose={() => setShowAddressPickerModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "white" }}>
+          <View className="flex flex-row justify-between items-center px-4 pb-4 border-b border-gray-200 mt-10">
+            <TouchableOpacity onPress={() => setShowAddressPickerModal(false)}>
+              <MaterialIcons name="arrow-back" size={24} color="black" />
+            </TouchableOpacity>
+            <Text className="text-lg font-semibold">Chọn Địa chỉ</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <AddressPicker onChange={handleAddressChange} />
+        </View>
+      </Modal>
+
       {/* SĐT */}
       <FormInput
         label="Số điện thoại *"
@@ -216,57 +247,66 @@ const isValidPhone = (phone: string) => {
       <Text className="text-xs text-gray-500 mb-5">
         Số điện thoại sẽ hiển thị trên tin đăng của bạn.
       </Text>
+      {/* Họ tên */}
+      <View className="mb-4">
+        <Text className="text-xs text-gray-500 mb-1">Họ và tên</Text>
+        <View className="border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+          <Text className="text-sm text-gray-800">{name}</Text>
+        </View>
+        {isCCCDVerified && (
+          <Text className="text-xs text-green-600 mt-1">Đã xác thực từ CCCD</Text>
+        )}
 
-      {/* Giới thiệu */}
-      <FormInput
-        label="Giới thiệu"
-        value={bio}
-        onChangeText={setBio}
-        placeholder="Giới thiệu bản thân..."
-        multiline
-      />
-
-      {/* Tên gợi nhớ */}
-      <FormInput label="Tên gợi nhớ" value={nickname} onChangeText={setNickname} placeholder="Nhập tên gợi nhớ" />
-
+      </View>
+      {/* Quê quán */}
       {/* CCCD */}
-      <FormInput
-        label="CCCD / CMND"
-        value={cccd}
-        onChangeText={setCccd}
-        placeholder="Nhập số giấy tờ"
-        keyboardType="numeric"
-      />
+      <View className="mb-4">
+        <Text className="text-xs text-gray-500 mb-1">Quê quán</Text>
+        <View className="border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+          <Text className="text-sm text-gray-800">{hometown}</Text>
+        </View>
+        {isCCCDVerified && (
+          <Text className="text-xs text-green-600 mt-1">Đã xác thực từ CCCD</Text>
+        )}
+
+      </View>
+      {/* CCCD */}
+      <View className="mb-4">
+        <Text className="text-xs text-gray-500 mb-1">CCCD / CMND</Text>
+        <View className="border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+          <Text className="text-sm text-gray-800">{cccd}</Text>
+        </View>
+        {isCCCDVerified && (
+          <Text className="text-xs text-green-600 mt-1">Đã xác thực từ CCCD</Text>
+        )}
+
+      </View>
+
 
       {/* Giới tính */}
       <View className="mb-4">
         <Text className="text-xs text-gray-500 mb-1">Giới tính</Text>
-        <View className="border border-gray-300 rounded-md">
-          <Picker selectedValue={gender} onValueChange={(v) => setGender(v)}>
-            <Picker.Item label="Nam" value="Nam" />
-            <Picker.Item label="Nữ" value="Nữ" />
-            <Picker.Item label="Khác" value="Khác" />
-          </Picker>
+        <View className="border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+          <Text className="text-sm text-gray-800">{gender}</Text>
         </View>
+        {isCCCDVerified && (
+          <Text className="text-xs text-green-600 mt-1">Đã xác thực từ CCCD</Text>
+        )}
+
       </View>
 
       {/* Ngày sinh */}
-      <View className="mb-8">
+      <View className="mb-4">
         <Text className="text-xs text-gray-500 mb-1">Ngày sinh</Text>
-        <TouchableOpacity
-          className="border border-gray-300 rounded-md px-3 py-3"
-          onPress={() => setShowDatePicker(true)}
-        >
-          <Text className="text-sm">{dob.toLocaleDateString("vi-VN")}</Text>
-        </TouchableOpacity>
-        {showDatePicker && (
-          <DateTimePicker
-            value={dob}
-            mode="date"
-            display="default"
-            onChange={onChangeDate}
-          />
+        <View className="border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+          <Text className="text-sm text-gray-800">
+            {dob}
+          </Text>
+        </View>
+        {isCCCDVerified && (
+          <Text className="text-xs text-green-600 mt-1">Đã xác thực từ CCCD</Text>
         )}
+
       </View>
 
       {/* Nút lưu */}
@@ -313,4 +353,5 @@ const FormInput = ({
       textAlignVertical={multiline ? "top" : "center"}
     />
   </View>
+
 );

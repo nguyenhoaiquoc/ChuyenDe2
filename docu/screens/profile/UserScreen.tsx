@@ -53,7 +53,7 @@ export default function UserScreen() {
             headers: { Authorization: `Bearer ${token}` },
           });
 
-          const serverName = res.data.fullName || res.data.name || "";
+          const serverName = res.data.nickname || res.data.name || "";
           const serverImage = res.data.image || null;
 
           // 4. Cập nhật state một lần nữa VỚI DỮ LIỆU MỚI TỪ SERVER

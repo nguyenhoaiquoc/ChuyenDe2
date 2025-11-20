@@ -11,6 +11,7 @@ import {
   Animated,
   Modal,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { RouteProp, useNavigation } from "@react-navigation/native";
@@ -37,93 +38,129 @@ interface Product {
   condition?: { name: string };
   images?: { image_url: string }[];
 }
+interface FilterState {
+  minPrice: string;
+  maxPrice: string;
+  category: string;
+  conditions: string[];
+  sortBy: "price" | "created_at";
+  sort: "asc" | "desc";
+}
 
 export default function SearchResultScreen({ route }: Props) {
   const { query } = route.params;
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [products, setProducts] = useState<Product[]>([]);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const [products, setProducts] = useState<Partial<Product>[]>([]); // Dùng Partial để tránh lỗi TS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const limit = 20;
 
   const [showFilter, setShowFilter] = useState(false);
 
-  // state bộ lọc
-  const [filterOptions, setFilterOptions] = useState({
-    sort: "", // "asc" | "desc"
+  // Bộ lọc mạnh như Shopee
+  const [filters, setFilters] = useState({
+    minPrice: "",
+    maxPrice: "",
     category: "",
-    condition: "",
+    conditions: [] as string[],
+    sortBy: "created_at", 
+    sort: "desc"
   });
 
-  // demo category và condition — cậu có thể fetch từ backend nếu có API
-  const categories = ["Tài liệu khoa", "Thời trang, đồ dùng cá nhân", "Đồ gia dụng, nội thất, cây cảnh", "Đồ điện tử","Thú cưng","Xe cộ","Giải trí, thể thao, sở thích"];
-  const conditions = ["Mới", "Cũ"];
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const animateList = () => {
+  const fadeIn = () => {
     fadeAnim.setValue(0);
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 400,
+      duration: 300,
       useNativeDriver: true,
     }).start();
   };
 
   const fetchProducts = useCallback(
-    async (pageNumber = 1, refresh = false) => {
-      if (loading && !refresh) return;
-      try {
-        if (!refresh) setLoading(true);
+    async (pageNum = 1, isRefresh = false) => {
+      if (!isRefresh && loading) return;
 
-        const params = new URLSearchParams();
-        params.append("name", query);
-        params.append("page", pageNumber.toString());
-        params.append("limit", limit.toString());
-        if (filterOptions.sort) params.append("sort", filterOptions.sort);
-        if (filterOptions.category)
-          params.append("category", filterOptions.category);
-        if (filterOptions.condition)
-          params.append("condition", filterOptions.condition);
+      try {
+        !isRefresh && setLoading(true);
+
+        const params = new URLSearchParams({
+          name: query.trim(),
+          page: pageNum.toString(),
+          limit: "20",
+          sortBy: filters.sortBy,
+          sort: filters.sort,
+        });
+
+        if (filters.minPrice) params.append("minPrice", filters.minPrice);
+        if (filters.maxPrice) params.append("maxPrice", filters.maxPrice);
+        if (filters.category) params.append("category", filters.category);
+        filters.conditions.forEach((c) => params.append("condition", c));
 
         const res = await axios.get(`${path}/products/search?${params.toString()}`);
-        const data: Product[] = res.data.data || [];
-        if (refresh) setProducts(data);
-        else setProducts((prev) => [...prev, ...data]);
-        setHasMore(data.length === limit);                                  
-        setPage(pageNumber);
+        const { data, total: count } = res.data;
+
+        if (isRefresh || pageNum === 1) {
+          setProducts(data);
+        } else {
+          setProducts((prev) => [...prev, ...data]);
+        }
+
+        setTotal(count || 0);
+        setHasMore(data.length === 20);
+        setPage(pageNum);
         setError("");
-        animateList();
-        
-      } catch (err) {
-        console.error(err);
-        setError("Không thể tải dữ liệu, vui lòng thử lại.");
+        fadeIn();
+      } catch (err: any) {
+        console.error("Lỗi tìm kiếm:", err);
+        setError("Không thể tải sản phẩm. Vui lòng thử lại.");
       } finally {
         setLoading(false);
-        if (refresh) setRefreshing(false);
+        setRefreshing(false);
       }
     },
-    [query, loading, filterOptions]
+    [query, filters]
   );
 
   useEffect(() => {
+    setProducts([]);
+    setPage(1);
+    setHasMore(true);
     fetchProducts(1, true);
-  }, [query, filterOptions]);
+  }, [query, filters]);
+
+  const handleLoadMore = () => {
+    if (hasMore && !loading) fetchProducts(page + 1);
+  };
 
   const handleRefresh = () => {
     setRefreshing(true);
     fetchProducts(1, true);
   };
 
-  const handleLoadMore = () => {
-    if (hasMore && !loading) fetchProducts(page + 1);
+  const applyFilters = () => {
+    setShowFilter(false);
+    setPage(1);
+    setProducts([]);
   };
 
-  const renderItem = ({ item }: { item: Product }) => (
+  const resetFilters = () => {
+    setFilters({
+      minPrice: "",
+      maxPrice: "",
+      category: "",
+      conditions: [],
+      sortBy: "created_at",
+      sort: "desc",
+    });
+  };
+
+  const renderItem = ({ item }: { item: Partial<Product> }) => (
     <TouchableOpacity
       style={{
         width: CARD_WIDTH,
@@ -135,26 +172,20 @@ export default function SearchResultScreen({ route }: Props) {
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.08,
         shadowRadius: 4,
-        elevation: 2,
+        elevation: 3,
       }}
       activeOpacity={0.9}
-      onPress={() =>
-        navigation.navigate("ProductDetail", { product: item } as any)
-      }
+      onPress={() => navigation.navigate("ProductDetail", { product: item as any })}
     >
       <View style={{ position: "relative" }}>
         <Image
           source={{
             uri:
               item.thumbnail_url ||
-              item?.images?.[0]?.image_url ||
+              item.images?.[0]?.image_url ||
               "https://cdn-icons-png.flaticon.com/512/4076/4076505.png",
           }}
-          style={{
-            width: "100%",
-            height: 160,
-            backgroundColor: "#f5f5f5",
-          }}
+          style={{ width: "100%", height: 160, backgroundColor: "#f5f5f5" }}
           resizeMode="cover"
         />
         <TouchableOpacity
@@ -173,38 +204,43 @@ export default function SearchResultScreen({ route }: Props) {
       </View>
 
       <View style={{ padding: 10 }}>
-        <Text numberOfLines={1} style={{ fontSize: 14, fontWeight: "500" }}>
+        <Text numberOfLines={2} style={{ fontSize: 14, fontWeight: "600" }}>
           {item.name}
         </Text>
-        <Text
-          style={{
-            marginTop: 4,
-            alignSelf: "flex-start",
-            backgroundColor: "#28a745",
-            borderRadius: 6,
-            paddingHorizontal: 8,
-            paddingVertical: 2,
-            color: "#fff",
-            fontSize: 11,
-            fontWeight: "600",
-          }}
-        >
-          Đang bán
-        </Text>
+
         <Text style={{ marginTop: 4, color: "#555", fontSize: 13 }}>
-          {item.category?.name || "Danh mục"}
+          {(item.category?.name || "") +
+            (item.subCategory?.name ? ` • ${item.subCategory.name}` : "") ||
+            "Danh mục"}
         </Text>
+
+        {item.condition && (
+          <Text
+            style={{
+              marginTop: 4,
+              alignSelf: "flex-start",
+              backgroundColor: "#28a745",
+              color: "#fff",
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: "600",
+            }}
+          >
+            {item.condition.name}
+          </Text>
+        )}
+
         <Text
           style={{
-            marginTop: 4,
+            marginTop: 6,
             fontSize: 15,
             fontWeight: "700",
-            color: Number(item.price) === 0 ? "#FF3B30" : "#007AFF",
+            color: item.price === 0 ? "#FF3B30" : "#007AFF",
           }}
         >
-          {Number(item.price) === 0
-            ? "Miễn phí"
-            : `${Number(item.price).toLocaleString()}₫`}
+          {item.price === 0 ? "Miễn phí" : `${Number(item.price).toLocaleString()}₫`}
         </Text>
       </View>
     </TouchableOpacity>
@@ -225,16 +261,16 @@ export default function SearchResultScreen({ route }: Props) {
           elevation: 2,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 6 }}>
             <Feather name="arrow-left" size={22} color="#333" />
           </TouchableOpacity>
-          <Text style={{ marginLeft: 8, fontSize: 18, fontWeight: "600" }}>
-            Kết quả cho “{query}”
+          <Text numberOfLines={1} style={{ marginLeft: 8, fontSize: 18, fontWeight: "600", flex: 1 }}>
+            Kết quả cho “{query}” {total > 0 && `(${total})`}
           </Text>
         </View>
         <TouchableOpacity onPress={() => setShowFilter(true)} style={{ padding: 6 }}>
-          <Feather name="filter" size={22} color="#333" />
+          <Feather name="sliders" size={22} color="#333" />
         </TouchableOpacity>
       </View>
 
@@ -261,164 +297,121 @@ export default function SearchResultScreen({ route }: Props) {
           <FlatList
             data={products}
             numColumns={2}
-            keyExtractor={(item, index) => String(item?.id ?? index)}
+            keyExtractor={(item) => item.id!.toString()}
             renderItem={renderItem}
             contentContainerStyle={{ padding: 8 }}
             onEndReached={handleLoadMore}
             onEndReachedThreshold={0.5}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+            ListFooterComponent={loading && page > 1 ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
           />
         </Animated.View>
       )}
 
-      {/* Modal Filter */}
+      {/* Modal Filter - Đỉnh cao như Shopee */}
       <Modal visible={showFilter} transparent animationType="slide">
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.4)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: "#fff",
-              padding: 16,
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              maxHeight: "70%",
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: "700", marginBottom: 10 }}>
-              Bộ lọc
-            </Text>
-            <ScrollView>
-              {/* Sắp xếp giá */}
-              <Text style={{ fontWeight: "600", marginVertical: 6 }}>Sắp xếp theo giá</Text>
-              <View style={{ flexDirection: "row" }}>
-                {["asc", "desc"].map((v) => (
-                  <TouchableOpacity
-                    key={v}
-                    onPress={() => setFilterOptions((prev) => ({ ...prev, sort: v }))}
-                    style={{
-                      flex: 1,
-                      margin: 4,
-                      paddingVertical: 8,
-                      borderRadius: 8,
-                      backgroundColor:
-                        filterOptions.sort === v ? "#007AFF" : "#f2f2f2",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        textAlign: "center",
-                        color: filterOptions.sort === v ? "#fff" : "#333",
-                      }}
-                    >
-                      {v === "asc" ? "Giá tăng dần" : "Giá giảm dần"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "85%" }}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderColor: "#eee", flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 18, fontWeight: "bold" }}>Bộ lọc & Sắp xếp</Text>
+              <TouchableOpacity onPress={() => setShowFilter(false)}>
+                <Feather name="x" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 16 }}>
+              {/* Khoảng giá */}
+              <Text style={{ fontWeight: "600", marginBottom: 8 }}>Khoảng giá</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <TextInput
+                  placeholder="Từ"
+                  keyboardType="numeric"
+                  value={filters.minPrice}
+                  onChangeText={(t) => setFilters(p => ({ ...p, minPrice: t.replace(/[^0-9]/g, "") }))}
+                  style={{ flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 }}
+                />
+                <Text>—</Text>
+                <TextInput
+                  placeholder="Đến"
+                  keyboardType="numeric"
+                  value={filters.maxPrice}
+                  onChangeText={(t) => setFilters(p => ({ ...p, maxPrice: t.replace(/[^0-9]/g, "") }))}
+                  style={{ flex: 1, borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 }}
+                />
               </View>
 
               {/* Danh mục */}
-              <Text style={{ fontWeight: "600", marginVertical: 6 }}>Danh mục</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() =>
-                      setFilterOptions((prev) => ({ ...prev, category: cat }))
-                    }
-                    style={{
-                      margin: 4,
-                      paddingVertical: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        filterOptions.category === cat ? "#007AFF" : "#f2f2f2",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: filterOptions.category === cat ? "#fff" : "#333",
-                      }}
-                    >
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <Text style={{ fontWeight: "600", marginTop: 20, marginBottom: 8 }}>Danh mục</Text>
+              <TextInput
+                placeholder="VD: Điện thoại, Xe máy, Thời trang..."
+                value={filters.category}
+                onChangeText={(t) => setFilters(p => ({ ...p, category: t }))}
+                style={{ borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12 }}
+              />
 
               {/* Tình trạng */}
-              <Text style={{ fontWeight: "600", marginVertical: 6 }}>Tình trạng</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-                {conditions.map((cond) => (
+              <Text style={{ fontWeight: "600", marginTop: 20, marginBottom: 8 }}>Tình trạng</Text>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {["Mới", "Cũ"].map((c) => (
                   <TouchableOpacity
-                    key={cond}
+                    key={c}
                     onPress={() =>
-                      setFilterOptions((prev) => ({ ...prev, condition: cond }))
+                      setFilters((p) => ({
+                        ...p,
+                        conditions: p.conditions.includes(c)
+                          ? p.conditions.filter((x) => x !== c)
+                          : [...p.conditions, c],
+                      }))
                     }
                     style={{
-                      margin: 4,
-                      paddingVertical: 6,
-                      paddingHorizontal: 10,
-                      borderRadius: 8,
-                      backgroundColor:
-                        filterOptions.condition === cond ? "#007AFF" : "#f2f2f2",
+                      paddingHorizontal: 20,
+                      paddingVertical: 10,
+                      borderRadius: 20,
+                      backgroundColor: filters.conditions.includes(c) ? "#007AFF" : "#f0f0f0",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: filterOptions.condition === cond ? "#fff" : "#333",
-                      }}
-                    >
-                      {cond}
-                    </Text>
+                    <Text style={{ color: filters.conditions.includes(c) ? "#fff" : "#333" }}>{c}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
+
+              {/* Sắp xếp */}
+              <Text style={{ fontWeight: "600", marginTop: 20, marginBottom: 8 }}>Sắp xếp theo</Text>
+              {[
+                { label: "Mới nhất", sortBy: "created_at", sort: "desc" },
+                { label: "Giá thấp → cao", sortBy: "price", sort: "asc" },
+                { label: "Giá cao → thấp", sortBy: "price", sort: "desc" },
+              ].map((opt) => (
+                <TouchableOpacity
+                  key={opt.label}
+                  onPress={() => setFilters((p) => ({ ...p, sortBy: opt.sortBy, sort: opt.sort }))}
+                  style={{
+                    padding: 14,
+                    borderRadius: 10,
+                    backgroundColor:
+                      filters.sortBy === opt.sortBy && filters.sort === opt.sort ? "#007AFF" : "#f8f8f8",
+                    marginBottom: 8,
+                  }}
+                >
+                  <Text style={{ color: filters.sortBy === opt.sortBy && filters.sort === opt.sort ? "#fff" : "#333" }}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
 
-            {/* Nút hành động */}
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginTop: 14,
-              }}
-            >
+            <View style={{ flexDirection: "row", padding: 16, gap: 12 }}>
               <TouchableOpacity
-                onPress={() => {
-                  setFilterOptions({ sort: "", category: "", condition: "" });
-                  setShowFilter(false);
-                }}
-                style={{
-                  flex: 1,
-                  backgroundColor: "#ccc",
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  marginRight: 8,
-                }}
+                onPress={() => { resetFilters(); applyFilters(); }}
+                style={{ flex: 1, padding: 16, backgroundColor: "#ddd", borderRadius: 10 }}
               >
-                <Text style={{ textAlign: "center", color: "#fff", fontWeight: "600" }}>
-                  Đặt lại
-                </Text>
+                <Text style={{ textAlign: "center", fontWeight: "600" }}>Đặt lại</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => setShowFilter(false)}
-                style={{
-                  flex: 1,
-                  backgroundColor: "#007AFF",
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                }}
+                onPress={applyFilters}
+                style={{ flex: 1, padding: 16, backgroundColor: "#007AFF", borderRadius: 10 }}
               >
-                <Text style={{ textAlign: "center", color: "#fff", fontWeight: "600" }}>
-                  Áp dụng
-                </Text>
+                <Text style={{ textAlign: "center", color: "#fff", fontWeight: "600" }}>Áp dụng</Text>
               </TouchableOpacity>
             </View>
           </View>

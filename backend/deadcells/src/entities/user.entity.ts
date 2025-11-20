@@ -34,9 +34,6 @@ export class User {
   @Column({ type: 'bigint', name: 'status_id' })
   statusId: number;
 
-  @Column({ nullable: true })
-  hometown: string;
-
   /** --------- Hồ sơ cơ bản --------- */
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
@@ -121,7 +118,17 @@ export class User {
 
   @Column({ type: 'varchar', length: 191, nullable: true })
   fullName: string;// ✅ họ và tên
-  
+
   @Column({ default: false })
   is_verified: boolean;
+  @Column({ nullable: true })
+  hometown?: string;
+  @Column({ default: false })
+  is_cccd_verified: boolean;
+  @Column({ type: 'json', nullable: true })
+  cccd_verified_data: any;
+
+  @Column({ type: 'json', nullable: true })
+  cccd_pending_data: any;
+
 }

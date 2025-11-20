@@ -6,6 +6,7 @@ import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import "../../global.css";
+import React from "react";
 
 type Props = {
   navigation: HomeAdminScreenNavigationProp;
@@ -57,7 +58,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
       console.log("⚠️ [Admin] Lỗi khi gửi sự kiện logout:", err);
     }
 
-    // ✨ ĐÃ SỬA LẠI: Thêm 'role_id' vào danh sách xóa
+    //  ĐÃ SỬA LẠI: Thêm 'role_id' vào danh sách xóa
     await AsyncStorage.multiRemove([
       "token",
       "userId",

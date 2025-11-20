@@ -11,6 +11,7 @@ import { User } from './user.entity';
 import { NotificationAction } from './notification-action.entity';
 import { TargetType } from './target-type.entity';
 import { Product } from './product.entity';
+import { Group } from './group.entity';
 
 @Entity({ name: 'notifications' })
 export class Notification {
@@ -54,4 +55,7 @@ export class Notification {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+  @ManyToOne(() => Group, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
 }

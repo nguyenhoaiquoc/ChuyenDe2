@@ -2,13 +2,12 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
-
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-  ) {}
+  ) { }
 
   async findOne(id: number): Promise<User> {
     const user = await this.userRepo.findOne({ where: { id } });
@@ -29,17 +28,18 @@ export class UsersService {
       'fullName',
       'phone',
       'address_json',
-      'citizenId',
-      'bio',
-      'nickname',
+      'hometown',
       'gender',
       'dob',
-      'hometown',
-      'is_verified',
+      'nickname',
+      'bio',
+      'is_cccd_verified',
       'verifiedAt',
       'image',
       'coverImage',
+      'citizenId',
     ] as const;
+    
 
     if (data.citizenId && data.citizenId !== user.citizenId) {
       const existingUser = await this.userRepo.findOne({
@@ -56,8 +56,8 @@ export class UsersService {
       }
     });
 
-    if (data.is_verified === true && !user.is_verified) {
-      user.is_verified = true;
+    if (data.is_cccd_verified === true && !user.is_cccd_verified) {
+      user.is_cccd_verified = true;
       user.verifiedAt = new Date();
     }
 
@@ -76,17 +76,22 @@ export class UsersService {
       imageUrl?: string;
     },
   ): Promise<User> {
+    console.log('CCCD DATA NHẬN VÀO:', cccdData);
     const updateData: Partial<User> = {
-      is_verified: true,
+      is_cccd_verified: true,
       verifiedAt: new Date(),
     };
 
     if (cccdData.fullName) updateData.fullName = cccdData.fullName;
     if (cccdData.citizenId) updateData.citizenId = cccdData.citizenId;
     if (cccdData.gender) updateData.gender = cccdData.gender;
-    if (cccdData.dob) updateData.dob = new Date(cccdData.dob);
+    if (cccdData.dob) {
+  const date = new Date(cccdData.dob);
+  if (!isNaN(date.getTime())) {
+    updateData.dob = date;
+  }
+}
     if (cccdData.hometown) updateData.hometown = cccdData.hometown;
-
     if (cccdData.address) {
       updateData.address_json = {
         full: cccdData.address,
@@ -98,7 +103,8 @@ export class UsersService {
     if (cccdData.imageUrl) {
       updateData.image = cccdData.imageUrl;
     }
-
+      console.log(updateData);
+      
     return this.updateUser(userId, updateData);
   }
 }

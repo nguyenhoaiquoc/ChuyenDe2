@@ -21,7 +21,7 @@ type ParsedCCCD = {
   citizenId?: string;
   gender?: string;
   placeOfOrigin?: string;
-  address?: string;
+  hometown?: string;
   raw?: string;
   [k: string]: any;
 };
@@ -48,34 +48,44 @@ export default function VerifyCCCDScreen({ navigation }: any) {
   const parseRawData = (raw: string): ParsedCCCD => {
     const out: ParsedCCCD = {};
 
-    // 1️⃣ Try JSON
+    // 1️ Try JSON
     try {
       const j = JSON.parse(raw);
       if (typeof j === "object" && j !== null) {
-        out.fullName = j.name || j.fullName || j.hoten;
-        out.dob = j.birth || j.dateOfBirth || j.dob || j.ngaysinh;
-        out.citizenId = j.id || j.cccd || j.citizenId || j.CCCD;
-        out.gender = j.gender || j.sex;
-        out.placeOfOrigin = j.placeOfOrigin || j.queQuan || j.quan;
-        out.address = j.address || j.diachi;
+        out.fullName = j.name || j.fullName || j.hoten || j["ho_ten"];
+        out.dob = j.birth || j.dateOfBirth || j.dob || j.ngaysinh || j["ngay_sinh"];
+        out.citizenId = j.id || j.cccd || j.citizenId || j.CCCD || j["so_CCCD"];
+        out.gender = j.gender || j.gioi_tinh || j["gioi_tinh"] || j.sex || j.gioitinh;
+        out.placeOfOrigin = j.placeOfOrigin || j.queQuan || j.quan || j["que_quan"] || j.quequan || j.noisinh;
+
+        // BỔ SUNG: Thêm logic cho hometown/address (vì UI và Block 2 có hỗ trợ)
+        out.hometown = j.hometown || j.address || j.thuongtru || j.noi_thuong_tru || j.diachi || j["dia_chi"];
+
         return out;
       }
     } catch (e) { }
 
-    // 2️⃣ Key:value parsing
+    // 2️ Key:value parsing
     const keyValRegex = /([^:;|=]+)[:=]\s*([^;|]+)/g;
     for (const match of raw.matchAll(keyValRegex)) {
-      const key = match[1].trim().toLowerCase();
+      const keyRaw = match[1].trim();
+      const key = keyRaw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // remove diacritics
       const val = match[2].trim();
-      if (/name|hoten/i.test(key)) out.fullName = val;
-      else if (/dob|birth|ngaysinh/i.test(key)) out.dob = val;
-      else if (/cccd|id|cmnd/i.test(key)) out.citizenId = val;
-      else if (/gender|sex/i.test(key)) out.gender = val;
-      else if (/place|que|origin/i.test(key)) out.placeOfOrigin = val;
-      else if (/addr|diachi/i.test(key)) out.address = val;
-      else out[key] = val;
+      if (/name|hoten|ho ?ten/i.test(key) || /ten/i.test(keyRaw)) out.fullName = val;
+      else if (/dob|birth|ngaysinh|ngay ?sinh/i.test(key)) out.dob = val;
+      else if (/cccd|cmnd|id|so[_ ]?cccd|so[_ ]?cmnd/i.test(key)) out.citizenId = val;
+      else if (/gender|sex|gioi.?tinh|gioitinh/i.test(key)) out.sex = val, out.gender = val;
+      else if (/place|que|que.?quan|quequan|noisinh|noi._?thuong_tru|diachi|dia.?chi/i.test(key)) {
+        // ưu tiên placeOfOrigin nếu key ám chỉ quê quán, else hometown/address
+        if (/que|que.?quan|quequan|noisinh/i.test(key)) out.placeOfOrigin = val;
+        else out.hometown = val;
+      } else {
+        // giữ các key thô khác (cần thiết cho debug)
+        out[keyRaw] = val;
+      }
     }
     if (Object.keys(out).length > 0) return out;
+
 
     // 3️⃣ Pipe-separated heuristic
     const parts = raw.split("|").map((s) => s.trim()).filter(Boolean);
@@ -90,6 +100,9 @@ export default function VerifyCCCDScreen({ navigation }: any) {
         out.citizenId = parts[1];
         out.dob = parts[2];
       }
+      out.gender = parts[3] || "";
+      out.placeOfOrigin = parts[4] || parts[5] || "";
+
       return out;
     }
 
@@ -103,6 +116,7 @@ export default function VerifyCCCDScreen({ navigation }: any) {
     if (!data) return;
     setScannedRaw(data);
     const p = parseRawData(data);
+    console.log("PARSED DATA SAU KHI QUÉT:", p);
     setParsed(p);
 
     Alert.alert("Đã quét", "Kiểm tra dữ liệu trước khi xác nhận.", [
@@ -139,20 +153,59 @@ export default function VerifyCCCDScreen({ navigation }: any) {
       console.log("UserId:", userId);
 
       if (!token || !userId) return Alert.alert("Cần đăng nhập");
+      let dobIso: string | undefined = undefined;
+      if (parsed?.dob) {
+        // Nếu dob dạng ddMMyyyy, convert sang yyyy-MM-dd
+        if (/^\d{8}$/.test(parsed.dob)) {
+          const day = parsed.dob.slice(0, 2);
+          const month = parsed.dob.slice(2, 4);
+          const year = parsed.dob.slice(4, 8);
+          dobIso = `${year}-${month}-${day}`;
+        } else {
+          dobIso = parsed.dob; // nếu đã ISO
+        }
+      }
+
+      // Map placeOfOrigin sang hometown nếu có
+      const parsedForServer = parsed
+        ? { ...parsed, hometown: parsed.hometown || parsed.placeOfOrigin }
+        : undefined;
 
       const form = new FormData();
       if (photoUri) form.append("citizenCard", { uri: photoUri, name: "cccd.jpg", type: "image/jpeg" } as any);
-      if (parsed) form.append("parsed", JSON.stringify(parsed));
-
+      if (parsed) {
+        const payload = {
+          ...parsed,
+          hometown: parsed.hometown || parsed.placeOfOrigin,
+          gender: parsed.gender,       // nếu backend chấp nhận string "Nam"/"Nữ"
+          dob: dobIso,
+         is_cccd_verified: true,         // định dạng ddmmyyyy hoặc convert nếu cần
+        };
+        // Thêm log ở đây (ngay trước axios.post)
+        console.log("DỮ LIỆU GỬI LÊN SERVER:", {
+          parsed: parsed,
+          payload: payload,
+          photoUri: photoUri ? "Có ảnh" : "Không có ảnh",
+          userId: userId,
+        });
+        form.append("parsed", JSON.stringify(payload));
+      }
       const res = await axios.post(`${path}/users/${userId}/verify-cccd`, form, {
         headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
       });
 
       Alert.alert("Thành công", "Thông tin đã được gửi lên server.");
+
+
       navigation.goBack();
     } catch (err: any) {
-      console.error("Send error", err.response?.data || err.message || err);
-      Alert.alert("Lỗi", "Không thể gửi dữ liệu. Vui lòng thử lại.");
+
+      const msg =
+    err.response?.data?.message ||
+    err.response?.data?.error ||
+    "Không thể gửi dữ liệu. Vui lòng thử lại.";
+
+  Alert.alert("Thông báo", msg);
     } finally {
       setLoading(false);
     }
@@ -220,10 +273,11 @@ export default function VerifyCCCDScreen({ navigation }: any) {
               <Text style={styles.infoLine}><Text style={styles.label}>Số CCCD:</Text> {parsed.citizenId || "-"}</Text>
               <Text style={styles.infoLine}><Text style={styles.label}>Ngày sinh:</Text> {parsed.dob || "-"}</Text>
               <Text style={styles.infoLine}><Text style={styles.label}>Giới tính:</Text> {parsed.gender || "-"}</Text>
-              <Text style={styles.infoLine}><Text style={styles.label}>Quê quán:</Text> {parsed.placeOfOrigin || parsed.address || "-"}</Text>
+              <Text style={styles.infoLine}><Text style={styles.label}>Quê quán:</Text> {parsed.placeOfOrigin || "-"}</Text>
               <Text style={styles.infoLine}><Text style={styles.label}>Raw:</Text> <Text style={{ fontSize: 12, color: '#444' }}>{scannedRaw}</Text></Text>
             </View>
           )}
+
           {photoUri && !parsed && (
             <Text style={{ marginTop: 8, textAlign: "center" }}>Ảnh chụp sẵn sàng: {photoUri}</Text>
           )}
@@ -242,7 +296,6 @@ export default function VerifyCCCDScreen({ navigation }: any) {
   );
 }
 
-/* Styles (giữ nguyên của bạn) */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20 },

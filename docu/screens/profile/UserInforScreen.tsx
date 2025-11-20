@@ -110,74 +110,95 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
 
       // --- LOGIC TẢI ẢNH (ĐÃ TÁCH RIÊNG) ---
 
-      // HÀM 1: UPLOAD ẢNH
-      const uploadImage = async (field: "image" | "coverImage", fileUri: string) => {
-            if (!fileUri) return alert("Lỗi: Không có đường dẫn ảnh!");
-            const userId = await AsyncStorage.getItem("userId");
-            const token = await AsyncStorage.getItem("token");
-            if (!userId || !token) return alert("Vui lòng đăng nhập!");
+      // --- HÀM 1: UPLOAD ẢNH LÊN CLOUDINARY VÀ SERVER ---
+      const uploadImage = async (field: 'image' | 'coverImage', fileUri: string) => {
+            if (!fileUri) return alert('Lỗi: Không có đường dẫn ảnh!');
+            const userId = await AsyncStorage.getItem('userId');
+            const token = await AsyncStorage.getItem('token');
+            if (!userId || !token) return alert('Vui lòng đăng nhập!');
             setIsUploading(true);
-            const formData = new FormData();
-            formData.append(field, {
-                  uri: fileUri,
-                  name: `photo.jpg`,
-                  type: "image/jpeg",
-            } as any);
 
             try {
-                  const res = await axios.patch(`${path}/users/${userId}`, formData, {
-                        headers: {
-                              "Content-Type": "multipart/form-data",
-                              Authorization: `Bearer ${token}`,
-                        },
+                  // 1️⃣ Upload lên Cloudinary
+                  const cloudinaryUrl = 'https://api.cloudinary.com/v1_1/dagyeu6h2/image/upload';
+                  const formData = new FormData();
+                  formData.append('file', {
+                        uri: fileUri,
+                        name: 'photo.jpg',
+                        type: 'image/jpeg',
+                  } as any);
+                  formData.append('upload_preset', 'products');
+
+                  const cloudinaryResponse = await axios.post(cloudinaryUrl, formData, {
+                        headers: { 'Content-Type': 'multipart/form-data' },
                   });
-                  const updatedUser = res.data;
-                  if (!updatedUser) return alert("Upload thành công nhưng không nhận được dữ liệu user!");
-                  if (field === "image") setAvatar(updatedUser.image);
-                  if (field === "coverImage") setCoverImage(updatedUser.coverImage);
+
+                  const imageUrl = cloudinaryResponse.data.secure_url;
+                  if (!imageUrl) throw new Error('Không nhận được URL từ Cloudinary');
+
+                  // 2️ Gửi URL lên server của bạn
+                  const serverResponse = await axios.patch(
+                        `${path}/users/${userId}`,
+                        { [field]: imageUrl },
+                        {
+                              headers: {
+                                    Authorization: `Bearer ${token}`,
+                                    'Content-Type': 'application/json',
+                              },
+                        }
+                  );
+
+                  const updatedUser = serverResponse.data;
+                  if (!updatedUser) return alert('Upload thành công nhưng không nhận được dữ liệu user!');
+
+                  // 3️ Cập nhật state local
+                  if (field === 'image') setAvatar(updatedUser.image);
+                  if (field === 'coverImage') setCoverImage(updatedUser.coverImage);
                   setUser(updatedUser);
-                  alert("Cập nhật ảnh thành công!");
+                  alert('Cập nhật ảnh thành công!');
             } catch (err: any) {
-                  console.log("Upload Error:", err.response?.data || err.message || err);
-                  alert("Upload thất bại!");
+                  console.log('Upload Error:', err.response?.data || err.message || err);
+                  alert('Upload thất bại! Kiểm tra kết nối hoặc cấu hình Cloudinary.');
             } finally {
                   setIsUploading(false);
             }
       };
 
-      // HÀM 2: CHỌN HOẶC CHỤP ẢNH
+      // --- HÀM 2: PICK OR TAKE PHOTO ---
       const pickAndUpload = async (field: 'image' | 'coverImage', source: 'camera' | 'library') => {
             try {
                   let result;
-                  const imagePickerOptions: ImagePicker.ImagePickerOptions = {
+                  const options: ImagePicker.ImagePickerOptions = {
                         allowsEditing: true,
                         quality: 0.8,
                         aspect: field === 'image' ? [1, 1] : [16, 9],
-                        mediaTypes: 'images', // ✅ Sửa lỗi (dùng chữ thường)
+                        mediaTypes: 'images',
                   };
 
                   if (source === 'camera') {
                         const { granted } = await ImagePicker.requestCameraPermissionsAsync();
-                        if (!granted) return alert("Cần quyền camera");
-                        result = await ImagePicker.launchCameraAsync(imagePickerOptions);
+                        if (!granted) return alert('Cần quyền camera để chụp ảnh!');
+                        result = await ImagePicker.launchCameraAsync(options);
                   } else {
                         const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                        if (!granted) return alert("Cần quyền thư viện");
-                        result = await ImagePicker.launchImageLibraryAsync(imagePickerOptions);
+                        if (!granted) return alert('Cần quyền truy cập thư viện ảnh!');
+                        result = await ImagePicker.launchImageLibraryAsync(options);
                   }
+
                   if (result.canceled || !result.assets?.[0]?.uri) return;
                   const uri = result.assets[0].uri;
                   await uploadImage(field, uri);
             } catch (err) {
-                  console.log("Picker error:", err);
+                  console.log('Picker error:', err);
+                  alert('Lỗi khi chọn/chụp ảnh!');
             }
       };
 
-      // HÀM 3: XOÁ ẢNH
+      // --- HÀM 3: XOÁ ẢNH ---
       const deleteImage = async (field: 'image' | 'coverImage') => {
             const userId = await AsyncStorage.getItem('userId');
             const token = await AsyncStorage.getItem('token');
-            if (!userId) return alert("Vui lòng đăng nhập trước!");
+            if (!userId) return alert('Vui lòng đăng nhập trước!');
             if (isUploading) return;
             setIsUploading(true);
 
@@ -200,29 +221,31 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
             }
       };
 
-      // HÀM 4: HIỂN THỊ MENU
+      // --- HÀM 4: HIỂN THỊ MENU CHỌN ẢNH ---
       const handleImageOptions = (field: 'image' | 'coverImage') => {
             if (isUploading) return;
-            const options = ['Chọn ảnh từ thư viện', 'Xoá ảnh hiện tại', 'Hủy'];
+            const options = ['Chụp ảnh', 'Chọn ảnh từ thư viện', 'Xoá ảnh hiện tại', 'Hủy'];
+
             if (Platform.OS === 'ios') {
                   ActionSheetIOS.showActionSheetWithOptions(
-                        { options, cancelButtonIndex: 3, destructiveButtonIndex: 2 },
+                        {
+                              options,
+                              cancelButtonIndex: 3,
+                              destructiveButtonIndex: 2,
+                        },
                         (index) => {
-
+                              if (index === 0) pickAndUpload(field, 'camera');
                               if (index === 1) pickAndUpload(field, 'library');
                               if (index === 2) deleteImage(field);
                         }
                   );
             } else {
-                  Alert.alert(
-                        'Chọn hành động', '',
-                        [
-
-                              { text: 'Chọn ảnh từ thư viện', onPress: () => pickAndUpload(field, 'library') },
-                              { text: 'Xoá ảnh hiện tại', onPress: () => deleteImage(field), style: 'destructive' },
-                              { text: 'Hủy', style: 'cancel' },
-                        ]
-                  );
+                  Alert.alert('Chọn hành động', '', [
+                        { text: 'Chụp ảnh', onPress: () => pickAndUpload(field, 'camera') },
+                        { text: 'Chọn ảnh từ thư viện', onPress: () => pickAndUpload(field, 'library') },
+                        { text: 'Xoá ảnh hiện tại', onPress: () => deleteImage(field), style: 'destructive' },
+                        { text: 'Hủy', style: 'cancel' },
+                  ]);
             }
       };
 
@@ -236,7 +259,7 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
                   <View className="flex flex-row gap-6 pl-6 items-center mt-10">
                         <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
                         <Text className="text-xl font-semibold">
-                              {user?.fullName || "Đang tải..."}
+                              {user?.nickname || "Đang tải..."}
                         </Text>
                   </View>
 
@@ -317,7 +340,7 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
 
 
                   <View className="pl-3 mt-[-10px] flex flex-col gap-2">
-                        <Text className="font-bold text-lg">{user?.fullName || "..."}</Text>
+                        <Text className="font-bold text-lg">{user?.nickname || "..."}</Text>
                         <Text className="text-sm text-gray-600">Chưa có đánh giá</Text>
                         <View className="flex flex-row gap-3">
                               <Text className="border-r pr-2 text-xs text-gray-700">
@@ -345,16 +368,16 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
                               <MaterialIcons name="verified-user" size={16} color="gray" />
                               <Text className="text-xs text-gray-600">Đã xác thực:</Text>
 
-                              {user?.isVerifiedStudent ? (
-                                    <View className="flex flex-row gap-2 items-center ml-1">
-                                          <MaterialIcons name="school" size={16} color="#34a853" />
-                                          <Text className="text-xs text-green-600 ml-1">Đã xác thực sinh viên</Text>
-                                    </View>
-                              ) : (
-                                    <TouchableOpacity onPress={() => navigation.navigate("VerifyStudentScreen")}>
-                                          <Text className="text-xs text-blue-500 ml-2 underline">Xác thực sinh viên</Text>
+                              <View className="flex flex-row gap-2 items-center ml-1">
+                                    <MaterialIcons name="school" size={16} color={user?.is_cccd_verified ? "#34a853" : "#9ca3af"} />
+                                    <TouchableOpacity
+                                          onPress={() => navigation.navigate("VerifyStudentScreen")}
+                                    >
+                                          <Text className={`text-xs ml-1 underline ${user?.is_cccd_verified ? "text-blue-500" : "text-red-500"}`}>
+                                                {user?.is_cccd_verified ? "Xác thực lại" : "Xác thực sinh viên"}
+                                          </Text>
                                     </TouchableOpacity>
-                              )}
+                              </View>
                         </View>
 
                         <View className="flex flex-row gap-2 items-center">
@@ -377,7 +400,15 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
                         {/* ---- PHẦN ẨN/HIỆN (SỬA LẠI GIAO DIỆN CHO GIỐNG ẢNH) ---- */}
                         {showMore && (
                               <View className="flex flex-col gap-3 mt-2">
-
+                                    <View className="flex flex-row gap-2 items-center">
+                                          <MaterialIcons name="near-me" size={16} color="gray" />
+                                          <View className="flex-1 flex-row justify-between">
+                                                <Text className="text-xs text-gray-600">Quê quán:</Text>
+                                                <Text className="text-xs text-gray-800 font-medium">
+                                                      {user?.hometown || "Chưa cập nhật"}
+                                                </Text>
+                                          </View>
+                                    </View>
                                     {/* Số điện thoại */}
                                     <View className="flex flex-row gap-2 items-center">
                                           <MaterialIcons name="phone" size={16} color="gray" />
@@ -388,25 +419,13 @@ export default function UserInforScreen({ navigation }: Props) { // Xóa route
                                                 </Text>
                                           </View>
                                     </View>
-
-                                    {/* Giới thiệu */}
-                                    <View className="flex flex-row gap-2 items-start">
-                                          <MaterialIcons name="info-outline" size={16} color="gray" className="mt-0.5" />
-                                          <View className="flex-1 flex-row justify-between">
-                                                <Text className="text-xs text-gray-600">Giới thiệu:</Text>
-                                                <Text className="text-xs text-gray-800 font-medium w-3/5 text-right" numberOfLines={3}>
-                                                      {user?.bio || "Chưa cập nhật"}
-                                                </Text>
-                                          </View>
-                                    </View>
-
                                     {/* Tên gợi nhớ */}
                                     <View className="flex flex-row gap-2 items-center">
                                           <MaterialIcons name="person-outline" size={16} color="gray" />
                                           <View className="flex-1 flex-row justify-between">
-                                                <Text className="text-xs text-gray-600">Tên gợi nhớ:</Text>
+                                                <Text className="text-xs text-gray-600">Họ và tên:</Text>
                                                 <Text className="text-xs text-gray-800 font-medium">
-                                                      {user?.nickname || "Chưa cập nhật"}
+                                                      {user?.fullName || "Chưa cập nhật"}
                                                 </Text>
                                           </View>
                                     </View>

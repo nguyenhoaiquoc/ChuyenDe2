@@ -37,6 +37,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "cloudinary": "^1.41.3",
+    "date-fns": "^4.1.0",
     "expo-image-manipulator": "~14.0.7",
     "expo-image-picker": "^17.0.8",
     "expo-linear-gradient": "~15.0.7",
