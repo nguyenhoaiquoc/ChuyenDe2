@@ -13,6 +13,7 @@ import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
 import { path } from "../config"; // ✅ nhớ import path server (VD: http://192.168.x.x:3000)
+import React from "react";
 
 export default function Menu() {
   const navigation =

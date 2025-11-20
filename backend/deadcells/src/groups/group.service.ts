@@ -302,7 +302,6 @@ export class GroupService {
         const g = m.group;
         const memberCount = await this.countMembers(g.id);
         const postCount = await this.countProductsByGroup(g.id);
-        console.log(g.owner_id);
         return {
           id: g.id,
           name: g.name,

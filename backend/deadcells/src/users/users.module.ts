@@ -4,11 +4,12 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { User } from 'src/entities/user.entity';
 import { Rating } from 'src/entities/rating.entity';
+import { UserSeedService } from './seed/user.seed';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Rating])],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService,UserSeedService],
   exports: [UsersService], // nếu muốn dùng service ngoài module này
 })
 export class UsersModule {}

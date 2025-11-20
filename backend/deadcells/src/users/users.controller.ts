@@ -10,6 +10,7 @@ import {
   Query,
   Post,
   Body,
+  Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -87,5 +88,17 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async checkUserRating(@Req() req, @Param('userId') userId: number) {
     return this.usersService.checkUserRating(req.user.id, userId);
+  }
+
+  @Delete(':userId/rate')
+  @UseGuards(JwtAuthGuard)
+  async deleteRating(@Req() req, @Param('userId') userId: number) {
+    return this.usersService.deleteRating(req.user.id, userId);
+  }
+
+  @Get('my-ratings')
+  @UseGuards(JwtAuthGuard)
+  async getMyRatings(@Req() req) {
+    return this.usersService.getMyRatings(req.user.id);
   }
 }

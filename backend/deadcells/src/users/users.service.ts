@@ -197,4 +197,49 @@ export class UsersService {
         }
       : { hasRated: false };
   }
+
+  /** XÓA đánh giá (MỚI THÊM) */
+  async deleteRating(reviewerId: number, ratedUserId: number) {
+    if (reviewerId === ratedUserId) {
+      throw new BadRequestException('Không thể xóa đánh giá của chính mình');
+    }
+
+    const rating = await this.ratingRepo.findOne({
+      where: {
+        user_id: reviewerId,
+        rated_user_id: ratedUserId,
+      },
+    });
+
+    if (!rating) {
+      throw new BadRequestException('Bạn chưa đánh giá người dùng này');
+    }
+
+    await this.ratingRepo.remove(rating);
+
+    return {
+      success: true,
+      message: 'Đã xóa đánh giá thành công',
+    };
+  }
+
+  async getMyRatings(userId: number) {
+    const ratings = await this.ratingRepo.find({
+      where: { user_id: userId },
+      relations: ['ratedUser'],
+      order: { created_at: 'DESC' },
+    });
+
+    return ratings.map((r) => ({
+      id: r.id,
+      stars: Number(r.number_stars),
+      content: r.content,
+      createdAt: r.created_at,
+      ratedUser: {
+        id: r.ratedUser.id,
+        fullName: r.ratedUser.fullName,
+        image: r.ratedUser.image,
+      },
+    }));
+  }
 }

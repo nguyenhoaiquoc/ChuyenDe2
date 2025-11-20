@@ -441,19 +441,23 @@ export default function GroupDetailScreen({
             {/* Vai trò của người dùng */}
             {renderStatusBadge()}
             {/* Chủ nhóm */}
-            <View className="flex-row items-center mb-2 mt-3">
-              <Image
-                source={
-                  groupDetail.owner?.avatar
-                    ? { uri: groupDetail.owner.avatar }
-                    : require("../../assets/khi.png")
-                }
-                className="w-6 h-6 rounded-full"
-              />
-              <Text className="ml-2 text-sm text-gray-600">
-                Chủ nhóm: {isLeader ? "Tôi" : groupDetail.owner?.name}
-              </Text>
-            </View>
+            {!isLeader && (
+              <View className="flex-row items-center mb-2 mt-3">
+                <>
+                  <Image
+                    source={
+                      groupDetail.owner?.avatar
+                        ? { uri: groupDetail.owner.avatar }
+                        : require("../../assets/khi.png")
+                    }
+                    className="w-6 h-6 rounded-full"
+                  />
+                  <Text className="ml-2 text-sm text-gray-600">
+                    Chủ nhóm: {groupDetail.owner?.name}
+                  </Text>
+                </>
+              </View>
+            )}
           </View>
           {/* Bên phải */}
           <View className="flex-1 items-end pl-2">
@@ -477,7 +481,7 @@ export default function GroupDetailScreen({
 
         {/* Mô tả nhóm */}
         {groupDetail.description ? (
-          <View className="mt-3">
+          <View>
             <Text
               className="text-gray-700 text-sm"
               numberOfLines={showFullDescription ? undefined : 2}
@@ -485,7 +489,7 @@ export default function GroupDetailScreen({
             >
               {groupDetail.description}
             </Text>
-            {groupDetail.description.length > 50 && (
+            {groupDetail.description.length > 130 && (
               <Text
                 className="text-blue-600 text-sm mt-1"
                 onPress={() => setShowFullDescription(!showFullDescription)}

@@ -14,6 +14,7 @@ import { NotificationModule } from 'src/notification/notification.module';
 import { User } from 'src/entities/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { GroupSeedService } from './seed/groups.seed';
+import { GroupRoleSeedService } from './seed/group-role.seed';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { GroupSeedService } from './seed/groups.seed';
     forwardRef(() => NotificationModule),
     forwardRef(() => AuthModule),
   ],
-  providers: [GroupService, GroupSeedService],
+  providers: [GroupService, GroupRoleSeedService, GroupSeedService],
   controllers: [GroupController],
   exports: [GroupService],
 })

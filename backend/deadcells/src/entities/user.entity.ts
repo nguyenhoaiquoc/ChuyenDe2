@@ -85,6 +85,9 @@ export class User {
   @Column({ nullable: true })
   hometown?: string;
 
+  @Column({ default: false })
+  is_cccd_verified: boolean;
+
   /** --------- Reset mật khẩu (AN TOÀN) ---------
    *  Lưu HASH của reset token + hạn dùng
    */

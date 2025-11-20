@@ -1,38 +1,149 @@
-import React, { useEffect, useState } from "react";
-import { ScrollView, Text, View, Image, useWindowDimensions, TouchableOpacity, Alert } from "react-native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../../types";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+  ScrollView,
+  Text,
+  View,
+  Image,
+  useWindowDimensions,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  Alert,
+  TextInput,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import { path } from "../../config";
+import { useFocusEffect, useRoute } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "UserInforScreen">;
-  route: any; // nếu bạn đã khai báo param trong RootStackParamList thì thay any bằng RouteProp<...>
+const DEFAULT_AVATAR = require("../../assets/khi.png");
+const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+
+// Star Rating Component
+const StarRating = ({ rating, editable = false, onChange }: any) => (
+  <View className="flex-row gap-1">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <TouchableOpacity
+        key={star}
+        onPress={() => editable && onChange?.(star)}
+        disabled={!editable}
+      >
+        <MaterialIcons
+          name={star <= rating ? "star" : "star-border"}
+          size={16}
+          color="#facc15"
+        />
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+
+// Rating Card Component
+const RatingCard = ({ rating }: any) => {
+  const timeAgo = (date: string) => {
+    const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+    if (seconds < 3600) return "Vừa xong";
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} giờ trước`;
+    return `${Math.floor(seconds / 86400)} ngày trước`;
+  };
+
+  return (
+    <View className="bg-white p-2 rounded-xl mb-2 border border-gray-100 shadow-sm">
+      <View className="flex-row items-center justify-between mb-1">
+        <View className="flex-row items-center">
+          <Image
+            source={
+              rating.reviewer.avatar
+                ? { uri: rating.reviewer.avatar }
+                : DEFAULT_AVATAR
+            }
+            className="w-8 h-8 rounded-full mr-2"
+          />
+          <View>
+            <Text className="font-semibold text-xxs">
+              {rating.reviewer?.name || "Người dùng"}
+            </Text>
+            <Text className="text-xs text-gray-500">
+              {timeAgo(rating.createdAt)}
+            </Text>
+          </View>
+        </View>
+        <StarRating rating={rating.stars} editable={false} />
+      </View>
+      {rating.content && (
+        <Text className="text-gray-700 text-xs mt-1">{rating.content}</Text>
+      )}
+    </View>
+  );
 };
 
+// Tabs Content
 const DisplayingRoute = () => (
   <View className="flex-1 items-center justify-center py-10">
-    <Text className="font-semibold text-gray-800">Bạn chưa có tin đăng nào</Text>
-    <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2">Đăng tin Ngay</Text>
+    <Text className="font-semibold text-gray-800">
+      Bạn chưa có tin đăng nào
+    </Text>
+    <TouchableOpacity
+      onPress={() => {
+        /* Logic điều hướng đến trang đăng tin */
+      }}
+    >
+      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
+        Đăng tin Ngay
+      </Text>
+    </TouchableOpacity>
   </View>
 );
 
 const SoldRoute = () => (
   <View className="flex-1 items-center justify-center py-10">
-    <Text className="font-semibold text-gray-500">Bạn chưa bán sản phẩm nào</Text>
-    <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2">Đăng tin mới</Text>
+    <Text className="font-semibold text-gray-500">
+      Bạn chưa bán sản phẩm nào
+    </Text>
+    <TouchableOpacity
+      onPress={() => {
+        /* Logic điều hướng đến trang đăng tin */
+      }}
+    >
+      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
+        Đăng tin mới
+      </Text>
+    </TouchableOpacity>
   </View>
 );
 
-export default function UserInforScreen({ navigation, route }: Props) {
+export default function UserInforScreen({ navigation }: any) {
   const layout = useWindowDimensions();
-  const [index, setIndex] = React.useState(0);
-  const [routes] = React.useState([
+  const route = useRoute<any>();
+  // 1. Lấy userId từ route params
+  const { userId: profileUserId } = route.params as { userId: string | number };
+
+  // States
+  const [index, setIndex] = useState(0);
+  const [showMore, setShowMore] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  // User ID của người đang đăng nhập
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState(0);
+  const [myRating, setMyRating] = useState<any>(null);
+  const [ratingModalVisible, setRatingModalVisible] = useState(false);
+  const [selectedStars, setSelectedStars] = useState(0);
+  const [ratingContent, setRatingContent] = useState("");
+  const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+
+  const [routes] = useState([
     { key: "displaying", title: "Đang hiển thị (0)" },
     { key: "sold", title: "Đã bán (0)" },
   ]);
@@ -42,208 +153,730 @@ export default function UserInforScreen({ navigation, route }: Props) {
     sold: SoldRoute,
   });
 
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [isMe, setIsMe] = useState<boolean>(true);
-  const [viewUserId, setViewUserId] = useState<string | null>(null);
+  // Check if current user is viewing their own profile
+  const isOwnProfile = currentUserId === profileUserId?.toString();
 
+  // 2. Fetch current user id (người đang đăng nhập)
   useEffect(() => {
-    (async () => {
-      const routeUserId = route?.params?.userId ? String(route.params.userId) : null;
-      const currentUserId = (await AsyncStorage.getItem("userId")) || "";
-      const token = await AsyncStorage.getItem("token");
+    AsyncStorage.getItem("userId").then(setCurrentUserId);
+  }, []);
 
-      const finalUserId = routeUserId || currentUserId; // nếu không truyền userId -> xem profile của mình
-      setViewUserId(finalUserId);
-      setIsMe(String(finalUserId) === String(currentUserId));
-
-      if (!finalUserId) return;
-
-      try {
-        const res = await axios.get(`${path}/users/${finalUserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.data) {
-          setName(res.data.name || res.data.fullName || "");
-          setAvatar(res.data.image || null);
-          setCoverImage(res.data.coverImage || null);
-
-          // chỉ lưu name local nếu là profile của mình
-          if (String(finalUserId) === String(currentUserId)) {
-            await AsyncStorage.setItem("userName", res.data.name || res.data.fullName || "");
-          }
-        }
-      } catch (err) {
-        console.log("Lấy user error:", err);
-        // fallback: nếu xem profile mình mà request lỗi thì lấy tên local
-        if (String(finalUserId) === String(currentUserId)) {
-          const localName = await AsyncStorage.getItem("userName");
-          if (localName) setName(localName);
-        }
-      }
-    })();
-  }, [route?.params?.userId]);
-
-  const handlePickImage = async () => {
-    if (!isMe) return Alert.alert("Thông báo", "Bạn không thể đổi ảnh trên trang người khác.");
-
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) return alert("Cần quyền truy cập ảnh");
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      allowsEditing: true,
-      quality: 0.7,
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-    });
-    if (result.canceled) return;
-
-    const currentUserId = await AsyncStorage.getItem("userId");
+  // Data Fetching
+  const fetchAllData = useCallback(async () => {
     const token = await AsyncStorage.getItem("token");
-    if (!currentUserId) return alert("Vui lòng đăng nhập trước khi đổi ảnh");
-
-    const formData = new FormData();
-    formData.append("image", { uri: result.assets[0].uri, name: "avatar.jpg", type: "image/jpeg" } as any);
+    if (!profileUserId) return; // Đảm bảo có profileUserId
 
     try {
-      const url = `${path}/users/${currentUserId}`;
-      const response = await axios.patch(url, formData, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
-      });
-      setAvatar(response.data.image);
-      alert("Cập nhật ảnh thành công!");
+      const [profileRes, ratingsRes, avgRes, checkRes] = await Promise.all([
+        axios.get(`${path}/users/${profileUserId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
+        }),
+        axios.get(`${path}/users/${profileUserId}/ratings`),
+        axios.get(`${path}/users/${profileUserId}/rating-average`),
+        // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
+        token && !isOwnProfile
+          ? axios
+              .get(`${path}/users/${profileUserId}/check-rating`, {
+                headers: { Authorization: `Bearer ${token}` },
+              })
+              .catch(() => ({ data: { hasRated: false } }))
+          : Promise.resolve({ data: { hasRated: false } }),
+      ]);
+
+      setUser(profileRes.data);
+      setAvatar(profileRes.data.image || null);
+      setCoverImage(profileRes.data.coverImage || null);
+
+      setRatings(ratingsRes.data || []);
+      setAverageRating(
+        avgRes.data.average ? Number(avgRes.data.average) : null
+      );
+      setRatingCount(avgRes.data.count || 0);
+
+      // Cập nhật thông tin đánh giá của mình (nếu có)
+      if (checkRes.data.hasRated) {
+        setMyRating(checkRes.data);
+        setSelectedStars(checkRes.data.stars);
+        setRatingContent(checkRes.data.content || "");
+      } else {
+        setMyRating(null);
+        setSelectedStars(0);
+        setRatingContent("");
+      }
+
+      // Cập nhật số lượng bài đăng vào Tabs
+      routes[0].title = `Đang hiển thị (${profileRes.data.postCount || 0})`;
+      routes[1].title = `Đã bán (${profileRes.data.soldCount || 0})`;
     } catch (err: any) {
-      console.log("Upload error:", err.response?.status, err.response?.data || err);
-      alert("Upload thất bại");
+      console.log("Lỗi khi lấy dữ liệu:", err.message);
+      Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
+    }
+  }, [profileUserId, isOwnProfile]); // Thêm isOwnProfile vào dependencies
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAllData();
+    }, [fetchAllData])
+  );
+
+  // Helper Function
+  function timeSince(dateString: string) {
+    if (!dateString) return "Mới tham gia";
+    const diff = Date.now() - new Date(dateString).getTime();
+    const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30));
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+
+    if (years > 0)
+      return `${years} năm ${remainingMonths > 0 ? remainingMonths + " tháng" : ""}`;
+    if (months > 0) return `${months} tháng`;
+    return "Mới tham gia";
+  }
+
+  // Follow Function (chỉ thực hiện khi xem hồ sơ người khác)
+  const toggleFollow = async () => {
+    if (isOwnProfile || !user) return;
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+
+    try {
+      if (user?.isFollowing) {
+        await axios.delete(`${path}/users/${user.id}/follow`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setUser((prev: any) => ({ ...prev, isFollowing: false }));
+      } else {
+        await axios.post(
+          `${path}/users/${user.id}/follow`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setUser((prev: any) => ({ ...prev, isFollowing: true }));
+      }
+    } catch (err) {
+      Alert.alert("Lỗi", "Không thể theo dõi");
     }
   };
 
+  // Rating Functions (chỉ cho phép khi xem hồ sơ người khác)
+  const handleSubmitRating = async () => {
+    if (isOwnProfile || selectedStars === 0)
+      return Alert.alert("Lỗi", "Vui lòng chọn số sao");
+    const token = await AsyncStorage.getItem("token");
+    if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để đánh giá.");
+
+    try {
+      const endpoint = `${path}/users/${user.id}/rate`;
+      await axios.post(
+        endpoint,
+        { stars: selectedStars, content: ratingContent },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert(
+        "Thành công",
+        myRating ? "Cập nhật thành công" : "Đánh giá thành công"
+      );
+      setRatingModalVisible(false);
+      fetchAllData();
+    } catch (err: any) {
+      Alert.alert("Lỗi", err.response?.data?.message || "Gửi thất bại");
+    }
+  };
+
+  const deleteMyRating = async () => {
+    if (isOwnProfile) return;
+    Alert.alert("Xóa đánh giá", "Bạn có chắc chắn?", [
+      { text: "Hủy" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          const token = await AsyncStorage.getItem("token");
+          if (!token) return;
+          try {
+            await axios.delete(`${path}/users/${user.id}/rate`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setMyRating(null);
+            fetchAllData();
+          } catch (error) {
+            Alert.alert("Lỗi", "Không thể xóa đánh giá.");
+          }
+        },
+      },
+    ]);
+  };
+
+  // TODO: Implement the actual Image and Upload functions
+  const uploadImage = async (
+    field: "image" | "coverImage",
+    fileUri: string
+  ) => {
+    Alert.alert("Thông báo", `Chức năng upload ${field} chưa được cài đặt.`);
+  };
+  const pickAndUpload = async (
+    field: "image" | "coverImage",
+    source: "camera" | "library"
+  ) => {
+    Alert.alert(
+      "Thông báo",
+      `Chức năng chọn ảnh từ ${source} chưa được cài đặt.`
+    );
+  };
+  const deleteImage = async (field: "image" | "coverImage") => {
+    Alert.alert("Thông báo", `Chức năng xóa ${field} chưa được cài đặt.`);
+  };
+  const handleImageOptions = (field: "image" | "coverImage") => {
+    if (!isOwnProfile) return; // Chỉ cho phép chỉnh sửa ảnh bìa/avatar nếu là hồ sơ của mình
+
+    Alert.alert(
+      `Cập nhật ${field === "image" ? "Ảnh đại diện" : "Ảnh bìa"}`,
+      "Chọn hành động:",
+      [
+        { text: "Hủy" },
+        { text: "Chụp ảnh mới", onPress: () => pickAndUpload(field, "camera") },
+        {
+          text: "Chọn từ thư viện",
+          onPress: () => pickAndUpload(field, "library"),
+        },
+        {
+          text: "Xóa ảnh",
+          style: "destructive",
+          onPress: () => deleteImage(field),
+        },
+      ]
+    );
+  };
+
+  // Copy Link
+  const handleCopyLink = async () => {
+    await Clipboard.setStringAsync(`https://yourapp.com/user/${user?.id}`);
+    Alert.alert("Thành công", "Liên kết đã được sao chép");
+    setMenuVisible(false);
+  };
+
   return (
-    <ScrollView className="flex-1">
-      <View className="mt-10">
-        <StatusBar style="auto" />
+    <ScrollView className="flex-1 bg-gray-50">
+      <StatusBar style="auto" />
 
-        {/* Header */}
-        <View className="flex flex-row gap-6 pl-6 items-center">
-          <FontAwesome onPress={() => navigation.goBack()} name="arrow-left" size={20} color="#000" />
-          <Text className="text-xl">{name || "Đang tải..."} </Text>
-        </View>
+      {/* Header */}
+      <View className="flex flex-row gap-6 pl-6 items-center mt-10">
+        <FontAwesome
+          onPress={() => navigation.goBack()}
+          name="arrow-left"
+          size={20}
+          color="#000"
+        />
+        <Text className="text-xl font-semibold">
+          {user?.fullName || "Đang tải..."}
+        </Text>
+      </View>
 
-        {/* Ảnh bìa + avatar */}
-        <View className="w-full h-[100px] relative mt-2">
-          <Image
-            className="w-full h-full object-contain"
-            source={
-              coverImage
-                ? { uri: coverImage.startsWith("http") ? coverImage : `${path}${coverImage}` }
-                : require("../../assets/anhbia.jpg")
-            }
-          />
-
-          {/* Chỉ mình mới hiện icon camera */}
-          {isMe && (
-            <MaterialIcons
-              onPress={handlePickImage}
-              className="absolute right-5 top-1/4 bg-white rounded-full p-1"
-              name="camera-alt"
-              size={16}
-              color="black"
-            />
-          )}
-
-          <TouchableOpacity className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
-            <Image
-              className="w-full h-full object-contain rounded-full"
-              source={
-                avatar
-                  ? { uri: avatar.startsWith("http") ? avatar : `${path}${avatar}` }
-                  : require("../../assets/meo.jpg")
-              }
-            />
-            {/* Chỉ mình mới hiện icon camera nhỏ */}
-            {isMe && (
-              <MaterialIcons
-                onPress={handlePickImage}
-                className="absolute right-0 bottom-0 bg-white rounded-full p-1"
-                name="camera-alt"
-                size={10}
-                color="black"
-              />
-            )}
+      {/* Ảnh bìa */}
+      <View className="w-full h-[100px] relative mt-2">
+        <Image
+          key={coverImage}
+          className="w-full h-full object-cover"
+          source={
+            coverImage
+              ? {
+                  uri: coverImage.startsWith("http")
+                    ? coverImage
+                    : `${path}/${coverImage.replace(/\\/g, "/")}`,
+                }
+              : DEFAULT_COVER
+          }
+          style={{ backgroundColor: "#d1d5db" }}
+        />
+        {/* Nút upload/chỉnh sửa ảnh bìa - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH */}
+        {isOwnProfile && (
+          <TouchableOpacity
+            onPress={() => handleImageOptions("coverImage")}
+            disabled={isUploading}
+            className="absolute right-5 top-1/4 bg-white rounded-full p-1"
+          >
+            <MaterialIcons name="camera-alt" size={16} color="black" />
           </TouchableOpacity>
-        </View>
+        )}
 
-        {/* Nút góc phải: nếu là mình -> "Chỉnh sửa thông tin"; nếu là người khác -> nút ba chấm */}
-        <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
-          {isMe ? (
-            <TouchableOpacity onPress={() => navigation.navigate("EditProfileScreen")}>
-              <Text className="text-xs border p-1 rounded-md border-gray-400">Chỉnh sửa thông tin</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => Alert.alert("Tùy chọn", "Mở menu hành động ở đây…")}>
-              <MaterialIcons name="more-horiz" size={22} color="#000" />
+        {/* Avatar */}
+        <View className="w-[60px] h-[60px] absolute -bottom-6 left-5 bg-white p-1 rounded-full">
+          <Image
+            key={avatar}
+            className="w-full h-full object-cover rounded-full"
+            source={
+              avatar
+                ? {
+                    uri: avatar.startsWith("http")
+                      ? avatar
+                      : `${path}/${avatar.replace(/\\/g, "/")}`,
+                  }
+                : DEFAULT_AVATAR
+            }
+            style={{ backgroundColor: "#d1d5db" }}
+          />
+          {/* Nút upload/chỉnh sửa avatar - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH */}
+          {isOwnProfile && (
+            <TouchableOpacity
+              onPress={() => handleImageOptions("image")}
+              disabled={isUploading}
+              className="absolute right-0 bottom-0 bg-white rounded-full p-1"
+            >
+              <MaterialIcons name="camera-alt" size={10} color="black" />
             </TouchableOpacity>
           )}
-
-          <Text className="text-xs p-1 bg-yellow-400 rounded-md px-2">Chia sẻ</Text>
         </View>
 
-        {/* Thông tin người dùng */}
-        <View className="pl-3 mt-4 flex flex-col gap-3">
-          <Text className="font-bold">{name || "Đang tải..."} </Text>
-          <Text className="text-sm text-gray-600">chưa có đánh giá</Text>
-          <View className="flex flex-row gap-3">
-            <Text className="border-r pr-2 text-xs">Người theo dõi: 1</Text>
-            <Text className="text-xs">Đang theo dõi: 1</Text>
+        {/* Loading Indicator */}
+        {isUploading && (
+          <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/30 flex items-center justify-center">
+            <ActivityIndicator size="large" color="#FFFFFF" />
           </View>
-        </View>
+        )}
+      </View>
 
-        {/* Mô tả + trạng thái */}
-        <View className="pl-3 flex flex-col mt-6 gap-3">
-          <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="chat" size={16} color="gray" />
-            <Text className="text-xs text-gray-600">Phản hồi chat: chưa có thông tin</Text>
-          </View>
-          <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="calendar-today" size={16} color="gray" />
-            <Text className="text-xs text-gray-600">Đã tham gia: 6 tháng</Text>
-          </View>
-          <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="check-circle" size={16} color="gray" />
-            <Text className="text-xs text-gray-600">Đã xác thực: </Text>
-            <MaterialIcons name="mail" size={16} color="blue" />
-          </View>
-          <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="near-me" size={16} color="gray" />
-            <Text className="text-xs text-gray-600">Địa chỉ: Chưa cung cấp</Text>
-          </View>
-          <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="more-horiz" size={16} color="blue" />
-            <Text className="text-xs text-blue-600">Xem thêm</Text>
-          </View>
-        </View>
+      {/* Action Buttons */}
+      <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
+        {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
+        {!isOwnProfile && (
+          <TouchableOpacity
+            onPress={toggleFollow}
+            className={`text-xs p-1 rounded-md px-2 ${
+              user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"
+            }`}
+          >
+            <Text className="text-white font-medium px-4">
+              {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-        {/* Tabs */}
-        <View className="mt-8 h-[350px]">
-          <TabView
-            navigationState={{ index, routes }}
-            renderScene={renderScene}
-            onIndexChange={setIndex}
-            initialLayout={{ width: layout.width }}
-            renderTabBar={(props: any) => (
-              <TabBar
-                {...props}
-                indicatorStyle={{ backgroundColor: "#facc15", height: 3, borderRadius: 2 }}
-                style={{ backgroundColor: "white", elevation: 0, shadowOpacity: 0 }}
-                labelStyle={{ color: "#000", fontWeight: "600", textTransform: "none", fontSize: 13 }}
-                activeColor="#000"
-                inactiveColor="#9ca3af"
-              />
-            )}
-          />
+        {/* Nút Menu 3 chấm (dành cho cả hai) */}
+        <TouchableOpacity onPress={() => setMenuVisible(true)}>
+          <MaterialIcons name="more-vert" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Tên và Đánh giá */}
+      <View className="pl-3 mt-[-10px] flex flex-col gap-2">
+        <Text className="font-bold text-lg">{user?.fullName || "..."}</Text>
+        <View className="flex-row items-center">
+          {averageRating !== null ? (
+            <>
+              <StarRating rating={Math.round(averageRating)} />
+              <Text className="text-sm text-gray-600 ml-2">
+                {averageRating.toFixed(1)} ({ratingCount} đánh giá)
+              </Text>
+            </>
+          ) : (
+            <Text className="text-sm text-gray-600">Chưa có đánh giá</Text>
+          )}
+        </View>
+        <View className="flex flex-row gap-3">
+          <Text className="border-r pr-2 text-xs text-gray-700">
+            Người theo dõi: {user?.followerCount || 0}
+          </Text>
+          <Text className="text-xs text-gray-700">
+            Đang theo dõi: {user?.followingCount || 0}
+          </Text>
         </View>
       </View>
+
+      {/* Chi tiết người dùng */}
+      <View className="pl-3 pr-4 flex flex-col mt-6 gap-3 mb-4">
+        {/* PHẦN HIỂN THỊ CỐ ĐỊNH */}
+        <View className="flex flex-row gap-2 items-center">
+          <MaterialIcons name="chat" size={16} color="gray" />
+          <Text className="text-xs text-gray-600">Phản hồi chat: Chưa có</Text>
+        </View>
+        <View className="flex flex-row gap-2 items-center">
+          <MaterialIcons name="access-time" size={16} color="gray" />
+          <Text className="text-xs text-gray-600">
+            Đã tham gia: {timeSince(user?.createdAt)}
+          </Text>
+        </View>
+
+        {/* Xác thực (CHỈ HIỂN THỊ CHO CHÍNH MÌNH) */}
+        {isOwnProfile && (
+          <View className="flex flex-row gap-2 items-center">
+            <MaterialIcons name="verified-user" size={16} color="gray" />
+            <Text className="text-xs text-gray-600">Đã xác thực:</Text>
+            <View className="flex flex-row gap-2 items-center ml-1">
+              <MaterialIcons
+                name="school"
+                size={16}
+                color={user?.is_cccd_verified ? "#34a853" : "#9ca3af"}
+              />
+              <TouchableOpacity>
+                <Text
+                  className={`text-xs ml-1 underline ${user?.is_cccd_verified ? "text-blue-500" : "text-red-500"}`}
+                >
+                  {user?.is_cccd_verified
+                    ? "Đã xác thực"
+                    : "Xác thực sinh viên"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <View className="flex flex-row gap-2 items-center">
+          <MaterialIcons name="near-me" size={16} color="gray" />
+          <Text className="text-xs text-gray-600">
+            Địa chỉ: {user?.address_json?.full || "Chưa cung cấp"}
+          </Text>
+        </View>
+
+        {/* Nút "Viết đánh giá" - CHỈ HIỂN THỊ TRÊN HỒ SƠ NGƯỜI KHÁC VÀ KHI ĐÃ ĐĂNG NHẬP */}
+        {!isOwnProfile && currentUserId && (
+          <TouchableOpacity
+            onPress={() =>
+              myRating
+                ? setRatingMenuVisible(true)
+                : setRatingModalVisible(true)
+            }
+            className={`py-2 rounded-xl mt-3 ${myRating ? "bg-white border border-yellow-400" : "bg-yellow-400"}`}
+          >
+            <Text
+              className={`text-center font-medium ${myRating ? "text-yellow-500" : "text-white"}`}
+            >
+              {myRating ? "Đánh giá của bạn" : "Viết đánh giá"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Danh sách đánh giá */}
+        {ratings.length > 0 && (
+          <View className="px-3 mt-2">
+            <Text className="text-base font-semibold mb-2">
+              Đánh giá từ người dùng ({ratingCount})
+            </Text>
+            {ratings.map((rating) => (
+              <RatingCard key={rating.id} rating={rating} />
+            ))}
+          </View>
+        )}
+
+        {/* Nút xem thêm/ẩn */}
+        <TouchableOpacity
+          className="mt-1"
+          onPress={() => setShowMore(!showMore)}
+        >
+          <Text className="text-xs text-yellow-500 font-semibold">
+            {showMore ? "Ẩn thông tin" : "Xem thêm thông tin"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* PHẦN ẨN/HIỆN */}
+        {showMore && (
+          <View className="flex flex-col gap-3 mt-2">
+            {/* Quê quán */}
+            <View className="flex flex-row gap-2 items-center">
+              <MaterialIcons name="near-me" size={16} color="gray" />
+              <View className="flex-1 flex-row justify-between">
+                <Text className="text-xs text-gray-600">Quê quán:</Text>
+                <Text className="text-xs text-gray-800 font-medium">
+                  {user?.hometown || "Chưa cập nhật"}
+                </Text>
+              </View>
+            </View>
+            {/* Số điện thoại (CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH) */}
+            {isOwnProfile && (
+              <View className="flex flex-row gap-2 items-center">
+                <MaterialIcons name="phone" size={16} color="gray" />
+                <View className="flex-1 flex-row justify-between">
+                  <Text className="text-xs text-gray-600">Số điện thoại:</Text>
+                  <Text className="text-xs text-gray-800 font-medium">
+                    {user?.phone || "Chưa cập nhật"}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {/* Tên gợi nhớ */}
+            <View className="flex flex-row gap-2 items-center">
+              <MaterialIcons name="person-outline" size={16} color="gray" />
+              <View className="flex-1 flex-row justify-between">
+                <Text className="text-xs text-gray-600">Họ và tên:</Text>
+                <Text className="text-xs text-gray-800 font-medium">
+                  {user?.fullName || "Chưa cập nhật"}
+                </Text>
+              </View>
+            </View>
+            {/* CCCD (CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH) */}
+            {isOwnProfile && (
+              <View className="flex flex-row gap-2 items-center">
+                <MaterialIcons name="badge" size={16} color="gray" />
+                <View className="flex-1 flex-row justify-between">
+                  <Text className="text-xs text-gray-600">CCCD / CMND:</Text>
+                  <Text className="text-xs text-gray-800 font-medium">
+                    {user?.citizenId
+                      ? "******" + user.citizenId.slice(-4)
+                      : "Chưa cập nhật"}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {/* Giới tính */}
+            <View className="flex flex-row gap-2 items-center">
+              <MaterialIcons name="wc" size={16} color="gray" />
+              <View className="flex-1 flex-row justify-between">
+                <Text className="text-xs text-gray-600">Giới tính:</Text>
+                <Text className="text-xs text-gray-800 font-medium">
+                  {user?.gender === 1 || user?.gender === "Nam"
+                    ? "Nam"
+                    : user?.gender === 2 || user?.gender === "Nữ"
+                      ? "Nữ"
+                      : user?.gender === 3 || user?.gender === "Khác"
+                        ? "Khác"
+                        : "Chưa cập nhật"}
+                </Text>
+              </View>
+            </View>
+            {/* Ngày sinh */}
+            <View className="flex flex-row gap-2 items-center">
+              <MaterialIcons name="cake" size={16} color="gray" />
+              <View className="flex-1 flex-row justify-between">
+                <Text className="text-xs text-gray-600">Ngày sinh:</Text>
+                <Text className="text-xs text-gray-800 font-medium">
+                  {user?.dob
+                    ? new Date(user.dob).toLocaleDateString("vi-VN")
+                    : "Chưa cập nhật"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Tabs */}
+      <View className="mt-8 h-[350px]">
+        <TabView
+          navigationState={{ index, routes }}
+          renderScene={renderScene}
+          onIndexChange={setIndex}
+          initialLayout={{ width: layout.width }}
+          renderTabBar={(props: any) => (
+            <TabBar
+              {...props}
+              indicatorStyle={{
+                backgroundColor: "#facc15",
+                height: 3,
+                borderRadius: 2,
+              }}
+              style={{
+                backgroundColor: "white",
+                elevation: 0,
+                shadowOpacity: 0,
+              }}
+              labelStyle={{
+                color: "#000",
+                fontWeight: "600",
+                textTransform: "none",
+                fontSize: 13,
+              }}
+              activeColor="#000"
+              inactiveColor="#9ca3af"
+            />
+          )}
+        />
+      </View>
+
+      {/* Modal Rating (Dành cho hồ sơ người khác) */}
+      <Modal
+        visible={ratingModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRatingModalVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/40 justify-center items-center"
+          onPress={() => setRatingModalVisible(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-white w-80 rounded-xl p-5 shadow-lg"
+          >
+            <Text className="text-lg font-semibold text-center mb-5">
+              {myRating ? "Chỉnh sửa đánh giá" : "Đánh giá người dùng"}
+            </Text>
+            <View className="items-center mb-4">
+              <StarRating
+                rating={selectedStars}
+                onChange={setSelectedStars}
+                editable
+              />
+            </View>
+            <TextInput
+              className="border border-gray-300 rounded-lg p-3 h-24 text-sm mb-4"
+              placeholder="Nhận xét của bạn (tùy chọn)"
+              multiline
+              value={ratingContent}
+              onChangeText={setRatingContent}
+              style={{ textAlignVertical: "top" }}
+            />
+            <TouchableOpacity
+              onPress={handleSubmitRating}
+              disabled={selectedStars === 0}
+              className={`py-3 rounded-xl mb-3 ${selectedStars === 0 ? "bg-gray-300" : "bg-orange-500 active:bg-orange-600"}`}
+            >
+              <Text
+                className={`text-center font-semibold ${selectedStars === 0 ? "text-gray-500" : "text-white"}`}
+              >
+                {myRating ? "Cập nhật" : "Gửi đánh giá"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setRatingModalVisible(false)}
+              className="bg-gray-100 py-2 rounded-xl"
+            >
+              <Text className="text-center text-gray-700 font-medium">Hủy</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Modal Rating Menu (Dành cho hồ sơ người khác) */}
+      <Modal
+        visible={ratingMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRatingMenuVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50"
+          onPress={() => setRatingMenuVisible(false)}
+        >
+          <View className="flex-1 justify-center items-center">
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-72"
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  setRatingMenuVisible(false);
+                  setRatingModalVisible(true);
+                }}
+                className="px-5 py-4 flex-row items-center gap-3 border-b border-gray-200"
+              >
+                <MaterialIcons name="edit" size={20} color="#666" />
+                <Text className="text-base">Chỉnh sửa đánh giá</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setRatingMenuVisible(false);
+                  deleteMyRating();
+                }}
+                className="px-5 py-4 flex-row items-center gap-3"
+              >
+                <MaterialIcons
+                  name="delete-outline"
+                  size={20}
+                  color="#ef4444"
+                />
+                <Text className="text-base text-red-500">Xóa đánh giá</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Modal Menu 3 chấm */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/40 justify-center items-center"
+          onPress={() => setMenuVisible(false)}
+        >
+          <View className="bg-white w-72 rounded-2xl shadow-lg p-3">
+            {/* Nếu là hồ sơ của mình → thêm nút chỉnh sửa */}
+            {isOwnProfile && (
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  navigation.navigate("EditProfileScreen");
+                }}
+                className="py-3"
+              >
+                <Text className="text-gray-700 text-center border-b border-gray-200">
+                  Chỉnh sửa thông tin
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Luôn có nút sao chép liên kết */}
+            <TouchableOpacity onPress={handleCopyLink} className="px-4 py-3">
+              <Text className="text-gray-700 text-center">
+                Sao chép liên kết
+              </Text>
+            </TouchableOpacity>
+
+            {/* Nếu không phải hồ sơ của mình → thêm nút báo cáo */}
+            {!isOwnProfile && (
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  setReportVisible(true);
+                }}
+                className="px-4 py-3"
+              >
+                <Text className="text-red-500 text-center font-medium">
+                  Báo cáo vi phạm
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Modal Report (Chỉ cho hồ sơ người khác) */}
+      <Modal
+        visible={reportVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReportVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/40 justify-center items-center"
+          onPress={() => setReportVisible(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-white w-80 rounded-2xl p-5 shadow"
+          >
+            <Text className="text-base font-semibold text-center mb-4">
+              Người dùng này có vấn đề gì?
+            </Text>
+            {[
+              "Hình ảnh không phù hợp",
+              "Thông tin sai lệch",
+              "Lừa đảo",
+              "Lý do khác",
+            ].map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                className="py-2 rounded-lg mb-1 bg-gray-50"
+              >
+                <Text className="text-center text-gray-700">{item}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity className="mt-4 py-3 rounded-xl bg-red-500">
+              <Text className="text-center text-white font-medium">
+                Gửi báo cáo
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setReportVisible(false)}
+              className="mt-3 py-2 rounded-xl bg-gray-100"
+            >
+              <Text className="text-center text-gray-700 font-medium">Hủy</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 }

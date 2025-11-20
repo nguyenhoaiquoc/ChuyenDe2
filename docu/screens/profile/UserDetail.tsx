@@ -23,27 +23,15 @@ import axios from "axios";
 import { path } from "../../config";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { RootStackParamList, StarRatingProps } from "../../types";
+import { RatingData, RootStackParamList, StarRatingProps } from "../../types";
 import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import { StatusBar } from "expo-status-bar";
 import "../../global.css";
 
-// Giả định cấu trúc dữ liệu Rating
-interface RatingData {
-  id: number;
-  stars: number;
-  content: string;
-  createdAt: string;
-  reviewer: {
-    id: number;
-    name: string;
-    avatar: string;
-  };
-}
+const DEFAULT_AVATAR = require("../../assets/khi.png");
+const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+const DEFAULT_USER_AVATAR = require("../../assets/meo.jpg");
 
-// ===================================
-// 1. COMPONENT: StarRating Stars (Dùng Tailwind)
-// ===================================
 const StarRating = ({
   rating,
   onRatingChange,
@@ -54,7 +42,7 @@ const StarRating = ({
       {[1, 2, 3, 4, 5].map((star) => (
         <TouchableOpacity
           key={star}
-          onPress={() => editable && onRatingChange?.(star)} // Sử dụng ?. để an toàn khi onRatingChange là undefined
+          onPress={() => editable && onRatingChange?.(star)}
           disabled={!editable}
         >
           <FontAwesome
@@ -68,9 +56,6 @@ const StarRating = ({
   );
 };
 
-// ===================================
-// 2. COMPONENT: Rating Card (Dùng Tailwind)
-// ===================================
 const RatingCard = ({ rating }: { rating: RatingData }) => {
   const timeSince = (dateString: string) => {
     const date = new Date(dateString);
@@ -93,9 +78,11 @@ const RatingCard = ({ rating }: { rating: RatingData }) => {
     >
       <View className="flex-row items-center mb-2">
         <Image
-          source={{
-            uri: rating.reviewer.avatar || "https://via.placeholder.com/40",
-          }}
+          source={
+            rating.reviewer.avatar
+              ? { uri: rating.reviewer.avatar }
+              : DEFAULT_AVATAR
+          }
           className="w-10 h-10 rounded-full mr-3"
         />
         <View className="flex-1">
@@ -113,9 +100,6 @@ const RatingCard = ({ rating }: { rating: RatingData }) => {
   );
 };
 
-// ---------------------------------
-// BẮT ĐẦU PHẦN TABS (Giữ nguyên Tailwind)
-// ---------------------------------
 const DisplayingRoute = () => (
   <View className="flex-1 items-center justify-center py-10">
     <Text className="font-semibold text-gray-800">
@@ -131,9 +115,6 @@ const SoldRoute = () => (
     </Text>
   </View>
 );
-// ---------------------------------
-// KẾT THÚC PHẦN TABS
-// ---------------------------------
 
 type UserProfileData = {
   id: number;
@@ -166,15 +147,13 @@ export default function UserProfile({ navigation }: any) {
   const [ratingModalVisible, setRatingModalVisible] = useState(false);
   const [selectedStars, setSelectedStars] = useState(0);
   const [ratingContent, setRatingContent] = useState("");
-  // --- KẾT THÚC STATES THÊM VÀO ---
 
-  // --- STATES CŨ CỦA USERPROFILE ---
   const [user, setUser] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
-  // --- KẾT THÚC STATES CŨ ---
+  const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
 
   const menuItems: MenuItem[] = [
     { id: 1, label: "Hình đại diện sản phẩm" },
@@ -183,9 +162,7 @@ export default function UserProfile({ navigation }: any) {
     { id: 4, label: "Lý do khác" },
   ];
 
-  // ===================================
   // 3. HÀM TẢI DỮ LIỆU BAN ĐẦU (KẾT HỢP)
-  // ===================================
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     const token = await AsyncStorage.getItem("token");
@@ -200,7 +177,7 @@ export default function UserProfile({ navigation }: any) {
       axios.get(`${path}/users/${userId}`),
       axios.get(`${path}/users/${userId}/ratings`),
       axios.get(`${path}/users/${userId}/rating-average`),
-      id
+      id && id !== Number(userId)
         ? axios.get(checkRatingEndpoint, { headers: ratingHeaders })
         : Promise.resolve({ data: { hasRated: false } }),
     ];
@@ -242,9 +219,7 @@ export default function UserProfile({ navigation }: any) {
     }
   }, [userId, fetchAllData]);
 
-  // ===================================
   // 4. HÀM GỬI ĐÁNH GIÁ
-  // ===================================
   const handleSubmitRating = async () => {
     if (selectedStars === 0) {
       Alert.alert("Thông báo", "Vui lòng chọn số sao đánh giá");
@@ -261,17 +236,10 @@ export default function UserProfile({ navigation }: any) {
 
     try {
       const endpoint = `${path}/users/${userId}/rate`;
-      const method = myRating ? axios.put : axios.post;
-
-      const res = await method(
+      const res = await axios.post(
         endpoint,
-        {
-          stars: selectedStars,
-          content: ratingContent,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { stars: selectedStars, content: ratingContent },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       Alert.alert("Thành công", res.data.message);
@@ -288,10 +256,6 @@ export default function UserProfile({ navigation }: any) {
     }
   };
 
-  // ===================================
-  // 5. CÁC HÀM KHÁC (GIỮ NGUYÊN)
-  // ===================================
-
   const handleToggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -300,7 +264,6 @@ export default function UserProfile({ navigation }: any) {
 
   const handleSubmitReport = async () => {
     // Logic báo cáo giữ nguyên
-    // ...
     setReportVisible(false);
     setSelectedIds([]);
   };
@@ -351,7 +314,7 @@ export default function UserProfile({ navigation }: any) {
           ? user.coverImage
           : `${path}${user.coverImage}`,
       }
-    : require("../../assets/anhbia.jpg");
+    : DEFAULT_COVER;
 
   const avatarImageUrl = user?.image
     ? {
@@ -359,13 +322,11 @@ export default function UserProfile({ navigation }: any) {
           ? user.image
           : `${path}${user.image}`,
       }
-    : require("../../assets/meo.jpg");
+    : DEFAULT_USER_AVATAR;
 
   const isOwnProfile = currentUserId === Number(userId);
 
-  // ---------------------------------
-  // BẮT ĐẦU GIAO DIỆN CHÍNH (Đã có sẵn Tailwind)
-  // ---------------------------------
+  // BẮT ĐẦU GIAO DIỆN CHÍNH
   return (
     <ScrollView className="flex-1">
       <View className="mt-10">
@@ -421,31 +382,45 @@ export default function UserProfile({ navigation }: any) {
             {user?.fullName || "Đang tải..."}
           </Text>
 
-          {/* ✅ RATING DISPLAY */}
-          <TouchableOpacity
-            onPress={() => !isOwnProfile && setRatingModalVisible(true)}
-            className="flex-row items-center gap-2"
-            disabled={isOwnProfile}
-          >
-            {typeof averageRating === "number" ? (
-              <>
+          {/* ===== RATING + NÚT 3 CHẤM HOẶC BÚT (ĐÃ FIX 100%) ===== */}
+          <View className="flex-row items-center">
+            {/* Hiển thị sao + số đánh giá */}
+            {averageRating !== null ? (
+              <View className="flex-row items-center gap-2">
                 <StarRating
                   rating={Math.round(averageRating)}
-                  onRatingChange={() => {}}
                   editable={false}
                 />
                 <Text className="text-sm text-gray-600">
                   {averageRating.toFixed(1)} ({ratingCount} đánh giá)
                 </Text>
-              </>
+              </View>
             ) : (
               <Text className="text-sm text-gray-600">Chưa có đánh giá</Text>
             )}
 
-            {!isOwnProfile && (
-              <MaterialIcons name="edit" size={16} color="#3b82f6" />
+            {/* NÚT 3 CHẤM: chỉ hiện khi đã đánh giá + không phải chính mình */}
+            {myRating && !isOwnProfile && (
+              <TouchableOpacity
+                onPress={() => setRatingMenuVisible(true)}
+                className="ml-3 p-2 -mr-2" // p-2 để dễ bấm, -mr-2 để sát mép
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              >
+                <MaterialIcons name="more-vert" size={22} color="#555" />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+
+            {/* NÚT BÚT: chỉ hiện khi chưa đánh giá + không phải chính mình */}
+            {!myRating && !isOwnProfile && (
+              <TouchableOpacity
+                onPress={() => setRatingModalVisible(true)}
+                className="ml-3 p-2"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <MaterialIcons name="edit" size={18} color="#3b82f6" />
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View className="flex flex-row gap-3">
             <Text className="border-r border-gray-200 pr-2 text-xs text-gray-700">
@@ -481,8 +456,7 @@ export default function UserProfile({ navigation }: any) {
             </Text>
           </View>
           <View className="flex flex-row gap-1 items-center">
-            <MaterialIcons name="more-horiz" size={16} color="blue" />
-            <Text className="text-xs text-blue-600">Xem thêm</Text>
+            <Text className="text-xs text-blue-600"> Xem thêm</Text>
           </View>
         </View>
 
@@ -634,7 +608,7 @@ export default function UserProfile({ navigation }: any) {
         </Pressable>
       </Modal>
 
-      {/* ✅ RATING MODAL MỚI (Dùng Tailwind) */}
+      {/*  RATING MODAL MỚI*/}
       <Modal
         visible={ratingModalVisible}
         transparent
@@ -667,7 +641,7 @@ export default function UserProfile({ navigation }: any) {
               multiline
               value={ratingContent}
               onChangeText={setRatingContent}
-              style={{ textAlignVertical: "top" }} // Cần dùng style object cho thuộc tính này
+              style={{ textAlignVertical: "top" }}
             />
 
             <TouchableOpacity
@@ -699,6 +673,80 @@ export default function UserProfile({ navigation }: any) {
               <Text className="text-center text-gray-700 font-medium">Hủy</Text>
             </TouchableOpacity>
           </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* MODAL MENU 3 CHẤM */}
+      <Modal
+        visible={ratingMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRatingMenuVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50"
+          onPress={() => setRatingMenuVisible(false)}
+        >
+          <View className="flex-1 justify-center items-center">
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl w-72"
+            >
+              <TouchableOpacity
+                onPress={() => {
+                  setRatingMenuVisible(false);
+                  setRatingModalVisible(true);
+                }}
+                className="px-5 py-4 flex-row items-center gap-3 border-b border-gray-200"
+              >
+                <MaterialIcons name="edit" size={20} color="#666" />
+                <Text className="text-base">Chỉnh sửa đánh giá</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setRatingMenuVisible(false);
+                  Alert.alert(
+                    "Xóa đánh giá",
+                    "Bạn có chắc chắn muốn xóa đánh giá này không?",
+                    [
+                      { text: "Hủy", style: "cancel" },
+                      {
+                        text: "Xóa",
+                        style: "destructive",
+                        onPress: async () => {
+                          setLoading(true);
+                          try {
+                            const token = await AsyncStorage.getItem("token");
+                            await axios.delete(`${path}/users/${userId}/rate`, {
+                              headers: { Authorization: `Bearer ${token}` },
+                            });
+                            Alert.alert("Thành công", "Đã xóa đánh giá");
+                            await fetchAllData();
+                          } catch (err: any) {
+                            Alert.alert(
+                              "Lỗi",
+                              err.response?.data?.message || "Không thể xóa"
+                            );
+                          } finally {
+                            setLoading(false);
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+                className="px-5 py-4 flex-row items-center gap-3"
+              >
+                <MaterialIcons
+                  name="delete-outline"
+                  size={20}
+                  color="#ef4444"
+                />
+                <Text className="text-base text-red-500">Xóa đánh giá</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </ScrollView>

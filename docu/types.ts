@@ -44,7 +44,9 @@ export type RootStackParamList = {
   };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
-  UserInforScreen: undefined;
+  UserInforScreen: {
+    userId: number | string;
+  };
   EditProfileScreen: undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
@@ -54,7 +56,6 @@ export type RootStackParamList = {
   HomeAdminScreen: undefined;
   ManageProductsUserScreen: undefined;
   ManageCategoriesScreen: undefined;
-  // 👇 THÊM DÒNG NÀY
   ManageGroupPostsScreen: undefined;
 
   PostsTab: undefined;
@@ -412,4 +413,21 @@ export type StarRatingProps = {
   rating: number;
   onRatingChange?: (stars: number) => void;
   editable?: boolean;
+};
+
+export type RatingData = {
+  id: number;
+  stars: number;
+  content: string;
+  createdAt: string;
+  reviewer: {
+    id: number;
+    name: string;
+    avatar: string;
+  };
+  ratedUser?: {
+    id: number;
+    fullName: string;
+    image: string | null;
+  };
 };

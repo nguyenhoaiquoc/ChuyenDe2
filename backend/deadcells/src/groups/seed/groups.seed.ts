@@ -15,7 +15,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 1,
         name: 'Khoa Công nghệ thông tin',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về lập trình, hệ thống và mạng',
         thumbnail_url:
@@ -26,7 +26,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 2,
         name: 'Khoa Kinh tế',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về tài chính, kế toán, quản trị',
         thumbnail_url:
@@ -37,7 +37,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 3,
         name: 'Khoa Y dược',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về y học, điều dưỡng, dược phẩm',
         thumbnail_url:
@@ -48,7 +48,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 4,
         name: 'Khoa Ngôn ngữ Nhật',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về tiếng Nhật',
         thumbnail_url:
@@ -59,7 +59,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 5,
         name: 'Khoa Ngôn ngữ Anh',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về tiếng Anh',
         thumbnail_url:
@@ -70,7 +70,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 6,
         name: 'Khoa Luật',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về pháp luật, tư pháp, hành chính',
         thumbnail_url:
@@ -81,7 +81,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 7,
         name: 'Khoa Sư phạm',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành đào tạo giáo viên các cấp',
         thumbnail_url:
@@ -92,7 +92,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 8,
         name: 'Khoa Nông nghiệp',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành về trồng trọt, chăn nuôi, thủy sản',
         thumbnail_url:
@@ -103,7 +103,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 9,
         name: 'Khoa Kiến trúc',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành thiết kế, kiến trúc, đồ họa',
         thumbnail_url:
@@ -114,7 +114,7 @@ export class GroupSeedService implements OnModuleInit {
       {
         id: 10,
         name: 'Khoa Du lịch',
-        owner_id: 2,
+        owner_id: 1,
         mustApprovePosts: true,
         description: 'Nhóm ngành dịch vụ, quản lý du lịch và khách sạn',
         thumbnail_url:
@@ -137,20 +137,20 @@ export class GroupSeedService implements OnModuleInit {
       const memberExists = await groupMemberRepo.findOne({
         where: {
           group_id: savedGroup.id,
-          user_id: 2,
+          user_id: 1,
         },
       });
 
       if (!memberExists) {
         await groupMemberRepo.save({
           group_id: savedGroup.id,
-          user_id: 2,
+          user_id: 1,
           group_role_id: 2,
           pending: 3,
         });
       }
     }
 
-    console.log('✅ Seed groups completed.');
+    console.log(' Seed groups thành công!.');
   }
 }

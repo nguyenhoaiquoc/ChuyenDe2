@@ -16,16 +16,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
-import { io } from "socket.io-client";
 import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import React from "react";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [roleId, setRoleId] = useState<string | null>(null); 
+
+  // GỘP USER VÀO 1 OBJECT
+  const [user, setUser] = useState<{
+    id: string;
+    name: string;
+    avatar: string | null;
+    roleId: string | null;
+  }>({
+    id: "",
+    name: "",
+    avatar: null,
+    roleId: null,
+  });
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -33,61 +42,48 @@ export default function UserScreen() {
         const userId = await AsyncStorage.getItem("userId");
         const token = await AsyncStorage.getItem("token");
 
-        // Nếu không có userId (ví dụ: người dùng chưa đăng nhập),
-        // thử tải dữ liệu local (nếu có) rồi thoát
         if (!userId || !token) {
           const localName = await AsyncStorage.getItem("userName");
           const localAvatar = await AsyncStorage.getItem("userAvatar");
           const localRoleId = await AsyncStorage.getItem("role_id");
-          if (localName) setName(localName);
-          if (localAvatar) setAvatar(localAvatar);
-          if (localRoleId) setRoleId(localRoleId);
+
+          setUser({
+            id: userId || "",
+            name: localName || "",
+            avatar: localAvatar || null,
+            roleId: localRoleId || null,
+          });
           return;
         }
 
-        // Nếu có userId, gọi API để lấy dữ liệu MỚI NHẤT
         const res = await axios.get(`${path}/users/${userId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        // Lấy dữ liệu từ API response
         const fullName = res.data.fullName || res.data.name || "";
         const image = res.data.image || null;
-
-        // ✨ LẤY ROLE_ID TỪ API ✨
         const apiRoleId =
           res.data.roleId != null ? String(res.data.roleId) : null;
-        // Cập nhật State
-        setName(fullName);
-        setAvatar(image);
-        if (apiRoleId) {
-          setRoleId(apiRoleId); // Set state bằng dữ liệu mới từ API
-        }
 
-        // Cập nhật lại AsyncStorage bằng dữ liệu mới nhất
-        await AsyncStorage.setItem("userName", fullName);
-        if (image) {
-          await AsyncStorage.setItem("userAvatar", image);
-        } else {
-          await AsyncStorage.removeItem("userAvatar"); // Xóa nếu avatar bị gỡ
-        }
-        if (apiRoleId) {
-          await AsyncStorage.setItem("role_id", apiRoleId); // Cập nhật role_id
-        }
+        setUser({
+          id: userId,
+          name: fullName,
+          avatar: image,
+          roleId: apiRoleId,
+        });
+
+        await AsyncStorage.multiSet([
+          ["userName", fullName],
+          ["userAvatar", image || ""],
+          ["role_id", apiRoleId || ""],
+        ]);
       } catch (err) {
-        // Nếu API lỗi, TẠM DÙNG dữ liệu cũ trong Storage
-        console.log("Lỗi fetchUser, dùng fallback data:", err);
-        const localName = await AsyncStorage.getItem("userName");
-        const localAvatar = await AsyncStorage.getItem("userAvatar");
-        const localRoleId = await AsyncStorage.getItem("role_id");
-        if (localName) setName(localName);
-        if (localAvatar) setAvatar(localAvatar);
-        if (localRoleId) setRoleId(localRoleId);
+        console.log("Lỗi fetchUser:", err);
       }
     };
 
     fetchUser();
-  }, []); 
+  }, []);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f3f4f6" }}>
@@ -98,7 +94,9 @@ export default function UserScreen() {
         >
           {/* Avatar */}
           <TouchableOpacity
-            onPress={() => navigation.navigate("UserInforScreen")}
+            onPress={() =>
+              navigation.navigate("UserInforScreen", { userId: user.id })
+            }
           >
             <View
               style={{
@@ -119,11 +117,11 @@ export default function UserScreen() {
             >
               <Image
                 source={
-                  avatar
+                  user.avatar
                     ? {
-                        uri: avatar.startsWith("http")
-                          ? avatar
-                          : `${path}${avatar}`,
+                        uri: user.avatar.startsWith("http")
+                          ? user.avatar
+                          : `${path}${user.avatar}`,
                       }
                     : require("../../assets/meo.jpg")
                 }
@@ -131,7 +129,8 @@ export default function UserScreen() {
               />
             </View>
           </TouchableOpacity>
-          {/* Tên và thông tin*/}
+
+          {/* Tên */}
           <Text
             style={{
               fontSize: 20,
@@ -140,19 +139,11 @@ export default function UserScreen() {
               color: "#1f2937",
             }}
           >
-            {name || "Đang tải..."}
+            {user.name || "Đang tải..."}
           </Text>
-          <View style={{ flexDirection: "row", marginTop: 4 }}>
-            <Text style={{ color: "#6b7280", fontSize: 14, marginRight: 16 }}>
-              Người theo dõi 1
-            </Text>
-            <Text style={{ color: "#6b7280", fontSize: 14 }}>
-              Đang theo dõi 1
-            </Text>
-          </View>
         </View>
 
-        {/* --- Phần Tiện ích --- */}
+        {/* --- Tiện ích --- */}
         <View style={{ paddingHorizontal: 16 }}>
           <Text
             style={{
@@ -164,6 +155,7 @@ export default function UserScreen() {
           >
             Tiện ích
           </Text>
+
           <View
             style={{
               backgroundColor: "white",
@@ -178,14 +170,16 @@ export default function UserScreen() {
             <UtilityItem
               icon="person-outline"
               title="Tài khoản của tôi"
-              onPress={() => navigation.navigate("UserInforScreen")}
+              onPress={() =>
+                navigation.navigate("UserInforScreen", { userId: user.id })
+              }
             />
 
-            {roleId === "1" && (
+            {user.roleId === "1" && (
               <UtilityItem
                 icon="shield-checkmark-outline"
                 title="Quản lý Admin"
-                color="#3b82f6" // Màu xanh cho nổi bật
+                color="#3b82f6"
                 onPress={() => navigation.navigate("HomeAdminScreen")}
               />
             )}
@@ -218,29 +212,27 @@ export default function UserScreen() {
             <UtilityItem
               icon="log-out-outline"
               title="Đăng xuất"
-              isLast={true}
+              isLast
               color="red"
               onPress={async () => {
                 try {
                   const socket = getSocket();
                   if (socket) {
-                    console.log("⚠️ Gửi sự kiện logout");
-                    socket.emit("logout"); // Gửi sự kiện logout đến backend
-                    disconnectSocket(); // Ngắt kết nối socket hiện tại
-                    console.log("✅ Socket đã ngắt kết nối!");
+                    socket.emit("logout");
+                    disconnectSocket();
                   }
                 } catch (err) {
-                  console.log("⚠️ Lỗi khi gửi sự kiện logout:", err);
+                  console.log("Lỗi socket logout:", err);
                 }
 
-                // ✨ 3. CẬP NHẬT LOGIC ĐĂNG XUẤT (THÊM "role_id") ✨
                 await AsyncStorage.multiRemove([
                   "token",
                   "userId",
                   "userName",
                   "userAvatar",
-                  "role_id", // 👈 PHẢI THÊM CÁI NÀY
+                  "role_id",
                 ]);
+
                 navigation.reset({
                   index: 0,
                   routes: [{ name: "LoginScreen" }],
@@ -254,6 +246,7 @@ export default function UserScreen() {
     </SafeAreaView>
   );
 }
+
 function UtilityItem({
   icon,
   title,
@@ -289,7 +282,7 @@ function UtilityItem({
         <Ionicons name={icon} size={24} color={iconColor} />
         <Text
           style={[
-            { marginLeft: 16, fontSize: 16, color: textColor }, 
+            { marginLeft: 16, fontSize: 16, color: textColor },
             textStyle,
           ]}
         >
