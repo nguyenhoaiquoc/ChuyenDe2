@@ -15,6 +15,7 @@ import { User } from 'src/entities/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { GroupSeedService } from './seed/groups.seed';
 import { GroupRoleSeedService } from './seed/group-role.seed';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { GroupRoleSeedService } from './seed/group-role.seed';
     forwardRef(() => FavoritesModule),
     forwardRef(() => NotificationModule),
     forwardRef(() => AuthModule),
+    forwardRef(() => ChatModule),
   ],
   providers: [GroupService, GroupRoleSeedService, GroupSeedService],
   controllers: [GroupController],
