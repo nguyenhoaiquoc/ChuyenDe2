@@ -56,6 +56,7 @@ import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupDeepLink } from './src/navigation/DeepLinkHandler';
+import { ChatProvider } from "./components/ChatContext";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -68,7 +69,8 @@ export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NotificationProvider>
-        <NavigationContainer>
+        <ChatProvider>
+             <NavigationContainer>
           <StatusBar hidden />
           <Stack.Navigator
             initialRouteName="Home"
@@ -213,6 +215,8 @@ export default function App() {
             />
           </Stack.Navigator>
         </NavigationContainer>
+        </ChatProvider>
+     
       </NotificationProvider>
     </GestureHandlerRootView>
   );

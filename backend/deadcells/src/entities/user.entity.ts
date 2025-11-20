@@ -102,7 +102,13 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true, name: 'reset_token_expires_at' })
   resetTokenExpiresAt?: Date | null;
+@Column({ default: false })
+is_cccd_verified: boolean;
+@Column({ type: 'json', nullable: true })
+cccd_verified_data: any;
 
+@Column({ type: 'json', nullable: true })
+cccd_pending_data: any;
   /** --------- Bảo mật bổ sung ---------
    *  - Thời điểm đổi mật khẩu gần nhất -> dùng để vô hiệu JWT cũ (nếu issuedAt < passwordChangedAt)
    */

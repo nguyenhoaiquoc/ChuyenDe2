@@ -19,6 +19,8 @@ import { io, Socket } from "socket.io-client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { path } from "../../config";
 import React from "react";
+import { useChat } from "../../components/ChatContext";
+import { useIsFocused } from "@react-navigation/native";
 
 type Props = { navigation: any; route: any };
 
@@ -33,6 +35,12 @@ type UiMsg = {
   edited?: boolean;
   createdAtISO?: string;
 };
+type HeaderMeta = {
+  room_type?: "PAIR" | "GROUP";
+  partner?: { name?: string; avatar?: string } | null;
+  group?: { name?: string; thumbnail_url?: string } | null;
+};
+
 
 export default function ChatRoomScreen({ navigation, route }: Props) {
   const {
@@ -60,10 +68,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     })();
   }, []);
 
-  const [headerMeta, setHeaderMeta] = useState<{
-    name?: string;
-    avatar?: string;
-  } | null>(null);
+const [headerMeta, setHeaderMeta] = useState<HeaderMeta | null>(null);
+
   const [contextVisible, setContextVisible] = useState(false);
   const [contextMsg, setContextMsg] = useState<UiMsg | null>(null);
   const [messages, setMessages] = useState<UiMsg[]>([]);
@@ -76,6 +82,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const scrollViewRef = useRef<ScrollView>(null);
   const socketRef = useRef<Socket | null>(null);
   const inputRef = useRef<TextInput>(null);
+const { markRoomAsRead, setUnreadCount } = useChat();
+
 
   const [replyTarget, setReplyTarget] = useState<null | {
     id: string;
@@ -96,12 +104,17 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
 
   const DEFAULT_AVATAR =
     "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-  const otherUserId = otherUserIdFromParams ?? null;
-  const otherUserName =
-    otherUserNameFromParams ?? headerMeta?.name ?? "Người dùng";
-  const otherUserAvatar =
-    otherUserAvatarFromParams ?? headerMeta?.avatar ?? DEFAULT_AVATAR;
+   const isPair = !!otherUserIdFromParams || headerMeta?.room_type === "PAIR";
 
+const displayName = isPair
+  ? otherUserNameFromParams ?? headerMeta?.partner?.name ?? "Người dùng"
+  : headerMeta?.group?.name ?? "Nhóm ẩn danh";
+
+const displayAvatar = isPair
+  ? otherUserAvatarFromParams ?? headerMeta?.partner?.avatar ?? DEFAULT_AVATAR
+  : headerMeta?.group?.thumbnail_url ?? DEFAULT_AVATAR;
+
+  const otherUserId = otherUserIdFromParams ?? null;
   const searchKeyword = (searchKeywordFromParams ?? "").toString().trim();
 
   const timeAgo = (dateString?: string) => {
@@ -243,6 +256,17 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       socket.disconnect();
     };
   }, [jwt, roomId, selfId, otherUserId]);
+  const isFocused = useIsFocused();
+
+useEffect(() => {
+  if (!socketRef.current || !selfId || !roomId) return;
+
+  if (isFocused) {
+    // Khi vào room → đánh dấu đã đọc
+    markRoomAsRead(roomId);
+    setUnreadCount(0); // reset local
+  }
+}, [roomId, selfId, isFocused]);
 
   // Online status
   useEffect(() => {
@@ -261,22 +285,24 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   }, [jwt, otherUserId]);
 
   // Header meta (khi thiếu)
-  useEffect(() => {
-    if (!jwt || !roomId) return;
-    if (otherUserNameFromParams) return;
-    axios
-      .get(`${path}/chat/room/${roomId}/meta`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      })
-      .then((res) => {
-        const meta = res.data?.data;
-        setHeaderMeta({
-          name: meta?.partner?.name,
-          avatar: meta?.partner?.avatar,
-        });
-      })
-      .catch(() => {});
-  }, [jwt, roomId, otherUserNameFromParams]);
+useEffect(() => {
+  if (!jwt || !roomId) return;
+
+ axios
+  .get(`${path}/chat/room/${roomId}/meta`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  })
+  .then((res) => {
+    const meta = res.data?.data;
+    setHeaderMeta({
+      room_type: meta?.room_type,
+      partner: meta?.partner ?? null,
+      group: meta?.group ?? null,
+    });
+  })
+  .catch(() => {});
+
+}, [jwt, roomId]);
 
   // Load messages (around anchor nếu có)
   useEffect(() => {
@@ -309,11 +335,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           });
         }
 
-        await axios.post(
-          `${path}/chat/mark-read/${roomId}`,
-          {},
-          { headers: { Authorization: `Bearer ${jwt}` } }
-        );
+      
       } catch (e) {
         try {
           const res = await axios.get(`${path}/chat/history/${roomId}`, {
@@ -435,7 +457,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       if (replyTarget) {
         socketRef.current?.emit("replyMessage", {
           room_id: String(roomId),
-          receiver_id: String(otherUserId || ""),
+          receiver_id: otherUserId ? Number(otherUserId) : null, 
           content: content.trim(),
           reply_to_id: Number(replyTarget.id),
           product_id: productFromParams?.id, // thêm dòng này
@@ -444,7 +466,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
         socketRef.current?.emit("sendMessage", {
           room_id: String(roomId),
           sender_id: String(selfId),
-          receiver_id: String(otherUserId || ""),
+          receiver_id: otherUserId ? Number(otherUserId) : null, 
           content: content.trim(),
           media_url: imageUrl ?? undefined,
           product_id: productFromParams?.id, // thêm dòng này
@@ -516,10 +538,18 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     };
   }
 
-  function pushOneToList(msg: any) {
-    const ui = mapMsgToUi(msg);
-    setMessages((prev) => [...prev, ui]);
-  }
+function pushOneToList(msg: any) {
+  const ui = mapMsgToUi(msg);
+
+  setMessages((prev) => {
+    // 🚫 Nếu đã có message với id này rồi thì bỏ qua, không push nữa
+    const existed = prev.some((m) => m.id === ui.id);
+    if (existed) return prev;
+
+    return [...prev, ui];
+  });
+}
+
 
   // ===== Highlight helpers =====
   function splitHighlight(text: string, keyword: string) {
@@ -588,6 +618,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
       </View>
     );
   };
+  
 
   if (!jwt || !selfId) {
     return (
@@ -624,10 +655,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
           >
             <Image
               className="w-[46px] h-[46px] rounded-full"
-              source={{ uri: otherUserAvatar }}
+  source={{ uri: displayAvatar }}
             />
             <View>
-              <Text className="font-semibold">{otherUserName}</Text>
+              <Text className="font-semibold">{displayName}</Text>
               <Text className="text-gray-400 text-xs">
                 {onlineStatus.online
                   ? "Đang hoạt động"
@@ -659,7 +690,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
               {/* Ô trích (mờ) */}
               {msg.replyToId && !msg.isRecalled
                 ? renderReplyPreview(msg)
-                : null}
+                : null} 
 
               {/* Bong bóng */}
               <TouchableOpacity
@@ -692,8 +723,10 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                             {" "}
                             (đã chỉnh sửa)
                           </Text>
+                          
                         ) : null}
                       </Text>
+                      
                     ) : null}
                   </>
                 )}
