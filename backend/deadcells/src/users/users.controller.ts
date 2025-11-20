@@ -40,20 +40,20 @@ export class UsersController {
   /**
    * Cập nhật thông tin user (profile, avatar, cover image)
    */
-@Patch(':id')
-async updateUser(
-  @Param('id') id: string,
-  @Body() data: { image?: string; coverImage?: string },
-) {
-  // Nếu không có dữ liệu gì gửi lên
-  if (!data || Object.keys(data).length === 0) {
-    throw new BadRequestException('Không có dữ liệu để cập nhật');
+  @Patch(':id')
+  async updateUser(
+    @Param('id') id: string,
+    @Body() data: { image?: string; coverImage?: string },
+  ) {
+    // Nếu không có dữ liệu gì gửi lên
+    if (!data || Object.keys(data).length === 0) {
+      throw new BadRequestException('Không có dữ liệu để cập nhật');
+    }
+
+    // Gọi service để cập nhật user
+    return this.usersService.updateUser(+id, data);
   }
 
-  // Gọi service để cập nhật user
-  return this.usersService.updateUser(+id, data);
-}
- 
   @Get(':id/verify-cccd')
   @UseGuards(AuthGuard('jwt'))
   async getCCCDInfo(@Param('id') id: string, @Req() req: any) {
@@ -94,8 +94,7 @@ async updateUser(
         filename: (req, file, cb) => {
           const userId = (req as any).user?.id || 'unknown';
           const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const filename = `${userId}-${uniqueSuffix}${extname(file.originalname)}`;
-          cb(null, filename);
+          cb(null, `${userId}-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
       fileFilter: (req, file, cb) => {
@@ -104,9 +103,7 @@ async updateUser(
         }
         cb(null, true);
       },
-      limits: {
-        fileSize: 5 * 1024 * 1024, // Max 5MB
-      },
+      limits: { fileSize: 5 * 1024 * 1024 },
     }),
   )
   async verifyCCCD(
@@ -115,41 +112,39 @@ async updateUser(
     @Body('parsed') parsedString: string,
     @Req() req: any,
   ) {
-    console.log(' [DEBUG] req.user:', req.user);
-    console.log(' [DEBUG] req.headers.authorization:', req.headers.authorization);
-
-    if (!req.user) {
-      throw new UnauthorizedException('Token không hợp lệ hoặc không có user');
-    }
+    if (!req.user) throw new UnauthorizedException('Token không hợp lệ hoặc không có user');
     const userId = req.user.id;
     this.logger.log(`User ${userId} đang xác thực CCCD...`);
 
-
-
-    // ✅ Parse dữ liệu từ QR/form
+    // Parse JSON
     let parsed: any = {};
     try {
       parsed = typeof parsedString === 'string'
         ? JSON.parse(parsedString)
         : parsedString || {};
     } catch (e) {
-      this.logger.error('Parse JSON error:', e);
       throw new BadRequestException('Dữ liệu CCCD không hợp lệ (JSON parse error)');
     }
 
-    // ✅ Validate: Phải có ít nhất 1 trong 2 (dữ liệu hoặc ảnh)
     if ((!parsed || Object.keys(parsed).length === 0) && !file) {
       throw new BadRequestException('Cần cung cấp dữ liệu CCCD hoặc ảnh CCCD');
     }
+
+    // Xử lý DOB
     let dob: string | undefined = undefined;
     if (parsed.dob) {
-      const dateObj = parseISO(parsed.dob); // parse chuỗi
-      if (isValid(dateObj)) {
-        dob = format(dateObj, 'yyyy-MM-dd'); // chuẩn Postgres
+      if (/^\d{8}$/.test(parsed.dob)) {
+        const day = parsed.dob.slice(0, 2);
+        const month = parsed.dob.slice(2, 4);
+        const year = parsed.dob.slice(4, 8);
+        dob = `${year}-${month}-${day}`;
+      } else {
+        const dateObj = parseISO(parsed.dob);
+        if (isValid(dateObj)) dob = format(dateObj, 'yyyy-MM-dd');
       }
     }
 
-    // ✅ Chuẩn bị dữ liệu để gửi vào service
+    // Chuẩn bị dữ liệu CCCD
     const cccdData = {
       fullName: parsed.fullName || undefined,
       citizenId: parsed.citizenId || undefined,
@@ -159,59 +154,49 @@ async updateUser(
       address: parsed.address || undefined,
       imageUrl: file ? `/uploads/cccd/${file.filename}` : undefined,
     };
-     const user = await this.usersService.findOne(userId);
 
-    // ✅ Gọi service xử lý
+    const user = await this.usersService.findOne(userId);
+
     try {
-       if (!user.is_verified && !user.cccd_pending_data) {
-      const updated = await this.usersService.verifyCCCD(userId, cccdData);
-
-      this.logger.log(`User ${userId} xác thực CCCD thành công!`);
-
-      return {
-        success: true,
-        message: 'Xác thực CCCD thành công ✅',
-        user: {
-          id: updated.id,
-          fullName: updated.fullName,
-          citizenId: updated.citizenId,
-          gender: updated.gender,
-          dob: updated.dob,
-          hometown: updated.hometown,
-          verified: updated.is_verified,
-          verifiedAt: updated.verifiedAt,
-          image: updated.image,
-        },
-      };
-    }else {
-      // Lần 2 trở đi: tạo pending chờ admin
-      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-      const pendingData = { ...cccdData, submittedAt: new Date() };
-      const updated = await this.usersService.saveCCCDPending(userId, pendingData);
-      return {
-        success: true,
-        message: 'Thông tin CCCD của bạn đang chờ admin duyệt',
-        user: {
-          id: updated.id,
-          verified: updated.is_verified,
-          pending: !!updated.cccd_pending_data,
-          submittedAt: updated.cccd_pending_data?.submittedAt,
-        },
-      };
-    }
-  }  
-    catch (error) {
-      this.logger.error(`Lỗi xác thực CCCD cho user ${userId}:`, error);
-
-      // ✅ Xóa file đã upload nếu có lỗi
-      if (file && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
+      // Nếu user chưa verified và chưa pending => xác thực trực tiếp
+      if (!user.is_verified && !user.cccd_pending_data) {
+        const updated = await this.usersService.verifyCCCD(userId, cccdData);
+        this.logger.log(`User ${userId} xác thực CCCD thành công!`);
+        return {
+          success: true,
+          message: 'Xác thực CCCD thành công ✅',
+          user: {
+            id: updated.id,
+            fullName: updated.fullName,
+            citizenId: updated.citizenId,
+            gender: updated.gender,
+            dob: updated.dob,
+            hometown: updated.hometown,
+            verified: updated.is_verified,
+            verifiedAt: updated.verifiedAt,
+            image: updated.image,
+          },
+        };
+      } else {
+        // Lần 2 trở đi: tạo pending chờ admin duyệt
+        const pendingData = { ...cccdData, submittedAt: new Date() };
+        const updated = await this.usersService.saveCCCDPending(userId, pendingData);
+        this.logger.log(`User ${userId} gửi CCCD chờ admin duyệt.`);
+        return {
+          success: true,
+          message: 'Thông tin CCCD của bạn đang chờ admin duyệt',
+          user: {
+            id: updated.id,
+            verified: updated.is_verified,
+            pending: !!updated.cccd_pending_data,
+            submittedAt: updated.cccd_pending_data?.submittedAt,
+          },
+        };
       }
-
-      throw error; // Re-throw để NestJS xử lý
+    } catch (error) {
+      this.logger.error(`Lỗi xác thực CCCD cho user ${userId}:`, error);
+      throw error;
     }
-    
   }
 
-  
 }

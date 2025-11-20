@@ -161,12 +161,9 @@ export default function VerifyCCCDScreen({ navigation }: any) {
     });
     const userInfo = userRes.data;
 
-    // 3️⃣ Kiểm tra trạng thái hiện tại
-    const isVerified = userInfo.is_verified; // đã xác thực
-    const hasPending = userInfo.pending_cccd; // đang chờ admin
-
-    // 4️⃣ Chọn endpoint phù hợp
-    const endpoint = !isVerified && !hasPending
+    // 3️⃣ Xác định lần đầu hay lần 2
+    const isVerifiedBefore = userInfo.is_cccd_verified; // dựa theo server
+    const endpoint = isVerifiedBefore
       ? `${path}/users/${userId}/verify-cccd`
       : `${path}/users/${userId}/verify-cccd`;
 
