@@ -38,7 +38,6 @@ export class GroupService {
     private readonly notificationService: NotificationService,
     private readonly favoritesService: FavoritesService,
     private readonly chatService: ChatService, // ⭐ Inject ở đây
-
   ) {}
 
   // ==================== UTILITY FUNCTIONS ====================
@@ -1010,7 +1009,7 @@ export class GroupService {
     };
   }
 
- // Thay thế hàm cũ bằng hàm này
+  // Thay thế hàm cũ bằng hàm này
   async getMyPublicJoinedGroups(userId: number) {
     // 1. Dùng hàm find của TypeORM để lấy dữ liệu an toàn nhất
     const members = await this.groupMemberRepo.find({
