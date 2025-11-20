@@ -53,14 +53,7 @@ async updateUser(
   // Gọi service để cập nhật user
   return this.usersService.updateUser(+id, data);
 }
-  /**
-   * ✅ Xác thực CCCD/CMND - Scan QR hoặc upload ảnh
-   * Route: POST /users/verify-cccd
-   * Header: Authorization: Bearer {token}
-   * Body (FormData):
-   *   - citizenCard: File (ảnh CCCD)
-   *   - parsed: JSON string (dữ liệu đã parse từ QR)
-   */
+ 
   @Get(':id/verify-cccd')
   @UseGuards(AuthGuard('jwt'))
   async getCCCDInfo(@Param('id') id: string, @Req() req: any) {
@@ -166,9 +159,11 @@ async updateUser(
       address: parsed.address || undefined,
       imageUrl: file ? `/uploads/cccd/${file.filename}` : undefined,
     };
+     const user = await this.usersService.findOne(userId);
 
     // ✅ Gọi service xử lý
     try {
+       if (!user.is_verified && !user.cccd_pending_data) {
       const updated = await this.usersService.verifyCCCD(userId, cccdData);
 
       this.logger.log(`User ${userId} xác thực CCCD thành công!`);
@@ -188,7 +183,24 @@ async updateUser(
           image: updated.image,
         },
       };
-    } catch (error) {
+    }else {
+      // Lần 2 trở đi: tạo pending chờ admin
+      if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      const pendingData = { ...cccdData, submittedAt: new Date() };
+      const updated = await this.usersService.saveCCCDPending(userId, pendingData);
+      return {
+        success: true,
+        message: 'Thông tin CCCD của bạn đang chờ admin duyệt',
+        user: {
+          id: updated.id,
+          verified: updated.is_verified,
+          pending: !!updated.cccd_pending_data,
+          submittedAt: updated.cccd_pending_data?.submittedAt,
+        },
+      };
+    }
+  }  
+    catch (error) {
       this.logger.error(`Lỗi xác thực CCCD cho user ${userId}:`, error);
 
       // ✅ Xóa file đã upload nếu có lỗi
@@ -198,6 +210,8 @@ async updateUser(
 
       throw error; // Re-throw để NestJS xử lý
     }
+    
   }
+
   
 }

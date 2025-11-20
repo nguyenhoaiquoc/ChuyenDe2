@@ -14,24 +14,24 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product; isApproved?: boolean } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
-    | {
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   ChooseSubCategoryScreen:
-    | {
-        category: Category;
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    category: Category;
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   PostFormScreen:
-    | {
-        category: { id: string; name: string };
-        subCategory: { id: string; name: string };
-      }
-    | undefined;
+  | {
+    category: { id: string; name: string };
+    subCategory: { id: string; name: string };
+  }
+  | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -40,19 +40,19 @@ export type RootStackParamList = {
   FeedbackScreen: undefined;
   UserScreen: undefined;
   VerifyStudentScreen: undefined;
-  
+
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
   ImageGalleryScreen?: {
-  onSelect?: (uri: string) => Promise<void>;
-};
+    onSelect?: (uri: string) => Promise<void>;
+  };
   UserInforScreen: {
     onUpdate?: (updatedUser: any) => void; // cho phép truyền callback
   } | undefined;
-   EditProfileScreen: {
+  EditProfileScreen: {
     onUpdate?: (updatedUser: any) => void;
   } | undefined;
   SellProductScreen: undefined;
@@ -61,11 +61,12 @@ export type RootStackParamList = {
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
+  AdminVerification: undefined;
   ManageProductsScreen: undefined;
-SearchProduct: undefined;
-SearchResultScreen: {
-  query: string;
-};
+  SearchProduct: undefined;
+  SearchResultScreen: {
+    query: string;
+  };
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
   GroupMembersScreen: { groupId: number; isLeader: boolean };
@@ -370,5 +371,5 @@ export type GroupType = {
   memberCount: string;
   isPublic: boolean;
   mustApprovePosts?: boolean;
-  
+
 };

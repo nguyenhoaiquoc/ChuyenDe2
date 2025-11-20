@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -141,75 +142,96 @@ export default function VerifyCCCDScreen({ navigation }: any) {
   };
 
   /** Send parsed & optional photo to server */
-  const handleSendToServer = async () => {
-    if (!parsed && !photoUri) return Alert.alert("Chưa có dữ liệu");
+ const handleSendToServer = async () => {
+  if (!parsed && !photoUri) return Alert.alert("Chưa có dữ liệu");
 
-    try {
-      setLoading(true);
-      const token = await AsyncStorage.getItem("token");
-      const userId = await AsyncStorage.getItem("userId");
+  try {
+    setLoading(true);
 
-      console.log("Token:", token);
-      console.log("UserId:", userId);
+    // 1️⃣ Lấy token và userId từ AsyncStorage
+    const token = await AsyncStorage.getItem("token");
+    const userIdStr = await AsyncStorage.getItem("userId");
+    const userId = Number(userIdStr);
 
-      if (!token || !userId) return Alert.alert("Cần đăng nhập");
-      let dobIso: string | undefined = undefined;
-      if (parsed?.dob) {
-        // Nếu dob dạng ddMMyyyy, convert sang yyyy-MM-dd
-        if (/^\d{8}$/.test(parsed.dob)) {
-          const day = parsed.dob.slice(0, 2);
-          const month = parsed.dob.slice(2, 4);
-          const year = parsed.dob.slice(4, 8);
-          dobIso = `${year}-${month}-${day}`;
-        } else {
-          dobIso = parsed.dob; // nếu đã ISO
-        }
+    if (!token || !userId) return Alert.alert("Cần đăng nhập");
+
+    // 2️⃣ Fetch thông tin user mới nhất từ server
+    const userRes = await axios.get(`${path}/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const userInfo = userRes.data;
+
+    // 3️⃣ Kiểm tra trạng thái hiện tại
+    const isVerified = userInfo.is_verified; // đã xác thực
+    const hasPending = userInfo.pending_cccd; // đang chờ admin
+
+    // 4️⃣ Chọn endpoint phù hợp
+    const endpoint = !isVerified && !hasPending
+      ? `${path}/users/${userId}/verify-cccd`
+      : `${path}/users/${userId}/verify-cccd`;
+
+    // 5️⃣ Chuẩn hóa DOB nếu cần
+    let dobIso: string | undefined;
+    if (parsed?.dob) {
+      if (/^\d{8}$/.test(parsed.dob)) {
+        const day = parsed.dob.slice(0, 2);
+        const month = parsed.dob.slice(2, 4);
+        const year = parsed.dob.slice(4, 8);
+        dobIso = `${year}-${month}-${day}`;
+      } else {
+        dobIso = parsed.dob;
       }
-
-      // Map placeOfOrigin sang hometown nếu có
-      const parsedForServer = parsed
-        ? { ...parsed, hometown: parsed.hometown || parsed.placeOfOrigin }
-        : undefined;
-
-      const form = new FormData();
-      if (photoUri) form.append("citizenCard", { uri: photoUri, name: "cccd.jpg", type: "image/jpeg" } as any);
-      if (parsed) {
-        const payload = {
-          ...parsed,
-          hometown: parsed.hometown || parsed.placeOfOrigin,
-          gender: parsed.gender,       // nếu backend chấp nhận string "Nam"/"Nữ"
-          dob: dobIso,
-         is_cccd_verified: true,         // định dạng ddmmyyyy hoặc convert nếu cần
-        };
-        // Thêm log ở đây (ngay trước axios.post)
-        console.log("DỮ LIỆU GỬI LÊN SERVER:", {
-          parsed: parsed,
-          payload: payload,
-          photoUri: photoUri ? "Có ảnh" : "Không có ảnh",
-          userId: userId,
-        });
-        form.append("parsed", JSON.stringify(payload));
-      }
-      const res = await axios.post(`${path}/users/${userId}/verify-cccd`, form, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
-      });
-
-      Alert.alert("Thành công", "Thông tin đã được gửi lên server.");
-
-
-      navigation.goBack();
-    } catch (err: any) {
-
-      const msg =
-    err.response?.data?.message ||
-    err.response?.data?.error ||
-    "Không thể gửi dữ liệu. Vui lòng thử lại.";
-
-  Alert.alert("Thông báo", msg);
-    } finally {
-      setLoading(false);
     }
-  };
+
+    // 6️⃣ Tạo FormData
+    const form = new FormData();
+    if (photoUri) {
+      form.append("citizenCard", { uri: photoUri, name: "cccd.jpg", type: "image/jpeg" } as any);
+    }
+    if (parsed) {
+      const payload = {
+        ...parsed,
+        hometown: parsed.hometown || parsed.placeOfOrigin,
+        gender: parsed.gender,
+        dob: dobIso,
+      };
+      form.append("parsed", JSON.stringify(payload));
+    }
+
+    // 7️⃣ Gửi request lên server
+    const res = await axios.post(endpoint, form, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    // 8️⃣ Thông báo kết quả
+    Alert.alert(
+      userInfo.is_verified
+        ? "Thông tin đang chờ admin phê duyệt"
+        : "Xác thực thành công",
+      userInfo.is_verified
+        ? "Thông tin của bạn đang đợi admin phê duyệt."
+        : "Thông tin đã được xác thực thành công."
+    );
+
+    // 9️⃣ Cập nhật AsyncStorage
+    await AsyncStorage.setItem("userInfo", JSON.stringify({
+      ...userInfo,
+      is_verified: !userInfo.is_verified ? true : userInfo.is_verified,
+      pending_cccd: userInfo.is_verified ? true : false,
+    }));
+
+    navigation.goBack();
+
+  } catch (err: any) {
+    const msg = err.response?.data?.message || err.response?.data?.error || "Không thể gửi dữ liệu. Vui lòng thử lại.";
+    Alert.alert("Thông báo", msg);
+  } finally {
+    setLoading(false);
+  }
+};
 
   /** UI - Permission check */
   if (!permission) {
@@ -323,3 +345,4 @@ const styles = StyleSheet.create({
   secondaryBtn: { backgroundColor: "#f1f5f9", paddingVertical: 10, paddingHorizontal: 14, borderRadius: 8, alignItems: "center" },
   secondaryText: { color: "#1f2937", fontWeight: "700" },
 });
+

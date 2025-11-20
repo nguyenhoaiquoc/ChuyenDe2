@@ -115,7 +115,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Quản lý Người Dùng"
             subtitle="Khóa/mở khóa tài khoản vi phạm"
             color="bg-red-600"
-            onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageUsersScreen")
+            onPress={() => navigation.navigate('AdminVerification')} 
           />
 
           {/* 3. Quản lý báo cáo */}

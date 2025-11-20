@@ -46,12 +46,12 @@ import PostGroupFormScreen from './screens/groups/PostGroupFormScreen';
 import SearchProduct from './screens/products/SearchProduct';
 import SearchResultScreen from './screens/products/SearchResultScreen';
 import VerifyStudentScreen from './screens/profile/VerifyStudentScreen';
-
 // import TestApi from './screens/TestApi';
 import MyGroupPostsScreen from './screens/groups/crud/MyGroupPostsScreen';
 import GroupMembersScreen from './screens/groups/crud/GroupMembersScreen';
 import ApprovePostsScreen from './screens/groups/crud/ApprovePostsScreen';
 import EditGroupScreen from './screens/groups/crud/EditGroupScreen';
+import AdminVerificationScreen from './screens/admin/user/AdminVerificationScreen'
 
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -102,12 +102,13 @@ export default function App() {
           <Stack.Screen name="VerifyStudentScreen" component={VerifyStudentScreen} />
           {/* <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} /> */}
           <Stack.Screen name="GroupDetailScreen" component={GroupDetailScreen} />
-           <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
-        <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
-        <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
-        <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
-        <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
-        <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+          <Stack.Screen name="NotificationScreen" component={NotificationScreen} />
+          <Stack.Screen name="PostGroupFormScreen" component={PostGroupFormScreen} />
+          <Stack.Screen name="MyGroupPostsScreen" component={MyGroupPostsScreen} />
+          <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
+          <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
+          <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+          <Stack.Screen name="AdminVerification" component={AdminVerificationScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

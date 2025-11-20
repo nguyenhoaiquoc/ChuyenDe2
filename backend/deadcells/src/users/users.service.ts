@@ -107,4 +107,31 @@ export class UsersService {
       
     return this.updateUser(userId, updateData);
   }
+ async saveCCCDPending(
+  userId: number,
+  pendingData: {
+    fullName?: string;
+    citizenId?: string;
+    gender?: string;
+    dob?: string;
+    hometown?: string;
+    address?: string;
+    imageUrl?: string;
+    submittedAt?: Date;
+  },
+): Promise<User> {
+  const user = await this.findOne(userId);
+
+  if (user.cccd_pending_data) {
+    // Nếu đã có pending, không overwrite
+    throw new BadRequestException('Thông tin CCCD của bạn đang chờ admin duyệt');
+  }
+
+  user.cccd_pending_data = {
+    ...pendingData,
+    submittedAt: pendingData.submittedAt || new Date(),
+  };
+
+  return this.userRepo.save(user);
+}
 }
