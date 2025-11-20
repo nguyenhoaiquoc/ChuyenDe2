@@ -115,6 +115,10 @@ const SoldRoute = () => (
     </Text>
   </View>
 );
+<<<<<<< HEAD
+=======
+
+>>>>>>> 71fbeb87f962df5a107cb9851723f04851893807
 
 type UserProfileData = {
   id: number;
@@ -153,7 +157,13 @@ export default function UserProfile({ navigation }: any) {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+<<<<<<< HEAD
   const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
+=======
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [otherReason, setOtherReason] = useState("");
+>>>>>>> 71fbeb87f962df5a107cb9851723f04851893807
 
   const menuItems: MenuItem[] = [
     { id: 1, label: "Hình đại diện sản phẩm" },
@@ -223,6 +233,76 @@ export default function UserProfile({ navigation }: any) {
   const handleSubmitRating = async () => {
     if (selectedStars === 0) {
       Alert.alert("Thông báo", "Vui lòng chọn số sao đánh giá");
+    const fetchCurrentUser = async () => {
+      const idStr = await AsyncStorage.getItem("userId");
+      if (idStr) {
+        setCurrentUserId(Number(idStr));
+      }
+    };
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    // Phải có cả 2 ID mới kiểm tra được
+    if (currentUserId && user?.id) {
+      const followingId = user.id; // ID người ta
+      axios.get(
+        `${path}/follow/status?followerId=${currentUserId}&followingId=${followingId}`
+      )
+        .then(res => {
+          setIsFollowing(res.data.isFollowing);
+        })
+        .catch(err => {
+          console.log("Lỗi check follow status:", err);
+        });
+    }
+  }, [currentUserId, user]); // Chạy lại khi 1 trong 2 ID này có
+
+  const handleToggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
+  };
+
+  const handleToggleFollow = async () => {
+    if (!currentUserId || !user?.id) {
+      Alert.alert("Lỗi", "Không thể theo dõi, vui lòng thử lại.");
+      return;
+    }
+
+    // Kiểm tra xem có đang tự follow mình không
+    if (currentUserId === Number(user.id)) {
+      Alert.alert("Lỗi", "Bạn không thể tự theo dõi chính mình.");
+      return;
+    }
+
+    const followingId = user.id;
+
+    // Cập nhật UI trước (Optimistic Update)
+    setIsFollowing(prev => !prev);
+
+    try {
+      // Gọi API (Backend)
+      await axios.post(`${path}/follow/toggle`, {
+        followerId: currentUserId,
+        followingId: followingId,
+      });
+    } catch (err: any) {
+      console.log("Lỗi khi toggle follow:", err.response?.data || err.message);
+      // Hoàn tác lại UI nếu lỗi
+      setIsFollowing(prev => !prev);
+      Alert.alert("Lỗi", "Không thể thay đổi trạng thái theo dõi.");
+    }
+  };
+
+
+
+  const handleSubmitReport = async () => {
+    if (selectedIds.length === 0) return;
+
+    const reporterId = await AsyncStorage.getItem("userId");
+    if (!reporterId) {
+      Alert.alert("Lỗi", "Bạn cần đăng nhập để báo cáo.");
       return;
     }
     setLoading(true);
@@ -233,6 +313,34 @@ export default function UserProfile({ navigation }: any) {
       setLoading(false);
       return;
     }
+    // Lấy lý do chuẩn
+    const standardReasons = selectedIds
+      .filter(id => id !== 4) // Lọc bỏ ID 4 (Lý do khác)
+      .map((id) => menuItems.find((m) => m.id === id)?.label)
+      .filter(Boolean); // Lọc bỏ undefined
+
+    // Kiểm tra lý do khác
+    if (selectedIds.includes(4)) {
+      if (otherReason.trim() === "") {
+        Alert.alert("Lỗi", "Vui lòng nhập nội dung cho 'Lý do khác'.");
+        return; // Chặn submit nếu chọn "Lý do khác" mà không nhập
+      }
+      standardReasons.push(otherReason.trim()); // Thêm lý do custom vào mảng
+    }
+
+    // (Đã kiểm tra ở trên, nhưng check lại cho chắc)
+    if (standardReasons.length === 0) {
+      Alert.alert("Lỗi", "Vui lòng chọn lý do.");
+      return;
+    }
+
+    const data = {
+      product_id: productId,
+      reporter_id: Number(reporterId),
+      reported_user_id: userId,
+      reason: standardReasons.join(", "), // Nối tất cả lý do lại
+      created_at: new Date().toISOString(),
+    };
 
     try {
       const endpoint = `${path}/users/${userId}/rate`;
@@ -266,6 +374,7 @@ export default function UserProfile({ navigation }: any) {
     // Logic báo cáo giữ nguyên
     setReportVisible(false);
     setSelectedIds([]);
+    setOtherReason("");
   };
 
   const handleCopyLink = async () => {
@@ -368,12 +477,26 @@ export default function UserProfile({ navigation }: any) {
             <MaterialIcons name="more-horiz" size={22} color="black" />
           </TouchableOpacity>
 
-          {/* Nút "+ Theo dõi" (Chỉ hiện khi không phải hồ sơ của mình) */}
-          {!isOwnProfile && (
-            <TouchableOpacity className="bg-orange-500 px-5 py-2 rounded-xl shadow active:bg-orange-600 h-10 items-center justify-center">
-              <Text className="text-white font-semibold">+ Theo dõi</Text>
-            </TouchableOpacity>
-          )}
+          {/* Nút "+ Theo dõi" */}
+          <TouchableOpacity
+            onPress={handleToggleFollow}
+            disabled={!currentUserId || Number(userId) === currentUserId}
+            className={`px-5 py-2 rounded-xl shadow h-10 items-center justify-center ${
+              // Ẩn nếu là profile của chính mình
+              Number(userId) === currentUserId ? "hidden" :
+                isFollowing
+                  ? "bg-gray-200"
+                  : "bg-orange-500 active:bg-orange-600"
+              }`}
+          >
+            <Text className={
+              isFollowing
+                ? "text-black font-semibold"
+                : "text-white font-semibold"
+            }>
+              {isFollowing ? "Đang theo dõi" : "+ Theo dõi"}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Thông tin người dùng + RATING DISPLAY */}
@@ -542,6 +665,7 @@ export default function UserProfile({ navigation }: any) {
         </Pressable>
       </Modal>
 
+      {/* ✅ SỬA LẠI MODAL BÁO CÁO (Report modal) */}
       <Modal
         visible={reportVisible}
         transparent
@@ -560,39 +684,59 @@ export default function UserProfile({ navigation }: any) {
               Người bán này có vấn đề gì?
             </Text>
 
+            {/* SỬA LẠI KHỐI MAP NÀY */}
             {menuItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                onPress={() => handleToggleSelect(item.id)}
-                className={`py-2 rounded-lg mb-1 ${
-                  selectedIds.includes(item.id) ? "bg-orange-100" : "bg-gray-50"
-                }`}
-              >
-                <Text
-                  className={`text-center ${
-                    selectedIds.includes(item.id)
-                      ? "text-orange-600 font-semibold"
-                      : "text-gray-700"
-                  }`}
+              <View key={item.id}> {/* Thêm <View> bọc ngoài */}
+                <TouchableOpacity
+                  onPress={() => handleToggleSelect(item.id)}
+                  className={`py-2 rounded-lg mb-1 ${selectedIds.includes(item.id)
+                      ? "bg-orange-100"
+                      : "bg-gray-50"
+                    }`}
                 >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    className={`text-center ${selectedIds.includes(item.id)
+                        ? "text-orange-600 font-semibold"
+                        : "text-gray-700"
+                      }`}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* 👇 THÊM KHỐI RENDER CÓ ĐIỀU KIỆN NÀY VÀO */}
+                {item.id === 4 && selectedIds.includes(4) && (
+                  <View className="mt-2 mb-2 px-1">
+                    <TextInput
+                      value={otherReason}
+                      onChangeText={setOtherReason}
+                      placeholder="Vui lòng nhập lý do của bạn..."
+                      className="border border-gray-300 rounded-lg p-3 text-sm text-gray-700 h-24"
+                      textAlignVertical="top" // 👈 Cho text bắt đầu từ trên
+                      multiline={true}
+                      numberOfLines={4}
+                    />
+                  </View>
+                )}
+                {/* 👆 KẾT THÚC KHỐI THÊM */}
+
+              </View>
             ))}
+            {/* KẾT THÚC SỬA KHỐI MAP */}
 
             <TouchableOpacity
-              onPress={handleSubmitReport}
+              onPress={handleSubmitReport} // 👈 (Hàm này ông phải sửa logic nhé)
               disabled={selectedIds.length === 0}
-              className={`mt-4 py-3 rounded-xl ${
-                selectedIds.length === 0
+              className={`mt-4 py-3 rounded-xl ${selectedIds.length === 0
                   ? "bg-gray-300"
                   : "bg-red-500 active:bg-red-600"
-              }`}
+                }`}
             >
               <Text
-                className={`text-center font-medium ${
-                  selectedIds.length === 0 ? "text-gray-500" : "text-white"
-                }`}
+                className={`text-center font-medium ${selectedIds.length === 0
+                    ? "text-gray-500"
+                    : "text-white"
+                  }`}
               >
                 Gửi báo cáo
               </Text>

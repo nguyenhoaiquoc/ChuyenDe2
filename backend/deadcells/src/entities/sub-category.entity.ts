@@ -7,7 +7,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-} from 'typeorm'; 
+} from 'typeorm';
 import { Category } from './category.entity';
 import { Product } from './product.entity';
 import { ProductType } from './product_types.entity';
@@ -44,10 +44,13 @@ export class SubCategory {
   @JoinColumn({ name: 'category_id' })
   category: Category;
 
-  @Column({ type: 'bigint' })
-  parent_category_id: number;
+  @Column({ type: 'bigint', nullable: true })
+  parent_category_id: number | null;
 
-  @ManyToOne(() => Category)
+  @ManyToOne(() => Category, (cat) => cat.subCategories, {
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
   @JoinColumn({ name: 'parent_category_id' })
   parentCategory: Category;
 
@@ -57,7 +60,10 @@ export class SubCategory {
   @Column({ type: 'bigint', nullable: true })
   source_id: number | null;
 
-  @OneToMany(() => Product, (product) => product.subCategory)
+  @OneToMany(() => Product, (product) => product.subCategory, {
+    onDelete: 'CASCADE',
+    cascade: true,
+  })
   products: Product[];
 
   @OneToMany(() => ProductType, (productType) => productType.subCategory)
@@ -67,7 +73,7 @@ export class SubCategory {
   origins: Origin[];
 
   @OneToMany(() => Material, (material) => material.subCategory)
-  materials: Origin[];
+  materials: Material[];
 
   @OneToMany(() => Size, (size) => size.subCategory)
   sizes: Size[];
@@ -105,7 +111,10 @@ export class SubCategory {
   @OneToMany(() => Gender, (gender) => gender.subCategory)
   genders: Gender[];
 
-  @OneToMany(() => EngineCapacity, (engineCapacitie) => engineCapacitie.subCategory)
+  @OneToMany(
+    () => EngineCapacity,
+    (engineCapacitie) => engineCapacitie.subCategory,
+  )
   engineCapacities: EngineCapacity[];
 
   @CreateDateColumn({ type: 'timestamp' })

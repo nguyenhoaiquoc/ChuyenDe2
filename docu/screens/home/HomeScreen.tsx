@@ -55,9 +55,9 @@ export default function HomeScreen({ navigation }: Props) {
           id: item.id.toString(),
           name: item.name,
           image: item.image
-            ? item.image.startsWith("/uploads")
-              ? `${path}${item.image}`
-              : `${path}/uploads/categories/${item.image}`
+            ? item.image.startsWith("http")
+              ? item.image
+              : `${path}${item.image.startsWith("/") ? "" : "/uploads/categories/"}${item.image}`
             : `${path}/uploads/categories/default.png`,
         }));
         setCategories(mapped);
