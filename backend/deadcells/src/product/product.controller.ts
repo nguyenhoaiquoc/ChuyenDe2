@@ -118,6 +118,31 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
+  //Tìm kiếm sản phẩm (hỗ trợ name, price, category, sort, phân trang)
+  @Get('search')
+async searchProducts(
+  @Query('name') name?: string,
+  @Query('minPrice') minPrice?: string,
+  @Query('maxPrice') maxPrice?: string,
+  @Query('category') category?: string,
+  @Query('condition') condition?: string | string[], // hỗ trợ cả 1 và mảng
+  @Query('sortBy') sortBy?: 'price' | 'created_at',
+  @Query('sort') sort?: 'asc' | 'desc',
+  @Query('page') page: string = '1',
+  @Query('limit') limit: string = '20',
+) {
+  return this.productService.searchProducts({
+    name,
+    minPrice: minPrice !== '' ? Number(minPrice) : undefined,
+    maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
+    category,
+    condition,
+    sortBy,
+    sort: sort || 'desc',
+    page: Number(page),
+    limit: Number(limit),
+  });
+}
   /**
    * (Người dùng) Cập nhật chi tiết tin đăng
    */

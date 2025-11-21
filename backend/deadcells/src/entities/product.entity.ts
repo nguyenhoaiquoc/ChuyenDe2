@@ -286,7 +286,7 @@ export class Product {
     comment: 'Ngày sản phẩm sẽ hết hạn',
   })
   expires_at: Date | null;
-
+  
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 

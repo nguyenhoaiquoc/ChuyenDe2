@@ -11,11 +11,26 @@ import {
 } from 'typeorm';
 import { ConversationParticipant } from './conversation-participant.entity';
 import { Message } from './message.entity';
+import { User } from './user.entity';
 @Index('idx_unique_pair', ['room_type'], { unique: false })
 @Entity({ name: 'conversation_rooms' })
 export class ConversationRoom {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id: number;
+
+  @Column({ type: 'bigint' , nullable:true})
+  seller_id: number;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'seller_id' })
+  seller: User;
+
+  @Column({ type: 'bigint', nullable:true })
+  buyer_id: number;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'buyer_id' })
+  buyer: User;
 
   @Column({ type: 'text', default: 'PAIR' })
   room_type: 'PAIR' | 'GROUP';

@@ -41,6 +41,7 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { Favorite } from 'src/entities/favorite.entity';
 import { ScheduleModule } from '@nestjs/schedule';
+import { UsersModule } from 'src/users/users.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -62,7 +63,7 @@ import { ScheduleModule } from '@nestjs/schedule';
       GroupMember,
       Favorite,
     ]),
-    
+      UsersModule,
     ScheduleModule.forRoot(),
     NotificationModule,
     forwardRef(() => GroupModule),

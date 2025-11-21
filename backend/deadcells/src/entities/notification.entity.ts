@@ -64,4 +64,5 @@ export class Notification {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+  
 }

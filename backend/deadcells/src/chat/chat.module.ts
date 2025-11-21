@@ -13,6 +13,8 @@ import { User } from 'src/entities/user.entity';
 import { Group } from 'src/entities/group.entity';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { GroupModule } from 'src/groups/group.module';
+import { UsersModule } from 'src/users/users.module';
+
 
 @Module({
   imports: [

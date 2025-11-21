@@ -408,8 +408,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -453,8 +453,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -492,8 +492,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+       
+        
         'size',
         'brand',
         'color',
@@ -532,8 +532,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+        
         'size',
         'brand',
         'color',
@@ -796,7 +796,7 @@ export class ProductService {
   }
   async findById(id: number): Promise<any> {
     const product = await this.productRepo.findOne({
-      where: { id },
+      where: { id},
       relations: [
         'images',
         'user',
@@ -809,7 +809,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -1054,6 +1054,129 @@ export class ProductService {
     
     return updatedProduct;
   }
+
+  // hàm tìm kiếm
+  // Trong ProductService
+async searchProducts(params: {
+  name?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  category?: string;           // tên category hoặc subCategory
+  condition?: string | string[]; // "Mới", "Cũ" hoặc mảng
+  sortBy?: 'price' | 'created_at';
+  sort?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> {
+  const {
+    name,
+    minPrice,
+    maxPrice,
+    category,
+    condition,
+    sortBy = 'created_at',
+    sort = 'desc',
+    page = 1,
+    limit = 20,
+  } = params;
+
+  const skip = (page - 1) * limit;
+
+  const query = this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.images', 'images')
+    .leftJoinAndSelect('product.category', 'category')
+    .leftJoinAndSelect('product.subCategory', 'subCategory')
+    .leftJoinAndSelect('product.condition', 'condition')
+    .leftJoinAndSelect('product.user', 'user')
+    .where('product.product_status_id = :status', { status: 2 }) // chỉ lấy đã duyệt
+    .andWhere('product.visibility_type = 0 OR product.visibility_type IS NULL') // chỉ công khai
+    .select([
+      'product.id',
+      'product.name',
+      'product.price',
+      'product.created_at',
+      'product.thumbnail_url',
+      'product.condition',
+      'category.name',
+      'subCategory.name',
+      'images.image_url',
+      'user.id',
+      'user.fullName',
+    ]);
+
+  // Tìm kiếm tên sản phẩm
+  if (name) {
+    query.andWhere('product.name ILIKE :name', { name: `%${name.trim()}%` });
+  }
+
+  // Lọc giá
+  if (minPrice !== undefined && minPrice !== null) {
+    query.andWhere('product.price >= :minPrice', { minPrice });
+  }
+  if (maxPrice !== undefined && maxPrice !== null) {
+    query.andWhere('product.price <= :maxPrice', { maxPrice });
+  }
+
+  // Lọc theo danh mục (category.name HOẶC subCategory.name)
+  if (category) {
+    const likeCategory = `%${category.trim()}%`;
+    query.andWhere(
+      '(category.name ILIKE :category OR subCategory.name ILIKE :category)',
+      { category: likeCategory }
+    );
+  }
+
+  // Lọc tình trạng (Mới / Cũ) - hỗ trợ 1 hoặc nhiều
+  if (condition) {
+    const conditions = Array.isArray(condition) ? condition : [condition];
+    if (conditions.length > 0) {
+      query.andWhere('condition.name IN (:...conditions)', { conditions });
+    }
+  }
+
+  // Sắp xếp
+  const validSortBy = ['price', 'created_at'].includes(sortBy) ? sortBy : 'created_at';
+  const validSort = sort.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  const order = sort.toUpperCase() as 'ASC' | 'DESC';
+  query.orderBy(`product.${validSortBy}`, validSort);
+  if (validSortBy !== 'created_at') {
+    query.addOrderBy('product.created_at', 'DESC'); // thứ tự phụ
+  }
+
+  // Phân trang
+  query.skip(skip).take(limit);
+
+  const [rawData, total] = await query.getManyAndCount();
+
+  // Format dữ liệu giống như formatProducts() để frontend dùng chung
+  const formattedData = rawData.map(p => ({
+    id: p.id,
+    name: p.name,
+    price: Number(p.price),
+    thumbnail_url: p.thumbnail_url || p.images?.[0]?.image_url || null,
+    created_at: p.created_at,
+    category: p.category ? { name: p.category.name } : null,
+    subCategory: p.subCategory ? { name: p.subCategory.name } : null,
+    condition: p.condition ? { name: p.condition.name } : null,
+    images: p.images?.map(img => ({ image_url: img.image_url })) || [],
+    user: p.user ? { id: p.user.id, fullName: p.user.fullName } : null,
+  }));
+
+  return {
+    data: formattedData,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
 
   //xóa vĩnh viễn
   async hardDeleteProduct(productId: number, reqUser: any): Promise<string> {
