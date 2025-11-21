@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { ConversationParticipant } from './conversation-participant.entity';
 import { Message } from './message.entity';
-import { User } from './user.entity';
+import { Group } from './group.entity';
 @Index('idx_unique_pair', ['room_type'], { unique: false })
 @Entity({ name: 'conversation_rooms' })
 export class ConversationRoom {
@@ -40,6 +40,13 @@ export class ConversationRoom {
 
   @Column({ type: 'text', nullable: true })
   group_avatar: string | null;
+
+  @ManyToOne(() => Group)
+  @JoinColumn({ name: 'group_id' })
+  group: Group;
+
+  @Column({ type: 'int', nullable: true })
+  group_id: number;
 
   @Column({ type: 'bigint', nullable: true })
   last_message_id: number | null;

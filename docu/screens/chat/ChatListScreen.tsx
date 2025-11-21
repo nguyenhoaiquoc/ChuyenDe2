@@ -118,6 +118,7 @@ export default function ChatListScreen({ navigation }: Props) {
         });
       });
 
+      
       socket.on("messageRecalled", (payload: { id: number }) => {
         // Khi thu hồi, nếu đó là last_message, hiển thị rỗng/placeholder
         // (cần last_message_id trong payload getChatList để làm chính xác 100%)
@@ -205,8 +206,16 @@ export default function ChatListScreen({ navigation }: Props) {
               <Text className="text-center text-gray-500 mt-10">Bạn chưa có cuộc trò chuyện nào</Text>
             ) : (
               chatList.map((room) => {
+  console.log("partner object:", room.partner);
+
+const avatarObj = room.partner ?? room.group;
+const displayName = avatarObj?.name ?? "Người dùng ẩn danh";
                 const unreadFlag = room?.is_last_unread === true;
                 const unreadCount: number = Number(room?.unread_count || 0);
+                
+                  const avatarUri =
+  (room.partner?.avatar || room.group?.thumbnail_url
+   || "https://cdn-icons-png.flaticon.com/512/149/149071.png");
                 return (
                   <TouchableOpacity
                     key={room.room_id}
@@ -214,11 +223,11 @@ export default function ChatListScreen({ navigation }: Props) {
                     onPress={() => handleOpenRoom(room)}
                   >
                     <View className="relative">
-                      <Image
-                        className="w-[46px] h-[46px] rounded-full"
-                        source={{ uri: room.partner?.avatar || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
-                      />
-                      {unreadFlag && (
+  <Image
+  className="w-[46px] h-[46px] rounded-full"
+  source={{ uri: avatarUri }}
+/>
+                {unreadFlag && (
                         <View className="absolute -top-1 -right-1 bg-blue-500 w-3.5 h-3.5 rounded-full" />
                       )}
                     </View>
@@ -226,8 +235,9 @@ export default function ChatListScreen({ navigation }: Props) {
                     <View className="w-[88%] pl-3 border-b border-gray-200 pb-3">
                       <View className="flex flex-row justify-between items-center">
                         <Text className={`text-lg ${unreadFlag ? "font-extrabold text-black" : "font-semibold"}`} numberOfLines={1}>
-                          {room.partner?.name || "Người dùng ẩn danh"}
-                        </Text>
+                      {displayName}
+
+                      </Text>
                         <Text className="text-gray-400 text-xs ml-2">{renderTime(room.last_message_at)}</Text>
                       </View>
 
