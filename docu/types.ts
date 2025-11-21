@@ -63,7 +63,6 @@ export type RootStackParamList = {
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
   AdminVerification: undefined;
-  ManageProductsScreen: undefined;
   SearchProduct: undefined;
   SearchResultScreen: {
     query: string;

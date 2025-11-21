@@ -15,7 +15,6 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { GroupModule } from 'src/groups/group.module';
 import { UsersModule } from 'src/users/users.module';
 
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -28,6 +27,7 @@ import { UsersModule } from 'src/users/users.module';
     ]),
     AuthModule,
     forwardRef(() => GroupModule),
+    UsersModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, JwtAuthGuard],

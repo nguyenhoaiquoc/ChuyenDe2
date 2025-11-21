@@ -99,7 +99,7 @@ export default function App() {
           <Stack.Screen name="ChooseExchangeCategoryScreen" component={ChooseExchangeCategoryScreen} />
           <Stack.Screen name="ChooseExchangeSubCategoryScreen" component={ChooseExchangeSubCategoryScreen} />
           <Stack.Screen name="HomeAdminScreen" component={HomeAdminScreen} />
-          <Stack.Screen name="ManageProductsScreen" component={ManageProductsUserScreen} />
+          <Stack.Screen name="ManageProductsUserScreen" component={ManageProductsUserScreen} />
           <Stack.Screen name="ManagerGroupsScreen" component={ManagerGroupsScreen} />
           <Stack.Screen name="UserInforScreen" component={UserInforScreen} />
           <Stack.Screen name="EditProfileScreen" component={EditProfileScreen} />
@@ -119,6 +119,18 @@ export default function App() {
           <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
           <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
           <Stack.Screen name="AdminVerification" component={AdminVerificationScreen} />
+
+          <Stack.Screen name="InviteMembersScreen" component={InviteMembersScreen} />
+          <Stack.Screen name="QRInviteScreen" component={QRInviteScreen} />
+          <Stack.Screen
+              name="DeepLinkHandler"
+              component={DeepLinkHandlerScreen}
+              options={{ headerShown: false }}
+            />
+          <Stack.Screen name="ManageGroupPostsScreen" component={ManageGroupPostsScreen} />
+          <Stack.Screen name="EditProductScreen" component={EditProductScreen} />
+          <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
+          <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NotificationProvider>

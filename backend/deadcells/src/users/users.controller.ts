@@ -32,7 +32,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 export class UsersController {
   private readonly logger = new Logger(UsersController.name);
 
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   /**
    * Lấy thông tin user theo ID
@@ -42,6 +42,12 @@ export class UsersController {
   async searchUsers(@Req() req, @Query('q') search?: string) {
     const currentUserId = req.user.id;
     return this.usersService.searchUsersForInvite(currentUserId, search);
+  }
+
+  @Get('my-ratings')
+  @UseGuards(JwtAuthGuard)
+  async getMyRatings(@Req() req) {
+    return this.usersService.getMyRatings(req.user.id);
   }
 
   @Get(':id')
@@ -70,7 +76,6 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   async getCCCDInfo(@Param('id') id: string, @Req() req: any) {
     const userId = req.user.id;
-
 
     // Chỉ cho phép user xem CCCD của chính họ
     if (Number(id) !== userId) {
@@ -105,13 +110,17 @@ export class UsersController {
         },
         filename: (req, file, cb) => {
           const userId = (req as any).user?.id || 'unknown';
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
           cb(null, `${userId}-${uniqueSuffix}${extname(file.originalname)}`);
         },
       }),
       fileFilter: (req, file, cb) => {
         if (!file.mimetype.match(/\/(jpg|jpeg|png)$/)) {
-          return cb(new BadRequestException('Chỉ chấp nhận file ảnh JPG/PNG'), false);
+          return cb(
+            new BadRequestException('Chỉ chấp nhận file ảnh JPG/PNG'),
+            false,
+          );
         }
         cb(null, true);
       },
@@ -124,18 +133,22 @@ export class UsersController {
     @Body('parsed') parsedString: string,
     @Req() req: any,
   ) {
-    if (!req.user) throw new UnauthorizedException('Token không hợp lệ hoặc không có user');
+    if (!req.user)
+      throw new UnauthorizedException('Token không hợp lệ hoặc không có user');
     const userId = req.user.id;
     this.logger.log(`User ${userId} đang xác thực CCCD...`);
 
     // Parse JSON
     let parsed: any = {};
     try {
-      parsed = typeof parsedString === 'string'
-        ? JSON.parse(parsedString)
-        : parsedString || {};
+      parsed =
+        typeof parsedString === 'string'
+          ? JSON.parse(parsedString)
+          : parsedString || {};
     } catch (e) {
-      throw new BadRequestException('Dữ liệu CCCD không hợp lệ (JSON parse error)');
+      throw new BadRequestException(
+        'Dữ liệu CCCD không hợp lệ (JSON parse error)',
+      );
     }
 
     if ((!parsed || Object.keys(parsed).length === 0) && !file) {
@@ -192,7 +205,10 @@ export class UsersController {
       } else {
         // Lần 2 trở đi: tạo pending chờ admin duyệt
         const pendingData = { ...cccdData, submittedAt: new Date() };
-        const updated = await this.usersService.saveCCCDPending(userId, pendingData);
+        const updated = await this.usersService.saveCCCDPending(
+          userId,
+          pendingData,
+        );
         this.logger.log(`User ${userId} gửi CCCD chờ admin duyệt.`);
         return {
           success: true,
@@ -250,11 +266,5 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async deleteRating(@Req() req, @Param('userId') userId: number) {
     return this.usersService.deleteRating(req.user.id, userId);
-  }
-
-  @Get('my-ratings')
-  @UseGuards(JwtAuthGuard)
-  async getMyRatings(@Req() req) {
-    return this.usersService.getMyRatings(req.user.id);
   }
 }
