@@ -182,16 +182,16 @@ export class CreateProductDto {
   author: string | null;
 
   @IsOptional()
-  @Transform(transformToNumberOrNull) // 'year' cũng có thể bị thiếu
+  @Transform(transformToNumberOrNull) 
   year: number | null;
 
   @IsOptional()
-  @IsNumberString()
-  visibility_type: string;
+  @Transform(transformToNumberOrNull)
+  visibility_type: number | null;
 
   @IsOptional()
-  @IsNumberString()
-  group_id: string;
+  @Transform(transformToNumberOrNull)
+  group_id: number | null;
 
   @IsOptional()
   @IsString()

@@ -266,11 +266,11 @@ export class Product {
   visibility_type: number; //0 toàn trường, 1 trong nhóm
 
   @Column({ type: 'bigint', nullable: true })
-  group_id: number;
+  group_id: number | null;
 
   @ManyToOne(() => Group, { nullable: true })
   @JoinColumn({ name: 'group_id' })
-  group: Group;
+  group: Group | null;
 
   // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })

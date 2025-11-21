@@ -163,8 +163,7 @@ async searchProducts(
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id;
-    return this.productService.hardDeleteProduct(id, userId);
+    return this.productService.hardDeleteProduct(id, req.user);
   }
 
   // 🟢 Lấy sản phẩm liên quan (ĐẶT TRƯỚC HÀM /:id)
@@ -196,15 +195,14 @@ async searchProducts(
   @UseGuards(JwtAuthGuard)
   @Patch(':id/hide')
   async hideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.hideProduct(id, req.user.id);
+    return this.productService.hideProduct(id, req.user);
   }
-
 
   // === HIỆN LẠI BÀI ĐÃ ẨN ===
   @UseGuards(JwtAuthGuard)
   @Patch(':id/unhide')
   async unhideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.unhideProduct(id, req.user.id);
+    return this.productService.unhideProduct(id, req.user);
   }
 
   // === ĐÁNH DẤU ĐÃ BÁN ===
@@ -241,5 +239,4 @@ async searchProducts(
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findById(id);
   }    
-  
 }

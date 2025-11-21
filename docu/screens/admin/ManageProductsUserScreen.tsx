@@ -9,19 +9,17 @@ import {
   Image,
   RefreshControl,
   ScrollView,
+  Modal,
+  Pressable,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons"; // Thêm Feather
 import { useNavigation, useIsFocused } from "@react-navigation/native";
-import {
-  RootStackParamList,
-  Product,
-  ManageProductsUserScreenNavigationProp, // 👈 Đã sửa theo yêu cầu trước
-} from "../../types";
+import { Product, ManageProductsUserScreenNavigationProp } from "../../types";
 import axios from "axios";
 import { path } from "../../config";
 import { SafeAreaView } from "react-native-safe-area-context";
 import "../../global.css";
-import AsyncStorage from "@react-native-async-storage/async-storage"; // 👈 THÊM IMPORT NÀY
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Tabs
 const TABS = {
@@ -29,7 +27,8 @@ const TABS = {
   APPROVED: "Đã duyệt",
   REJECTED: "Bị từ chối",
   HIDDEN: "Đã ẩn",
-  EXPIRED: "Hết hạn", // 👈 THÊM TAB MỚI
+  EXPIRED: "Hết hạn",
+  SOLD: "Đã bán",
 };
 
 type NavProps = ManageProductsUserScreenNavigationProp;
@@ -41,14 +40,13 @@ const mapProductData = (item: any): Product => {
     ...item,
     id: item.id.toString(),
     image: imageUrl.startsWith("http") ? imageUrl : `${path}${imageUrl}`,
-    authorName: item.user?.name || "Người dùng",
+    authorName: item.user?.fullName || item.user?.name || "Người dùng",
     product_status_id: item.product_status_id
       ? parseInt(item.product_status_id, 10)
       : 1,
   } as Product;
 };
 
-// ⚠️ ĐỔI TÊN HÀM
 export default function ManageProductsUserScreen() {
   const navigation = useNavigation<NavProps>();
   const isFocused = useIsFocused();
@@ -58,13 +56,16 @@ export default function ManageProductsUserScreen() {
   const [filteredPosts, setFilteredPosts] = useState<Product[]>([]);
   const [activeTab, setActiveTab] = useState(TABS.PENDING);
 
+  // --- STATE CHO MENU 3 CHẤM ---
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
   const fetchAllPosts = async () => {
     try {
       const response = await axios.get(`${path}/products/admin/all`);
-
-      // Lọc tin CÔNG KHAI
+      // Lọc visibility_type = 0 (Toàn trường)
       const publicPosts = response.data.filter(
-        (item: any) => item.visibility_type == "0"
+        (item: any) => Number(item.visibility_type || 0) === 0
       );
       const mappedData = publicPosts.map(mapProductData);
       setAllPosts(mappedData);
@@ -89,7 +90,7 @@ export default function ManageProductsUserScreen() {
     fetchAllPosts();
   }, []);
 
-  // Cập nhật logic lọc
+  // Logic lọc
   useEffect(() => {
     let posts: Product[] = [];
     if (activeTab === TABS.PENDING)
@@ -101,130 +102,223 @@ export default function ManageProductsUserScreen() {
     else if (activeTab === TABS.HIDDEN)
       posts = allPosts.filter((p) => p.productStatus?.id == 4);
     else if (activeTab === TABS.EXPIRED)
-      // 👈 THÊM LOGIC LỌC MỚI
       posts = allPosts.filter((p) => p.productStatus?.id == 5);
-
+    else if (activeTab === TABS.SOLD)
+      posts = allPosts.filter((p) => p.productStatus?.id == 6);
     setFilteredPosts(posts);
   }, [activeTab, allPosts]);
 
-  // Cập nhật (Duyệt/Từ chối)
-  const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
-    const newStatus = {
-      product_status_id: isApproved ? 2 : 3,
-    };
-    try {
-      // Lấy token để xác thực
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Lỗi", "Không thể xác thực. Vui lòng đăng nhập lại.");
-        return;
-      }
+  // --- XỬ LÝ MENU 3 CHẤM ---
+  const handleOpenMenu = (product: Product, pageY: number) => {
+    setSelectedProduct(product); // Lưu cả sản phẩm
+    setMenuPosition({ top: pageY - 100, right: 20 });
+    setIsMenuVisible(true);
+  }; /** Đóng menu 3 chấm */
 
+  const handleCloseMenu = () => {
+    setIsMenuVisible(false);
+    setSelectedProduct(null);
+  };
+
+  // 1. Xóa Vĩnh Viễn
+  // Tìm hàm này và thay thế nội dung bên trong
+  const handleHardDelete = async () => {
+    if (!selectedProduct) return;
+    const id = selectedProduct.id;
+    handleCloseMenu();
+
+    Alert.alert("Admin xóa tin", "Bạn chắc chắn muốn xóa vĩnh viễn tin này?", [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await AsyncStorage.getItem("token");
+            // 👇 THÊM LOG Ở ĐÂY
+            console.log("------------------------------------------------");
+            console.log("LOG: DELETE PRODUCT");
+            console.log("1. Token hiện tại:", token);
+            console.log("2. URL gọi API:", `${path}/products/${id}`);
+
+            await axios.delete(`${path}/products/${id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            console.log("3. Kết quả: Thành công");
+            Alert.alert("Đã xóa", "Sản phẩm đã bị xóa vĩnh viễn.");
+            fetchAllPosts();
+          } catch (err: any) {
+            // 👇 THÊM LOG LỖI CHI TIẾT
+            console.log("3. Kết quả: THẤT BẠI");
+            console.log("   - Lỗi:", err.message);
+            console.log("   - Status Code:", err.response?.status);
+            console.log("   - Server trả về:", err.response?.data);
+
+            Alert.alert(
+              "Lỗi",
+              `Server báo: ${JSON.stringify(err.response?.data?.message || "Lỗi không xác định")}`
+            );
+          }
+        },
+      },
+    ]);
+  };
+
+  // 3. Ẩn / Hiện tin
+  // Tìm hàm này và thay thế nội dung bên trong
+  const handleToggleHide = async () => {
+    if (!selectedProduct) return;
+    handleCloseMenu();
+    try {
+      const token = await AsyncStorage.getItem("token");
+      const isHidden = selectedProduct.productStatus?.id === 4;
+      const endpoint = isHidden ? "unhide" : "hide";
+
+      // 👇 THÊM LOG Ở ĐÂY
+      console.log("------------------------------------------------");
+      console.log(`LOG: ${endpoint.toUpperCase()} PRODUCT`);
+      console.log("1. Token hiện tại:", token);
+      console.log(
+        "2. URL gọi API:",
+        `${path}/products/${selectedProduct.id}/${endpoint}`
+      );
+
+      await axios.patch(
+        `${path}/products/${selectedProduct.id}/${endpoint}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log("3. Kết quả: Thành công");
+      Alert.alert("Thành công", `Đã ${isHidden ? "hiện" : "ẩn"} tin đăng.`);
+      fetchAllPosts();
+    } catch (err: any) {
+      // 👇 THÊM LOG LỖI CHI TIẾT
+      console.log("3. Kết quả: THẤT BẠI");
+      console.log("   - Lỗi:", err.message);
+      console.log("   - Status Code:", err.response?.status);
+      console.log("   - Server trả về:", err.response?.data);
+
+      Alert.alert(
+        "Lỗi",
+        `Server báo: ${JSON.stringify(err.response?.data?.message || "Lỗi không xác định")}`
+      );
+    }
+  };
+
+  // 4. Duyệt / Từ chối (Logic cũ)
+  const handleUpdateStatus = async (product: Product, isApproved: boolean) => {
+    const newStatus = { product_status_id: isApproved ? 2 : 3 };
+    try {
+      const token = await AsyncStorage.getItem("token");
       await axios.patch(
         `${path}/products/admin/status/${product.id}`,
         newStatus,
-        { headers: { Authorization: `Bearer ${token}` } } // 👈 Gửi token
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       await fetchAllPosts();
       Alert.alert("Thành công", `Đã ${isApproved ? "duyệt" : "từ chối"} tin.`);
     } catch (err: any) {
-      console.error("Lỗi cập nhật status:", err.message);
       Alert.alert("Lỗi", "Cập nhật thất bại.");
     }
   };
 
-  // ⭐️ HÀM MỚI: DUYỆT GIA HẠN ⭐️
+  // 5. Duyệt Gia Hạn
   const handleApproveExtension = async (product: Product) => {
     try {
       const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        Alert.alert("Lỗi", "Không thể xác thực. Vui lòng đăng nhập lại.");
-        return;
-      }
-
       await axios.patch(
-        `${path}/products/${product.id}/approve-extension`, // 👈 Endpoint duyệt gia hạn
-        {}, // Không cần body
-        { headers: { Authorization: `Bearer ${token}` } } // 👈 Gửi token
+        `${path}/products/${product.id}/approve-extension`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      // Xóa tin khỏi danh sách "Hết hạn"
       await fetchAllPosts();
-      Alert.alert(
-        "Thành công",
-        "Đã duyệt gia hạn. Tin đã được chuyển sang tab 'Đã duyệt'."
-      );
+      Alert.alert("Thành công", "Đã duyệt gia hạn.");
     } catch (err: any) {
-      console.error("Lỗi duyệt gia hạn:", err.message);
       Alert.alert("Lỗi", "Duyệt gia hạn thất bại.");
     }
   };
 
   const renderProductItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow"
-      onPress={() => navigation.navigate("ProductDetail", { product: item })}
-    >
-      <Image
-        source={{ uri: item.image }}
-        className="w-20 h-20 rounded-md bg-gray-200"
-      />
-      <View className="flex-1 ml-3 justify-between">
-        <Text
-          className="text-base font-semibold text-gray-800"
-          numberOfLines={2}
-        >
-          {item.name}
-        </Text>
-        <Text className="text-sm text-gray-600">
-          Người đăng: {item.authorName}
-        </Text>
-        <Text className="text-sm font-bold text-red-600 mt-1">
-          {item.dealType?.name === "Miễn phí"
-            ? "Miễn phí"
-            : item.dealType?.name === "Trao đổi"
-              ? "Trao đổi"
-              : item.price
-                ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-                : "Liên hệ"}
-        </Text>
+    <View className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow border border-gray-100">
+      <TouchableOpacity
+        className="flex-1 flex-row"
+        onPress={() => navigation.navigate("ProductDetail", { product: item })}
+      >
+        <Image
+          source={{ uri: item.image }}
+          className="w-20 h-20 rounded-md bg-gray-200"
+        />
+        <View className="flex-1 ml-3 justify-between">
+          <Text
+            className="text-base font-semibold text-gray-800"
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+          <Text className="text-sm text-gray-500">
+            Đăng bởi:{" "}
+            <Text className="font-medium text-indigo-600">
+              {item.authorName}
+            </Text>
+          </Text>
+          <Text className="text-sm font-bold text-red-600 mt-1">
+            {item.dealType?.name === "Miễn phí"
+              ? "Miễn phí"
+              : item.dealType?.name === "Trao đổi"
+                ? "Trao đổi"
+                : item.price
+                  ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+                  : "Liên hệ"}
+          </Text>
 
-        {/* Nút Chờ duyệt */}
-        {activeTab === TABS.PENDING && (
-          <View className="flex-row mt-2 space-x-2">
-            <TouchableOpacity
-              className="flex-1 py-2 bg-green-500 rounded-md items-center"
-              onPress={() => handleUpdateStatus(item, true)}
-            >
-              <Text className="text-white font-semibold">Duyệt</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              className="flex-1 py-2 bg-red-500 rounded-md items-center"
-              onPress={() => handleUpdateStatus(item, false)}
-            >
-              <Text className="text-white font-semibold">Từ chối</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {/* Nút Duyệt nhanh cho tab Chờ Duyệt */}
+          {activeTab === TABS.PENDING && (
+            <View className="flex-row mt-2 space-x-2">
+              <TouchableOpacity
+                className="flex-1 py-1.5 bg-green-500 rounded items-center"
+                onPress={() => handleUpdateStatus(item, true)}
+              >
+                <Text className="text-white font-semibold text-xs">Duyệt</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="flex-1 py-1.5 bg-red-500 rounded items-center"
+                onPress={() => handleUpdateStatus(item, false)}
+              >
+                <Text className="text-white font-semibold text-xs">
+                  Từ chối
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {/* ⭐️ NÚT MỚI: DUYỆT GIA HẠN ⭐️ */}
-        {activeTab === TABS.EXPIRED && (
-          <View className="flex-row mt-2 space-x-2">
+          {/* Nút Duyệt gia hạn */}
+          {activeTab === TABS.EXPIRED && (
             <TouchableOpacity
-              className="flex-1 py-2 bg-blue-500 rounded-md items-center"
+              className="mt-2 py-1.5 bg-blue-500 rounded items-center self-start px-4"
               onPress={() => handleApproveExtension(item)}
             >
-              <Text className="text-white font-semibold">Duyệt Gia Hạn</Text>
+              <Text className="text-white font-semibold text-xs">
+                Duyệt Gia Hạn
+              </Text>
             </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {/* MENU 3 CHẤM */}
+      <TouchableOpacity
+        className="p-2 -mr-2"
+        onPress={(e) => handleOpenMenu(item, e.nativeEvent.pageY)}
+      >
+        <Feather name="more-vertical" size={24} color="#6b7280" />
+      </TouchableOpacity>
+    </View>
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-100">
-      {/* Header */}
+    <SafeAreaView className="flex-1 bg-gray-50">
       <View className="flex-row justify-between items-center h-14 px-4 bg-white border-b border-gray-200">
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="black" />
@@ -235,21 +329,22 @@ export default function ManageProductsUserScreen() {
         <View className="w-6" />
       </View>
 
-      {/* Tabs (đã thêm tab "Hết hạn") */}
-      <View className="flex-row bg-white px-2 py-2">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <View className="bg-white py-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+        >
           {Object.values(TABS).map((tabName) => (
             <TouchableOpacity
               key={tabName}
               className={`px-4 py-2 rounded-full mr-2 ${
-                activeTab === tabName ? "bg-indigo-600" : "bg-gray-200"
+                activeTab === tabName ? "bg-indigo-600" : "bg-gray-100"
               }`}
               onPress={() => setActiveTab(tabName)}
             >
               <Text
-                className={`text-sm font-medium ${
-                  activeTab === tabName ? "text-white" : "text-gray-700"
-                }`}
+                className={`text-sm font-medium ${activeTab === tabName ? "text-white" : "text-gray-700"}`}
               >
                 {tabName}
               </Text>
@@ -258,7 +353,6 @@ export default function ManageProductsUserScreen() {
         </ScrollView>
       </View>
 
-      {/* Content */}
       {isLoading ? (
         <ActivityIndicator
           size="large"
@@ -270,15 +364,9 @@ export default function ManageProductsUserScreen() {
           data={filteredPosts}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderProductItem}
-          contentContainerStyle={{
-            flexGrow: 1, 
-            paddingBottom: 80,
-            justifyContent:
-              filteredPosts.length === 0 ? "center" : "flex-start",
-            alignItems: filteredPosts.length === 0 ? "center" : "stretch",
-          }}
+          contentContainerStyle={{ paddingBottom: 80, paddingTop: 10 }}
           ListEmptyComponent={
-            <Text className="text-gray-500 text-base">
+            <Text className="text-center text-gray-500 mt-10">
               Không có tin đăng nào.
             </Text>
           }
@@ -287,6 +375,58 @@ export default function ManageProductsUserScreen() {
           }
         />
       )}
+
+      {/* MODAL MENU 3 CHẤM */}
+      <Modal
+        transparent={true}
+        visible={isMenuVisible}
+        animationType="fade"
+        onRequestClose={handleCloseMenu}
+      >
+        <Pressable className="flex-1" onPress={handleCloseMenu}>
+          <View
+            style={{
+              position: "absolute",
+              top: menuPosition.top,
+              right: menuPosition.right,
+            }}
+            className="bg-white rounded-lg shadow-xl border border-gray-100 w-48 py-1"
+          >
+            {/* Hide/Unhide */}
+            {(selectedProduct?.productStatus?.id === 2 ||
+              selectedProduct?.productStatus?.id === 4) && (
+              <TouchableOpacity
+                className="flex-row items-center p-3 border-b border-gray-50"
+                onPress={handleToggleHide}
+              >
+                <Feather
+                  name={
+                    selectedProduct?.productStatus?.id === 4 ? "eye" : "eye-off"
+                  }
+                  size={18}
+                  color="#4b5563"
+                />
+                <Text className="ml-3 text-gray-700 font-medium">
+                  {selectedProduct?.productStatus?.id === 4
+                    ? "Hiện tin"
+                    : "Ẩn tin"}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Delete */}
+            <TouchableOpacity
+              className="flex-row items-center p-3"
+              onPress={handleHardDelete}
+            >
+              <Feather name="trash-2" size={18} color="#ef4444" />
+              <Text className="ml-3 text-red-600 font-medium">
+                Xóa vĩnh viễn
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }

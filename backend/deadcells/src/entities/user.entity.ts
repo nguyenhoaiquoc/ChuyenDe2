@@ -43,6 +43,9 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'khong_xac_dinh' })
   gender: string;
 
+  @Column({ nullable: true })
+  hometown?: string;
+
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })
@@ -80,8 +83,14 @@ export class User {
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
-  @Column({ nullable: true })
-  hometown?: string;
+  @Column({ default: false })
+  is_cccd_verified: boolean;
+
+  @Column({ type: 'json', nullable: true })
+  cccd_verified_data: any;
+
+  @Column({ type: 'json', nullable: true })
+  cccd_pending_data: any;
 
   @Column({ default: false })
   is_cccd_verified: boolean;
