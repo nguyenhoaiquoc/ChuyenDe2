@@ -64,12 +64,12 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async () => {
     if (isLoading) return;
-    const [fullName, emailRaw, phoneRaw, password, confirmPassword] = values;
+    const [nickName, emailRaw, phoneRaw, password, confirmPassword] = values;
     const email = (emailRaw || "").trim().toLowerCase();
     const phone = (phoneRaw || "").trim();
 
     // kiểm tra cơ bản phía client
-    if (!fullName?.trim() || !email || !password || !confirmPassword) {
+    if (!nickName?.trim() || !email || !password || !confirmPassword) {
       Alert.alert("Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -90,7 +90,7 @@ export default function RegisterScreen({ navigation }: Props) {
       const res = await axios.post(
         `${path}/auth/register`,
         {
-          fullName: fullName.trim(),
+          nickname: nickName.trim(),
           email,
           password,
           phone,
