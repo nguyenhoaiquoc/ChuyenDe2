@@ -26,8 +26,8 @@ import { useFocusEffect, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { TextInput } from "react-native-gesture-handler";
 
-const DEFAULT_AVATAR = require("../../assets/khi.png");
-const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+const DEFAULT_AVATAR = require("../../assets/default.png");
+const DEFAULT_COVER = require("../../assets/cover_default.jpg");
 
 // Star Rating Component
 const StarRating = ({ rating, editable = false, onChange }: any) => (

@@ -51,7 +51,7 @@ const getExpiryMessage = (
   if (statusId === 3) return { text: "Đã bị từ chối", color: "text-red-600" };
   if (statusId === 4) return { text: "Đang ẩn", color: "text-gray-600" };
   if (statusId === 5) return { text: "Đã hết hạn", color: "text-red-600" };
-if (statusId === 6) return { text: "Đã bán", color: "text-green-600" };
+  if (statusId === 6) return { text: "Đã bán", color: "text-green-600" };
   // Logic mới: Ưu tiên 'expires_at'
   if (statusId === 2 && product.expires_at) {
     const expiryDate = new Date(product.expires_at);
@@ -237,6 +237,8 @@ export default function ManagePostsScreen({
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
   const [reasonModalVisible, setReasonModalVisible] = useState(false);
 
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+
   const fetchMyPosts = async (currentUserId: string) => {
     setIsLoading(true);
     try {
@@ -255,9 +257,12 @@ export default function ManagePostsScreen({
     const loadData = async () => {
       const id = await AsyncStorage.getItem("userId");
       const name = await AsyncStorage.getItem("userName");
+      const avatar = await AsyncStorage.getItem("userAvatar");
+
       if (id) {
         setUserId(id);
         setUserName(name || "Người dùng");
+        setUserAvatar(avatar || null);
         if (isFocused) fetchMyPosts(id);
       } else {
         Alert.alert("Lỗi", "Vui lòng đăng nhập để xem tin.");
@@ -497,17 +502,33 @@ export default function ManagePostsScreen({
           <>
             {/* Profile */}
             <View className="px-5 pt-5">
-              <View className="flex-row items-center mb-5">
-                <Image
-                  source={require("../../assets/khi.png")}
-                  className="w-14 h-14 rounded-full"
-                />
-                <View className="ml-3">
-                  <Text className="text-base font-semibold text-gray-800">
-                    {userName || "Người dùng"}
-                  </Text>
+              <TouchableOpacity
+                className="flex-row items-center mb-5"
+                onPress={() => {
+                  if (userId) {
+                    navigation.navigate("UserInforScreen", { userId });
+                  } else {
+                    Alert.alert("Lỗi", "Không xác định được người dùng."); // Xử lý khi null
+                  }
+                }}
+              >
+                <View className="flex-row items-center mb-5">
+                  <Image
+                    source={
+                      userAvatar
+                        ? { uri: userAvatar }
+                        : require("../../assets/default.png")
+                    }
+                    className="w-14 h-14 rounded-full"
+                  />
+
+                  <View className="ml-3">
+                    <Text className="text-base font-semibold text-gray-800">
+                      {userName || "Người dùng"}
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* Status Tabs */}

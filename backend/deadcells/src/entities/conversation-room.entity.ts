@@ -12,6 +12,8 @@ import {
 import { ConversationParticipant } from './conversation-participant.entity';
 import { Message } from './message.entity';
 import { Group } from './group.entity';
+import { User } from './user.entity';
+
 @Index('idx_unique_pair', ['room_type'], { unique: false })
 @Entity({ name: 'conversation_rooms' })
 export class ConversationRoom {
