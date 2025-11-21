@@ -133,8 +133,8 @@ async searchProducts(
 ) {
   return this.productService.searchProducts({
     name,
-    minPrice: minPrice ? Number(minPrice) : undefined,
-    maxPrice: maxPrice ? Number(maxPrice) : undefined,
+    minPrice: minPrice !== '' ? Number(minPrice) : undefined,
+    maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
     category,
     condition,
     sortBy,

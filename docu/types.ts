@@ -50,7 +50,7 @@ export type RootStackParamList = {
     onSelect?: (uri: string) => Promise<void>;
   };
   UserInforScreen: {
-    onUpdate?: (updatedUser: any) => void; // cho phép truyền callback
+    onUpdate?: (updatedUser: any) => void; 
      userId: number | string;
   } | undefined;
   EditProfileScreen: {

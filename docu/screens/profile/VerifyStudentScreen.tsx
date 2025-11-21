@@ -143,31 +143,36 @@ export default function VerifyCCCDScreen({ navigation }: any) {
 
   /** Send parsed & optional photo to server */
  const handleSendToServer = async () => {
-  if (!parsed && !photoUri) return Alert.alert("Chưa có dữ liệu");
+  if (!parsed && !photoUri) {
+    return Alert.alert("Lỗi", "Chưa có dữ liệu để gửi");
+  }
 
   try {
     setLoading(true);
 
-    // 1️⃣ Lấy token và userId từ AsyncStorage
+    // 1. Lấy token & userId
     const token = await AsyncStorage.getItem("token");
     const userIdStr = await AsyncStorage.getItem("userId");
     const userId = Number(userIdStr);
 
-    if (!token || !userId) return Alert.alert("Cần đăng nhập");
+    if (!token || !userId) {
+      return Alert.alert("Lỗi", "Vui lòng đăng nhập lại");
+    }
 
-    // 2️⃣ Fetch thông tin user mới nhất từ server
+    // 2. Lấy thông tin user mới nhất từ server (rất quan trọng!)
     const userRes = await axios.get(`${path}/users/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const userInfo = userRes.data;
 
-    // 3️⃣ Xác định lần đầu hay lần 2
-    const isVerifiedBefore = userInfo.is_cccd_verified; // dựa theo server
-    const endpoint = isVerifiedBefore
-      ? `${path}/users/${userId}/verify-cccd`
-      : `${path}/users/${userId}/verify-cccd`;
+    // 3. Xác định đúng lần quét đầu hay lần 2 trở đi
+    const hasPending = !!userInfo.cccd_pending_data;
+    const isFirstTime = !userInfo.is_cccd_verified && !hasPending;
 
-    // 4️⃣ Chuẩn hóa DOB nếu có
+    // Dù lần 1 hay lần 2 → đều dùng chung 1 endpoint
+    const endpoint = `${path}/users/${userId}/verify-cccd`;
+
+    // 4. Chuẩn hóa ngày sinh
     let dobIso: string | undefined;
     if (parsed?.dob) {
       if (/^\d{8}$/.test(parsed.dob)) {
@@ -180,54 +185,82 @@ export default function VerifyCCCDScreen({ navigation }: any) {
       }
     }
 
-    // 5️⃣ Tạo FormData
+    // 5. Tạo FormData
     const form = new FormData();
+    
     if (photoUri) {
-      form.append("citizenCard", { uri: photoUri, name: "cccd.jpg", type: "image/jpeg" } as any);
+      form.append("citizenCard", {
+        uri: photoUri,
+        name: "cccd.jpg",
+        type: "image/jpeg",
+      } as any);
     }
+
     if (parsed) {
       const payload = {
         ...parsed,
-        hometown: parsed.hometown || parsed.placeOfOrigin,
+        hometown: parsed.hometown || parsed.placeOfOrigin || undefined,
         gender: parsed.gender,
         dob: dobIso,
       };
       form.append("parsed", JSON.stringify(payload));
     }
 
-    // 6️⃣ Gửi request lên server
-    await axios.post(endpoint, form, {
+    // 6. Gửi lên server (luôn dùng POST + cùng 1 endpoint)
+    const response = await axios.post(endpoint, form, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${token}`,
       },
     });
 
-    // 7️⃣ Cập nhật AsyncStorage với trạng thái mới
-    await AsyncStorage.setItem("userInfo", JSON.stringify({
-      ...userInfo,
-      is_cccd_verified: true, // đảm bảo lần sau chọn đúng endpoint
-    }));
+    // 7. Cập nhật lại userInfo trong AsyncStorage (lấy từ server mới nhất)
+    await AsyncStorage.setItem("userInfo", JSON.stringify(response.data.user || userInfo));
 
-    // 8️⃣ Thông báo thành công
-    Alert.alert(
-      isVerifiedBefore ? "Đã gửi chờ duyệt" : "Xác thực thành công",
-      isVerifiedBefore
-        ? "Thông tin của bạn đang đợi admin phê duyệt."
-        : "Thông tin đã được xác thực thành công."
-    );
-
-    navigation.goBack();
+    // 8. Thông báo đúng theo trường hợp
+    if (isFirstTime) {
+      Alert.alert(
+        "Xác thực thành công",
+        "Thông tin CCCD của bạn đã được xác minh tự động!",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    } else if (hasPending) {
+      Alert.alert(
+        "Đã có yêu cầu chờ duyệt",
+        "Bạn đã gửi yêu cầu cập nhật trước đó. Vui lòng chờ admin duyệt.",
+        [{ text: "OK" }]
+      );
+    } else {
+      Alert.alert(
+        "Đã gửi yêu cầu cập nhật",
+        "Thông tin CCCD mới đã được gửi. Vui lòng chờ admin phê duyệt.",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+    }
 
   } catch (err: any) {
-    // 9️⃣ Hiển thị lỗi từ server nếu có
-    const msg = err.response?.data?.message || err.response?.data?.error || "Không thể gửi dữ liệu. Vui lòng thử lại.";
-    Alert.alert("Thông báo", msg);
+  console.log("Lỗi gửi CCCD:", err.response?.data);
+
+  // Đặc biệt xử lý trường hợp đang có pending
+  if (err.response?.status === 400) {
+    const msg = err.response.data?.message || "";
+    if (msg.includes("đang chờ admin duyệt") || msg.includes("đang chờ")) {
+      Alert.alert(
+        "Đã gửi rồi!",
+        "Bạn đã gửi yêu cầu cập nhật CCCD trước đó.\nVui lòng chờ Admin phê duyệt nhé!",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
+      return;
+    }
+  }
+
+  // Các lỗi khác
+  const message = err.response?.data?.message || "Không thể gửi dữ liệu. Vui lòng thử lại.";
+  Alert.alert("Lỗi", message);
   } finally {
     setLoading(false);
   }
 };
-
 
   /** UI - Permission check */
   if (!permission) {

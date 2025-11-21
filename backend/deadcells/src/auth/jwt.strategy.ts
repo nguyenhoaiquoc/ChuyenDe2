@@ -14,14 +14,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // payload = { sub: userId, email: userEmail }
     const user = await this.usersService.findOne(payload.sub);
     
     if (!user) {
       throw new UnauthorizedException('User không tồn tại');
     }
 
-    // Trả về user object, sẽ được gán vào req.user
-    return { id: user.id, email: user.email, role: user.roleId };
+    // TRẢ VỀ ĐÚNG DỮ LIỆU TỪ DB – ĐƠN GIẢN & CHUẨN
+    return { 
+      id: user.id, 
+      email: user.email, 
+      roleId: user.roleId   
+    };
   }
 }

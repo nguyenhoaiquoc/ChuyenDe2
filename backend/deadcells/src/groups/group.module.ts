@@ -16,6 +16,7 @@ import { AuthModule } from 'src/auth/auth.module';
 import { GroupSeedService } from './seed/groups.seed';
 import { GroupRoleSeedService } from './seed/group-role.seed';
 import { ChatModule } from 'src/chat/chat.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { ChatModule } from 'src/chat/chat.module';
       ProductStatus,
       GroupInvitation,
       User,
-    ]),
+    ]), UsersModule,
     forwardRef(() => FavoritesModule),
     forwardRef(() => NotificationModule),
     forwardRef(() => AuthModule),

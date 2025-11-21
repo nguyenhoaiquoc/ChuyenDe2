@@ -87,7 +87,7 @@ export class UsersController {
       hometown: user.hometown || null,
       address: user.address_json || null,
       image: user.image || null,
-      verified: user.is_verified,
+      verified: user.is_cccd_verified,
       verifiedAt: user.verifiedAt,
     };
   }
@@ -171,7 +171,7 @@ export class UsersController {
 
     try {
       // Nếu user chưa verified và chưa pending => xác thực trực tiếp
-      if (!user.is_verified && !user.cccd_pending_data) {
+      if (!user.is_cccd_verified && !user.cccd_pending_data) {
         const updated = await this.usersService.verifyCCCD(userId, cccdData);
         this.logger.log(`User ${userId} xác thực CCCD thành công!`);
         return {
@@ -184,7 +184,7 @@ export class UsersController {
             gender: updated.gender,
             dob: updated.dob,
             hometown: updated.hometown,
-            verified: updated.is_verified,
+            verified: updated.is_cccd_verified,
             verifiedAt: updated.verifiedAt,
             image: updated.image,
           },
@@ -199,7 +199,7 @@ export class UsersController {
           message: 'Thông tin CCCD của bạn đang chờ admin duyệt',
           user: {
             id: updated.id,
-            verified: updated.is_verified,
+            verified: updated.is_cccd_verified,
             pending: !!updated.cccd_pending_data,
             submittedAt: updated.cccd_pending_data?.submittedAt,
           },

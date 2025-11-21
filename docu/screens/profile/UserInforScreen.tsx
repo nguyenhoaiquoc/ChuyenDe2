@@ -493,7 +493,7 @@ export default function UserInforScreen({ navigation }: any) {
           color="#000"
         />
         <Text className="text-xl font-semibold">
-          {user?.fullName || "Đang tải..."}
+          {user?.nickname || "Đang tải..."}
         </Text>
       </View>
 
@@ -584,7 +584,7 @@ export default function UserInforScreen({ navigation }: any) {
 
       {/* Tên và Đánh giá */}
       <View className="pl-3 mt-[-10px] flex flex-col gap-2">
-        <Text className="font-bold text-lg">{user?.fullName || "..."}</Text>
+        <Text className="font-bold text-lg">{user?.nickname || "..."}</Text>
         <View className="flex-row items-center">
           {averageRating !== null ? (
             <>

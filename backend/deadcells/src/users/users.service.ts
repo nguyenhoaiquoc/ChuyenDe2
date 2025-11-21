@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
 import { Express } from 'express';
 import { Rating } from 'src/entities/rating.entity';
@@ -136,12 +136,12 @@ export class UsersService {
   ): Promise<User> {
     const user = await this.findOne(userId);
 
-    if (user.cccd_pending_data) {
-      // Nếu đã có pending, không overwrite
-      throw new BadRequestException(
-        'Thông tin CCCD của bạn đang chờ admin duyệt',
-      );
-    }
+    // if (user.cccd_pending_data) {
+    //   // Nếu đã có pending, không overwrite
+    //   throw new BadRequestException(
+    //     'Thông tin CCCD của bạn đang chờ admin duyệt',
+    //   );
+    // }
 
     user.cccd_pending_data = {
       ...pendingData,
@@ -149,7 +149,64 @@ export class UsersService {
     };
 
     return this.userRepo.save(user);
+  
   }
+  async getPendingCCCDRequests(): Promise<User[]> {
+  return this.userRepo.find({
+    where: {
+      cccd_pending_data: Not(IsNull()), 
+    },
+    select: ['id', 'fullName', 'cccd_pending_data'],
+  });
+}
+
+async approveCCCD(userId: number): Promise<any> {
+  const user = await this.findOne(userId);
+
+  if (!user.cccd_pending_data) {
+    throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+  }
+
+  const pending = user.cccd_pending_data;
+
+  // Cập nhật dữ liệu thật từ pending
+  const updateData: Partial<User> = {
+    is_cccd_verified: true,
+    verifiedAt: new Date(),
+    fullName: pending.fullName || user.fullName,
+    citizenId: pending.citizenId || user.citizenId,
+    gender: pending.gender || user.gender,
+    dob: pending.dob ? new Date(pending.dob) : user.dob,
+    hometown: pending.hometown || user.hometown,
+    address_json: pending.address
+      ? { full: pending.address, source: 'cccd_scan', updatedAt: new Date() }
+      : user.address_json,
+    image: pending.imageUrl || user.image,
+  };
+
+  // Xóa pending sau khi duyệt
+  user.cccd_pending_data = null;
+
+  Object.assign(user, updateData);
+  await this.userRepo.save(user);
+
+  return { success: true, message: 'Đã phê duyệt thành công' };
+}
+
+async rejectCCCD(userId: number): Promise<any> {
+  const user = await this.findOne(userId);
+
+  if (!user.cccd_pending_data) {
+    throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+  }
+
+  // Chỉ xóa pending, không thay đổi dữ liệu thật
+  user.cccd_pending_data = null;
+  await this.userRepo.save(user);
+
+  return { success: true, message: 'Đã từ chối yêu cầu' };
+}
+  
 
   async searchUsersForInvite(currentUserId: number | string, search?: string) {
     const userId = Number(currentUserId);
