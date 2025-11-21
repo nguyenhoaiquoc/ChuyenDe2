@@ -28,6 +28,18 @@ export class UsersController {
     return this.usersService.searchUsersForInvite(currentUserId, search);
   }
 
+  @Get('my-ratings')
+  @UseGuards(JwtAuthGuard)
+  async getMyRatings(@Req() req) {
+    return this.usersService.getMyRatings(req.user.id);
+  }
+
+  @Get('feedback')
+  @UseGuards(JwtAuthGuard)
+  async getFeedback(@Req() req) {
+    return this.usersService.getFeedback(req.user.id);
+  }
+
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return this.usersService.findOne(+id);
@@ -94,11 +106,5 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async deleteRating(@Req() req, @Param('userId') userId: number) {
     return this.usersService.deleteRating(req.user.id, userId);
-  }
-
-  @Get('my-ratings')
-  @UseGuards(JwtAuthGuard)
-  async getMyRatings(@Req() req) {
-    return this.usersService.getMyRatings(req.user.id);
   }
 }

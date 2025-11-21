@@ -65,7 +65,7 @@ export type RootStackParamList = {
   EditGroupScreen: { group: any };
   InviteMembersScreen: { groupId: number };
   QRInviteScreen: { groupId: number };
-  DeepLinkHandler: undefined;
+  DeepLinkHandlerScreen: undefined;
   GroupDetailScreen: {
     groupId: number;
     initialJoinStatus?: "none" | "pending" | "joined";

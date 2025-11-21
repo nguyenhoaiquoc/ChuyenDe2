@@ -199,7 +199,7 @@ export default function App() {
             />
             <Stack.Screen name="QRInviteScreen" component={QRInviteScreen} />
             <Stack.Screen
-              name="DeepLinkHandler"
+              name="DeepLinkHandlerScreen"
               component={DeepLinkHandlerScreen}
               options={{ headerShown: false }}
             />

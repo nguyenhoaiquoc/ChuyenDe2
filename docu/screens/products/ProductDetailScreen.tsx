@@ -77,6 +77,9 @@ export default function ProductDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
 
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
@@ -117,6 +120,26 @@ export default function ProductDetailScreen() {
       fetchFavoriteData();
     }
   }, [product.id, currentUser, product.productStatus?.id]);
+
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        console.log(product.authorName);
+        console.log(product.user?.avatar);
+        console.log("id", product.user_id);
+        const res = await fetch(
+          `${path}/users/${product.user_id}/rating-average`
+        );
+        const data = await res.json();
+        setAverageRating(data.average ? parseFloat(data.average) : null);
+        setRatingCount(data.count || 0);
+      } catch (error) {
+        console.error("Lỗi khi lấy đánh giá:", error);
+      }
+    };
+
+    fetchRating();
+  }, [product.user_id]);
 
   const fetchComments = useCallback(async () => {
     if (!product.id) return; // Thêm kiểm tra
@@ -320,8 +343,6 @@ export default function ProductDetailScreen() {
       return;
     }
     const numericId = Number(userId);
-    const isOwner = currentUser && Number(currentUser.id) === numericId;
-
     // Dẫn tới màn hình UserDetail, kèm product và flag isOwner
     navigation.navigate("UserInforScreen", {
       userId: product.user_id,
@@ -467,62 +488,59 @@ export default function ProductDetailScreen() {
     );
   };
 
-const handleChatPress = async () => {
-  try {
-    if (!currentUser) {
-      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-      return;
+  const handleChatPress = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Không tìm thấy token.");
+
+      // Gửi lên userId của người muốn chat và productId
+      const payload = {
+        userId: product.user_id,
+        productId: product.id,
+      };
+
+      const response = await fetch(`${path}/chat/room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
+
+      const room = await response.json();
+
+      // Xác định thông tin người còn lại
+      const otherUserName = product.authorName || "Người bán";
+      const otherUserAvatar = sellerAvatar
+        ? sellerAvatar.startsWith("http")
+          ? sellerAvatar
+          : `${path}${sellerAvatar}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+      // Điều hướng sang ChatRoom
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        product,
+        otherUserId: product.user_id,
+        otherUserName,
+        otherUserAvatar,
+        currentUserId: currentUser.id,
+        currentUserName: currentUser.name,
+        token,
+      });
+    } catch (error) {
+      console.error("s Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
     }
-
-    const token = await AsyncStorage.getItem("token");
-    if (!token) throw new Error("Không tìm thấy token.");
-
-    // Gửi lên userId của người muốn chat và productId
-    const payload = {
-      userId: product.user_id,
-      productId: product.id,
-    };
-
-    const response = await fetch(`${path}/chat/room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
-
-    const room = await response.json();
-
-    // Xác định thông tin người còn lại
-    const otherUserName = product.authorName || "Người bán";
-    const otherUserAvatar = sellerAvatar
-      ? sellerAvatar.startsWith("http")
-        ? sellerAvatar
-        : `${path}${sellerAvatar}`
-      : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-    // Điều hướng sang ChatRoom
-    navigation.navigate("ChatRoomScreen", {
-      roomId: room.id,
-      product,
-      otherUserId: product.user_id,
-      otherUserName,
-      otherUserAvatar,
-      currentUserId: currentUser.id,
-      currentUserName: currentUser.name,
-      token,
-    });
-  } catch (error) {
-    console.error("s Lỗi mở phòng chat:", error);
-    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-  }
-};
-
-
-
+  };
 
   // Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -542,8 +560,6 @@ const handleChatPress = async () => {
     offset: width * index,
     index,
   });
-
- 
 
   const formatAgeRangeName = (text: string) => {
     if (!text) return "";
@@ -565,6 +581,7 @@ const handleChatPress = async () => {
 
         // Dùng key 'image' (giống hệt trang UserScreen của bạn)
         if (res.data?.image) {
+          console.log(res.data?.image);
           setSellerAvatar(res.data.image);
         }
       } catch (err) {
@@ -617,20 +634,17 @@ const handleChatPress = async () => {
     );
   };
 
-    useEffect(() => {
-     AsyncStorage.getItem('token').then(token => {
-         fetch(`${path}/products/${product.id}`, {
-          headers: {Authorization: token ? `Bearer ${token}` : ''},
-      }) 
-      
-      .then(res => res.json())
-      .then(data => {
-        console.log("Đây là dữ liệu log ra",data);
+  useEffect(() => {
+    AsyncStorage.getItem("token").then((token) => {
+      fetch(`${path}/products/${product.id}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
       })
-     })
-
-    },[product.id])
-
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Đây là dữ liệu log ra", data);
+        });
+    });
+  }, [product.id]);
 
   return (
     <View className="flex-1 bg-white">
@@ -778,8 +792,22 @@ const handleChatPress = async () => {
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
+                {/* <Text className="text-yellow-500 font-bold"> ★ </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text> */}
+                {averageRating !== null ? (
+                  <>
+                    <Text className="text-sm text-yellow-500 ml-2">
+                      {averageRating.toFixed(1)} ★
+                    </Text>
+                    <Text className="text-gray-500 text-xs ml-2">
+                      ({ratingCount} đánh giá)
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-sm text-gray-400">
+                    Chưa có đánh giá
+                  </Text>
+                )}
               </View>
             </View>
           </TouchableOpacity>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   ScrollView,
   Text,
@@ -11,6 +12,8 @@ import {
   Pressable,
   Alert,
   TextInput,
+  Platform,
+  ActionSheetIOS,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome, MaterialIcons } from "@expo/vector-icons";
@@ -132,6 +135,7 @@ export default function UserInforScreen({ navigation }: any) {
   const [isUploading, setIsUploading] = useState(false);
   // User ID của người đang đăng nhập
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>("");
   const [ratings, setRatings] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState(0);
@@ -158,7 +162,15 @@ export default function UserInforScreen({ navigation }: any) {
 
   // 2. Fetch current user id (người đang đăng nhập)
   useEffect(() => {
-    AsyncStorage.getItem("userId").then(setCurrentUserId);
+    const fetchCurrentUser = async () => {
+      const [userId, userName] = await Promise.all([
+        AsyncStorage.getItem("userId"),
+        AsyncStorage.getItem("userName"),
+      ]);
+      setCurrentUserId(userId);
+      setCurrentUserName(userName || "");
+    };
+    fetchCurrentUser();
   }, []);
 
   // Data Fetching
@@ -232,6 +244,63 @@ export default function UserInforScreen({ navigation }: any) {
     if (months > 0) return `${months} tháng`;
     return "Mới tham gia";
   }
+
+  const handleChatPress = async () => {
+    try {
+      if (!currentUserId) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      // Gửi request tạo/lấy phòng chat
+      const payload = {
+        userId: profileUserId, // ID của người đang xem profile
+      };
+
+      const response = await fetch(`${path}/chat/room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Lỗi khi mở phòng chat");
+      }
+
+      const room = await response.json();
+
+      // Xác định thông tin người còn lại (người đang xem profile)
+      const otherUserName = user?.fullName || "Người dùng";
+      const otherUserAvatar = avatar
+        ? avatar.startsWith("http")
+          ? avatar
+          : `${path}/${avatar.replace(/\\/g, "/")}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+      // Điều hướng sang ChatRoomScreen
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        otherUserId: profileUserId,
+        otherUserName,
+        otherUserAvatar,
+        currentUserId: currentUserId,
+        currentUserName: currentUserName,
+        token,
+      });
+    } catch (error) {
+      console.error("Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
 
   // Follow Function (chỉ thực hiện khi xem hồ sơ người khác)
   const toggleFollow = async () => {
@@ -307,46 +376,169 @@ export default function UserInforScreen({ navigation }: any) {
     ]);
   };
 
-  // TODO: Implement the actual Image and Upload functions
+  // --- LOGIC TẢI ẢNH (ĐÃ TÁCH RIÊNG) ---
+
+  // --- HÀM 1: UPLOAD ẢNH LÊN CLOUDINARY VÀ SERVER ---
   const uploadImage = async (
     field: "image" | "coverImage",
     fileUri: string
   ) => {
-    Alert.alert("Thông báo", `Chức năng upload ${field} chưa được cài đặt.`);
+    if (!fileUri) return alert("Lỗi: Không có đường dẫn ảnh!");
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId || !token) return alert("Vui lòng đăng nhập!");
+    setIsUploading(true);
+
+    try {
+      // 1️⃣ Upload lên Cloudinary
+      const cloudinaryUrl =
+        "https://api.cloudinary.com/v1_1/dagyeu6h2/image/upload";
+      const formData = new FormData();
+      formData.append("file", {
+        uri: fileUri,
+        name: "photo.jpg",
+        type: "image/jpeg",
+      } as any);
+      formData.append("upload_preset", "products");
+
+      const cloudinaryResponse = await axios.post(cloudinaryUrl, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const imageUrl = cloudinaryResponse.data.secure_url;
+      if (!imageUrl) throw new Error("Không nhận được URL từ Cloudinary");
+
+      // 2️ Gửi URL lên server của bạn
+      const serverResponse = await axios.patch(
+        `${path}/users/${userId}`,
+        { [field]: imageUrl },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const updatedUser = serverResponse.data;
+      if (!updatedUser)
+        return alert("Upload thành công nhưng không nhận được dữ liệu user!");
+
+      // 3️ Cập nhật state local
+      if (field === "image") setAvatar(updatedUser.image);
+      if (field === "coverImage") setCoverImage(updatedUser.coverImage);
+      setUser(updatedUser);
+      alert("Cập nhật ảnh thành công!");
+    } catch (err: any) {
+      console.log("Upload Error:", err.response?.data || err.message || err);
+      alert("Upload thất bại! Kiểm tra kết nối hoặc cấu hình Cloudinary.");
+    } finally {
+      setIsUploading(false);
+    }
   };
+
+  // --- HÀM 2: PICK OR TAKE PHOTO ---
   const pickAndUpload = async (
     field: "image" | "coverImage",
     source: "camera" | "library"
   ) => {
-    Alert.alert(
-      "Thông báo",
-      `Chức năng chọn ảnh từ ${source} chưa được cài đặt.`
-    );
-  };
-  const deleteImage = async (field: "image" | "coverImage") => {
-    Alert.alert("Thông báo", `Chức năng xóa ${field} chưa được cài đặt.`);
-  };
-  const handleImageOptions = (field: "image" | "coverImage") => {
-    if (!isOwnProfile) return; // Chỉ cho phép chỉnh sửa ảnh bìa/avatar nếu là hồ sơ của mình
+    try {
+      let result;
+      const options: ImagePicker.ImagePickerOptions = {
+        allowsEditing: true,
+        quality: 0.8,
+        aspect: field === "image" ? [1, 1] : [16, 9],
+        mediaTypes: "images",
+      };
 
-    Alert.alert(
-      `Cập nhật ${field === "image" ? "Ảnh đại diện" : "Ảnh bìa"}`,
-      "Chọn hành động:",
-      [
-        { text: "Hủy" },
-        { text: "Chụp ảnh mới", onPress: () => pickAndUpload(field, "camera") },
+      if (source === "camera") {
+        const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+        if (!granted) return alert("Cần quyền camera để chụp ảnh!");
+        result = await ImagePicker.launchCameraAsync(options);
+      } else {
+        const { granted } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!granted) return alert("Cần quyền truy cập thư viện ảnh!");
+        result = await ImagePicker.launchImageLibraryAsync(options);
+      }
+
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const uri = result.assets[0].uri;
+      await uploadImage(field, uri);
+    } catch (err) {
+      console.log("Picker error:", err);
+      alert("Lỗi khi chọn/chụp ảnh!");
+    }
+  };
+
+  // --- HÀM 3: XOÁ ẢNH ---
+  const deleteImage = async (field: "image" | "coverImage") => {
+    const userId = await AsyncStorage.getItem("userId");
+    const token = await AsyncStorage.getItem("token");
+    if (!userId) return alert("Vui lòng đăng nhập trước!");
+    if (isUploading) return;
+    setIsUploading(true);
+
+    try {
+      const res = await axios.patch(
+        `${path}/users/${userId}`,
+        { [field]: null },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const updatedUser = res.data;
+      if (field === "image") setAvatar(updatedUser.image);
+      if (field === "coverImage") setCoverImage(updatedUser.coverImage);
+      setUser(updatedUser);
+      alert("Đã xoá ảnh thành công!");
+    } catch (err: any) {
+      console.log("Delete Error:", err.response?.data || err);
+      alert("Xoá ảnh thất bại!");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // --- HÀM 4: HIỂN THỊ MENU CHỌN ẢNH ---
+  const handleImageOptions = (field: "image" | "coverImage") => {
+    if (isUploading) return;
+    const options = [
+      "Chụp ảnh",
+      "Chọn ảnh từ thư viện",
+      "Xoá ảnh hiện tại",
+      "Hủy",
+    ];
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
         {
-          text: "Chọn từ thư viện",
+          options,
+          cancelButtonIndex: 3,
+          destructiveButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) pickAndUpload(field, "camera");
+          if (index === 1) pickAndUpload(field, "library");
+          if (index === 2) deleteImage(field);
+        }
+      );
+    } else {
+      Alert.alert("Chọn hành động", "", [
+        { text: "Chụp ảnh", onPress: () => pickAndUpload(field, "camera") },
+        {
+          text: "Chọn ảnh từ thư viện",
           onPress: () => pickAndUpload(field, "library"),
         },
         {
-          text: "Xóa ảnh",
-          style: "destructive",
+          text: "Xoá ảnh hiện tại",
           onPress: () => deleteImage(field),
+          style: "destructive",
         },
-      ]
-    );
+        { text: "Hủy", style: "cancel" },
+      ]);
+    }
   };
+
+  // --- HẾT LOGIC TẢI ẢNH ---
 
   // Copy Link
   const handleCopyLink = async () => {
@@ -437,6 +629,17 @@ export default function UserInforScreen({ navigation }: any) {
 
       {/* Action Buttons */}
       <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
+        {/* Nút "Chat" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
+        {!isOwnProfile && (
+          <TouchableOpacity
+            onPress={handleChatPress}
+            className="flex-row items-center bg-white border border-green-400 p-1 rounded-md px-3"
+          >
+            <MaterialIcons name="chat" size={16} color="#008c07ff" />
+            <Text className="text-green-500 font-medium ml-1 px-2">Chat</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
         {!isOwnProfile && (
           <TouchableOpacity

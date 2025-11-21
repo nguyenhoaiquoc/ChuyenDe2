@@ -1,5 +1,4 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import { useState, useEffect } from "react";
 import {
   FontAwesome,
   Feather,
@@ -7,30 +6,26 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import "../global.css";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
-import { path } from "../config"; // ✅ nhớ import path server (VD: http://192.168.x.x:3000)
-import React from "react";
+import { path } from "../config";
+import React, { useState, useEffect } from "react";
 
 export default function Menu() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [activeTab, setActiveTab] = useState("home");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0); // ✅ thêm state badge
 
-  // ✅ Theo dõi thay đổi route
-  useEffect(() => {
-    const unsub = navigation.addListener("state", () => {
-      const route = navigation.getState().routes[navigation.getState().index];
-      const name = route?.name ?? "Home";
-      setActiveTab(name.toString().toLowerCase());
-    });
-    return unsub;
-  }, [navigation]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // ✅ Lấy route hiện tại trực tiếp từ navigation state
+  const activeRouteName = useNavigationState(
+    (state) => state.routes[state.index].name
+  );
+  const activeTab = activeRouteName.toLowerCase();
 
   // ✅ Kiểm tra đăng nhập
   useEffect(() => {
@@ -53,15 +48,10 @@ export default function Menu() {
         transports: ["websocket"],
       });
 
-      // socket.on("connect", () => console.log("✅ Socket connected for unread"));
-      
-      // Nhận số tin chưa đọc realtime từ server
       socket.on("unreadCount", (data) => {
-        console.log("📩 Unread count cập nhật:", data);
         setUnreadCount(data.count || 0);
       });
 
-      // Gửi yêu cầu lấy số tin chưa đọc ban đầu
       socket.emit("getUnreadCount", { userId });
 
       return () => {
@@ -136,7 +126,7 @@ export default function Menu() {
           </Text>
         </TouchableOpacity>
 
-        {/* Chat + badge số tin chưa đọc */}
+        {/* Chat */}
         <TouchableOpacity
           className="items-center flex-1"
           onPress={() => navigation.navigate("ChatListScreen")}
