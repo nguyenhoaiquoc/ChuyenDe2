@@ -41,6 +41,9 @@ type HeaderMeta = {
   group?: { name?: string; thumbnail_url?: string } | null;
 };
 
+// ⭐ Avatar default
+const DEFAULT_AVATAR =
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
 export default function ChatRoomScreen({ navigation, route }: Props) {
   const {
@@ -68,7 +71,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
     })();
   }, []);
 
-const [headerMeta, setHeaderMeta] = useState<HeaderMeta | null>(null);
+  const [headerMeta, setHeaderMeta] = useState<HeaderMeta | null>(null);
 
   const [contextVisible, setContextVisible] = useState(false);
   const [contextMsg, setContextMsg] = useState<UiMsg | null>(null);
@@ -82,8 +85,7 @@ const [headerMeta, setHeaderMeta] = useState<HeaderMeta | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const socketRef = useRef<Socket | null>(null);
   const inputRef = useRef<TextInput>(null);
-const { markRoomAsRead, setUnreadCount } = useChat();
-
+  const { markRoomAsRead, setUnreadCount } = useChat();
 
   const [replyTarget, setReplyTarget] = useState<null | {
     id: string;
@@ -92,6 +94,9 @@ const { markRoomAsRead, setUnreadCount } = useChat();
     senderId: string;
   }>(null);
   const [editTarget, setEditTarget] = useState<null | { id: string }>(null);
+
+  // ⭐ Avatar của chính mình (lấy từ DB)
+  const [selfAvatar, setSelfAvatar] = useState<string>(DEFAULT_AVATAR);
 
   // Theo dõi vị trí scroll và điều khiển auto-scroll lần đầu vào phòng
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -102,17 +107,17 @@ const { markRoomAsRead, setUnreadCount } = useChat();
     initialAutoScrollDoneRef.current = false;
   }, [roomId, highlightMessageId]);
 
-  const DEFAULT_AVATAR =
-    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-   const isPair = !!otherUserIdFromParams || headerMeta?.room_type === "PAIR";
+  const isPair = !!otherUserIdFromParams || headerMeta?.room_type === "PAIR";
 
-const displayName = isPair
-  ? otherUserNameFromParams ?? headerMeta?.partner?.name ?? "Người dùng"
-  : headerMeta?.group?.name ?? "Nhóm ẩn danh";
+  const displayName = isPair
+    ? otherUserNameFromParams ?? headerMeta?.partner?.name ?? "Người dùng"
+    : headerMeta?.group?.name ?? "Nhóm ẩn danh";
 
-const displayAvatar = isPair
-  ? otherUserAvatarFromParams ?? headerMeta?.partner?.avatar ?? DEFAULT_AVATAR
-  : headerMeta?.group?.thumbnail_url ?? DEFAULT_AVATAR;
+  const displayAvatar = isPair
+    ? otherUserAvatarFromParams ??
+      headerMeta?.partner?.avatar ??
+      DEFAULT_AVATAR
+    : headerMeta?.group?.thumbnail_url ?? DEFAULT_AVATAR;
 
   const otherUserId = otherUserIdFromParams ?? null;
   const searchKeyword = (searchKeywordFromParams ?? "").toString().trim();
@@ -201,6 +206,7 @@ const displayAvatar = isPair
     socket.emit("joinRoom", { room_id: String(roomId) });
 
     socket.on("receiveMessage", (msg: any) => {
+      // tin của người khác mới add
       if (selfId && String(msg.sender_id) === String(selfId)) return;
       pushOneToList(msg);
     });
@@ -239,7 +245,7 @@ const displayAvatar = isPair
                 ...m,
                 text: msg.content ?? "",
                 edited: true,
-                time: new Date(msg.updated_at ?? Date.now())
+                time: new Date(msg.edited_at ?? msg.updated_at ?? Date.now())
                   .toLocaleTimeString("vi-VN")
                   .slice(0, 5),
               }
@@ -249,6 +255,8 @@ const displayAvatar = isPair
     });
 
     socket.on("newReply", (msg: any) => {
+      // nếu là bản thân gửi reply thì skip, tránh nhân đôi
+      if (selfId && String(msg.sender_id) === String(selfId)) return;
       pushOneToList(msg);
     });
 
@@ -256,17 +264,47 @@ const displayAvatar = isPair
       socket.disconnect();
     };
   }, [jwt, roomId, selfId, otherUserId]);
+
   const isFocused = useIsFocused();
 
-useEffect(() => {
-  if (!socketRef.current || !selfId || !roomId) return;
+  // ✅ Đánh dấu đã đọc khi đang ở trong room
+  useEffect(() => {
+    if (!selfId || !roomId) return;
 
-  if (isFocused) {
-    // Khi vào room → đánh dấu đã đọc
-    markRoomAsRead(roomId);
-    setUnreadCount(0); // reset local
-  }
-}, [roomId, selfId, isFocused]);
+    if (isFocused) {
+      markRoomAsRead(roomId);
+      setUnreadCount(0); // optimistic reset badge
+    }
+  }, [roomId, selfId, isFocused, markRoomAsRead, setUnreadCount]);
+
+  // ⭐ Lấy avatar của chính mình từ DB
+  useEffect(() => {
+    if (!jwt || !selfId) return;
+
+    const fetchSelfAvatar = async () => {
+      try {
+        // 👉 ĐỔI API NÀY THEO BACKEND CỦA BẠN
+        // Ví dụ: GET /users/:id hoặc /auth/me, ...
+        const res = await axios.get(`${path}/users/${selfId}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+
+        const url =
+          res.data?.data?.image ||
+          res.data?.image ||
+          res.data?.user?.image ||
+          "";
+        if (url) setSelfAvatar(url);
+      } catch (e: any) {
+        console.log(
+          "⚠️ Không load được avatar của mình:",
+          e?.response?.data || e?.message
+        );
+      }
+    };
+
+    fetchSelfAvatar();
+  }, [jwt, selfId]);
 
   // Online status
   useEffect(() => {
@@ -285,24 +323,23 @@ useEffect(() => {
   }, [jwt, otherUserId]);
 
   // Header meta (khi thiếu)
-useEffect(() => {
-  if (!jwt || !roomId) return;
+  useEffect(() => {
+    if (!jwt || !roomId) return;
 
- axios
-  .get(`${path}/chat/room/${roomId}/meta`, {
-    headers: { Authorization: `Bearer ${jwt}` },
-  })
-  .then((res) => {
-    const meta = res.data?.data;
-    setHeaderMeta({
-      room_type: meta?.room_type,
-      partner: meta?.partner ?? null,
-      group: meta?.group ?? null,
-    });
-  })
-  .catch(() => {});
-
-}, [jwt, roomId]);
+    axios
+      .get(`${path}/chat/room/${roomId}/meta`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      })
+      .then((res) => {
+        const meta = res.data?.data;
+        setHeaderMeta({
+          room_type: meta?.room_type,
+          partner: meta?.partner ?? null,
+          group: meta?.group ?? null,
+        });
+      })
+      .catch(() => {});
+  }, [jwt, roomId]);
 
   // Load messages (around anchor nếu có)
   useEffect(() => {
@@ -311,10 +348,13 @@ useEffect(() => {
     const run = async () => {
       try {
         if (highlightMessageId) {
-          const res = await axios.get(`${path}/chat/history/${roomId}/around`, {
-            headers: { Authorization: `Bearer ${jwt}` },
-            params: { messageId: Number(highlightMessageId), window: 40 },
-          });
+          const res = await axios.get(
+            `${path}/chat/history/${roomId}/around`,
+            {
+              headers: { Authorization: `Bearer ${jwt}` },
+              params: { messageId: Number(highlightMessageId), window: 40 },
+            }
+          );
           const data = res.data?.data;
           const ui = (data?.items || []).map(mapMsgToUi);
           setMessages(ui);
@@ -334,8 +374,6 @@ useEffect(() => {
             roomId: String(roomId),
           });
         }
-
-      
       } catch (e) {
         try {
           const res = await axios.get(`${path}/chat/history/${roomId}`, {
@@ -393,7 +431,7 @@ useEffect(() => {
     if (!selfId || (!content.trim() && selectedImages.length === 0)) return;
 
     if (editTarget) {
-      if (!content.trim()) return; // Không cho cập nhật nội dung rỗng
+      if (!content.trim()) return;
 
       setIsSending(true);
       try {
@@ -418,7 +456,8 @@ useEffect(() => {
       }
       return;
     }
-    if (!content.trim() && selectedImages.length === 0) return; // Không gửi nếu rỗng
+
+    if (!content.trim() && selectedImages.length === 0) return;
 
     setIsSending(true);
     try {
@@ -457,19 +496,19 @@ useEffect(() => {
       if (replyTarget) {
         socketRef.current?.emit("replyMessage", {
           room_id: String(roomId),
-          receiver_id: otherUserId ? Number(otherUserId) : null, 
+          receiver_id: otherUserId ? Number(otherUserId) : null,
           content: content.trim(),
           reply_to_id: Number(replyTarget.id),
-          product_id: productFromParams?.id, // thêm dòng này
+          product_id: productFromParams?.id,
         });
       } else {
         socketRef.current?.emit("sendMessage", {
           room_id: String(roomId),
           sender_id: String(selfId),
-          receiver_id: otherUserId ? Number(otherUserId) : null, 
+          receiver_id: otherUserId ? Number(otherUserId) : null,
           content: content.trim(),
           media_url: imageUrl ?? undefined,
-          product_id: productFromParams?.id, // thêm dòng này
+          product_id: productFromParams?.id,
         });
       }
 
@@ -538,18 +577,15 @@ useEffect(() => {
     };
   }
 
-function pushOneToList(msg: any) {
-  const ui = mapMsgToUi(msg);
+  function pushOneToList(msg: any) {
+    const ui = mapMsgToUi(msg);
 
-  setMessages((prev) => {
-    // 🚫 Nếu đã có message với id này rồi thì bỏ qua, không push nữa
-    const existed = prev.some((m) => m.id === ui.id);
-    if (existed) return prev;
-
-    return [...prev, ui];
-  });
-}
-
+    setMessages((prev) => {
+      const existed = prev.some((m) => m.id === ui.id);
+      if (existed) return prev;
+      return [...prev, ui];
+    });
+  }
 
   // ===== Highlight helpers =====
   function splitHighlight(text: string, keyword: string) {
@@ -606,7 +642,11 @@ function pushOneToList(msg: any) {
     const txt = origin.mediaUrl ? "[Ảnh]" : origin.text || "";
     return (
       <View
-        className={`${String(msg.senderId) === String(selfId) ? "bg-yellow-100" : "bg-gray-100"} px-3 py-2 rounded-lg mb-1`}
+        className={`${
+          String(msg.senderId) === String(selfId)
+            ? "bg-yellow-100"
+            : "bg-gray-100"
+        } px-3 py-2 rounded-lg mb-1`}
         style={{ opacity: 0.7 }}
       >
         <Text className="text-[11px] text-gray-600" numberOfLines={1}>
@@ -618,7 +658,6 @@ function pushOneToList(msg: any) {
       </View>
     );
   };
-  
 
   if (!jwt || !selfId) {
     return (
@@ -643,19 +682,19 @@ function pushOneToList(msg: any) {
             onPress={() => navigation.goBack()}
           />
 
-          {/* 👇 Bọc avatar + tên bằng TouchableOpacity để mở UserInforScreen */}
+          {/* Avatar + tên mở UserInforScreen */}
           <TouchableOpacity
             className="flex flex-row gap-2 items-center"
             activeOpacity={0.7}
             onPress={() =>
               navigation.navigate("UserInforScreen", {
-                userId: otherUserId ?? selfId, // nếu không có otherUserId thì mở profile của chính mình
+                userId: otherUserId ?? selfId,
               })
             }
           >
             <Image
               className="w-[46px] h-[46px] rounded-full"
-  source={{ uri: displayAvatar }}
+              source={{ uri: displayAvatar }}
             />
             <View>
               <Text className="font-semibold">{displayName}</Text>
@@ -682,61 +721,95 @@ function pushOneToList(msg: any) {
       >
         {messages.map((msg) => {
           const isMe = selfId && String(msg.senderId) === String(selfId);
+          const avatarUri = isMe ? selfAvatar : displayAvatar;
+
           return (
             <View
               key={msg.id}
-              className={`flex flex-col gap-1 ${isMe ? "self-end" : "self-start"} mb-3 max-w-[80%]`}
+              className={`flex flex-row mb-3 ${
+                isMe ? "justify-end" : "justify-start"
+              }`}
             >
-              {/* Ô trích (mờ) */}
-              {msg.replyToId && !msg.isRecalled
-                ? renderReplyPreview(msg)
-                : null} 
+              {/* Avatar bên trái nếu là đối phương */}
+              {!isMe && (
+                <Image
+                  source={{ uri: avatarUri }}
+                  className="w-8 h-8 rounded-full mt-4 mr-2"
+                />
+              )}
 
-              {/* Bong bóng */}
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onLongPress={() => openContextMenu(msg)}
+              {/* Cột nội dung tin nhắn */}
+              <View
+                className={`max-w-[75%] flex flex-col gap-1 ${
+                  isMe ? "items-end" : "items-start"
+                }`}
               >
-                {msg.isRecalled ? (
-                  <Text className="italic text-gray-400 text-sm">
-                    Tin nhắn đã được thu hồi
-                  </Text>
-                ) : (
-                  <>
-                    {msg.mediaUrl ? (
-                      <Image
-                        source={{ uri: msg.mediaUrl }}
-                        style={{ width: 220, height: 220, borderRadius: 12 }}
-                      />
-                    ) : null}
-                    {msg.text?.trim() ? (
-                      <Text
-                        className={`${isMe ? "bg-yellow-200" : "bg-gray-200"} px-3 py-3 rounded-xl`}
-                        style={{ overflow: "hidden" }}
-                      >
-                        <InlineHighlight
-                          text={msg.text}
-                          keyword={searchKeyword}
+                {/* Ô trích (mờ) */}
+                {msg.replyToId && !msg.isRecalled
+                  ? renderReplyPreview(msg)
+                  : null}
+
+                {/* Bong bóng */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onLongPress={() => openContextMenu(msg)}
+                >
+                  {msg.isRecalled ? (
+                    <Text className="italic text-gray-400 text-sm">
+                      Tin nhắn đã được thu hồi
+                    </Text>
+                  ) : (
+                    <>
+                      {msg.mediaUrl ? (
+                        <Image
+                          source={{ uri: msg.mediaUrl }}
+                          style={{
+                            width: 220,
+                            height: 220,
+                            borderRadius: 12,
+                          }}
                         />
-                        {msg.edited ? (
-                          <Text className="text-gray-500 text-xs">
-                            {" "}
-                            (đã chỉnh sửa)
-                          </Text>
-                          
-                        ) : null}
-                      </Text>
-                      
-                    ) : null}
-                  </>
-                )}
-              </TouchableOpacity>
+                      ) : null}
+                      {msg.text?.trim() ? (
+                        <Text
+                          className={`${
+                            isMe ? "bg-yellow-200" : "bg-gray-200"
+                          } px-3 py-3 rounded-xl`}
+                          style={{ overflow: "hidden" }}
+                        >
+                          <InlineHighlight
+                            text={msg.text}
+                            keyword={searchKeyword}
+                          />
+                          {msg.edited ? (
+                            <Text className="text-gray-500 text-xs">
+                              {" "}
+                              (đã chỉnh sửa)
+                            </Text>
+                          ) : null}
+                        </Text>
+                      ) : null}
+                    </>
+                  )}
+                </TouchableOpacity>
 
-              <Text
-                className={`text-gray-400 text-xs ${isMe ? "self-end" : "self-start"}`}
-              >
-                {msg.time}
-              </Text>
+                {/* Thời gian */}
+                <Text
+                  className={`text-gray-400 text-xs ${
+                    isMe ? "self-end" : "self-start"
+                  }`}
+                >
+                  {msg.time}
+                </Text>
+              </View>
+
+              {/* Avatar bên phải nếu là mình */}
+              {isMe && (
+                <Image
+                  source={{ uri: avatarUri }}
+                  className="w-8 h-8 rounded-full mt-4 ml-2"
+                />
+              )}
             </View>
           );
         })}
@@ -814,7 +887,9 @@ function pushOneToList(msg: any) {
               </View>
               <Text numberOfLines={2} className="text-gray-600">
                 <InlineHighlight
-                  text={replyTarget.mediaUrl ? "[Ảnh]" : replyTarget.text || ""}
+                  text={
+                    replyTarget.mediaUrl ? "[Ảnh]" : replyTarget.text || ""
+                  }
                   keyword={searchKeyword}
                 />
               </Text>
@@ -838,13 +913,7 @@ function pushOneToList(msg: any) {
               className="absolute right-2 top-2 bg-blue-500 px-3 py-2 rounded-lg"
             >
               <Text className="text-white font-semibold">
-                {
-                  isSending
-                    ? "Đang gửi..." // Text khi đang gửi
-                    : editTarget
-                      ? "Cập nhật"
-                      : "Gửi" // Text bình thường
-                }
+                {isSending ? "Đang gửi..." : editTarget ? "Cập nhật" : "Gửi"}
               </Text>
             </TouchableOpacity>
           </View>
