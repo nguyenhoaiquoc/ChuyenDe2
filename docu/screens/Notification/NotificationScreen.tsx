@@ -54,23 +54,29 @@ export default function NotificationScreen({ navigation }: Props) {
       const apiUrl = `${path}/notifications/user/${userId}${tabQueryParam}`;
 
       const response = await axios.get(apiUrl);
-const data = response.data;
+      const data = response.data;
 
-console.log(`📦 API trả về ${data.length} thông báo.`);
+      const matchingItems = data.filter(
+        (n: any) => n.action?.name === "matching_buy_request"
+      );
 
-const matchingItems = data.filter((n: any) => n.action?.name === 'matching_buy_request');
-      
       if (matchingItems.length > 0) {
-        console.log("✅ SUCCESS: Frontend ĐÃ NHẬN ĐƯỢC thông báo matching_buy_request!");
-        console.log("🔍 Chi tiết item đầu tiên:", JSON.stringify(matchingItems[0], null, 2));
+        console.log(
+          "✅ SUCCESS: Frontend ĐÃ NHẬN ĐƯỢC thông báo matching_buy_request!"
+        );
       } else {
-        console.log("⚠️ WARNING: Không tìm thấy 'matching_buy_request' nào trong API trả về.");
+        console.log(
+          "⚠️ WARNING: Không tìm thấy 'matching_buy_request' nào trong API trả về."
+        );
         // 2. Log ra danh sách các action đang có để xem có bị sai chính tả không
         const currentActions = data.map((n: any) => n.action?.name);
-        console.log("📋 Danh sách các action hiện có:", JSON.stringify(currentActions));
+        console.log(
+          "📋 Danh sách các action hiện có:",
+          JSON.stringify(currentActions)
+        );
       }
       const updated = await Promise.all(
-        data.map(async (n: Notification) => { 
+        data.map(async (n: Notification) => {
           if (n.action?.name === "group_invitation") {
             const localStatus = await getHandledInvitation(n.target_id);
             if (localStatus) return { ...n, invitationStatus: localStatus };

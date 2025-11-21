@@ -28,6 +28,7 @@ const TABS = {
   REJECTED: "Bị từ chối",
   HIDDEN: "Đã ẩn",
   EXPIRED: "Hết hạn",
+  SOLD: "Đã bán",
 };
 
 type NavProps = ManageProductsUserScreenNavigationProp;
@@ -102,7 +103,8 @@ export default function ManageProductsUserScreen() {
       posts = allPosts.filter((p) => p.productStatus?.id == 4);
     else if (activeTab === TABS.EXPIRED)
       posts = allPosts.filter((p) => p.productStatus?.id == 5);
-
+    else if (activeTab === TABS.SOLD)
+      posts = allPosts.filter((p) => p.productStatus?.id == 6);
     setFilteredPosts(posts);
   }, [activeTab, allPosts]);
 

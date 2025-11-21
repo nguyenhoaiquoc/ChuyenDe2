@@ -10,6 +10,7 @@ import {
   RefreshControl,
   Modal,
   Pressable,
+  ScrollView, // 👈 Thêm ScrollView cho thanh Tab
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
@@ -29,6 +30,8 @@ const TABS = {
   APPROVED: "Đã duyệt",
   REJECTED: "Bị từ chối",
   HIDDEN: "Đã ẩn",
+  EXPIRED: "Hết hạn", 
+  SOLD: "Đã bán",
 };
 
 type NavProps = ManageGroupPostsScreenNavigationProp;
@@ -91,6 +94,7 @@ export default function ManageGroupPostsScreen() {
     fetchAllPosts();
   }, []);
 
+  // 2. Cập nhật logic lọc
   useEffect(() => {
     let posts: Product[] = [];
     if (activeTab === TABS.PENDING)
@@ -101,15 +105,19 @@ export default function ManageGroupPostsScreen() {
       posts = allPosts.filter((p) => p.productStatus?.id == 3);
     else if (activeTab === TABS.HIDDEN)
       posts = allPosts.filter((p) => p.productStatus?.id == 4);
+    else if (activeTab === TABS.EXPIRED)
+      posts = allPosts.filter((p) => p.productStatus?.id == 5); 
+    else if (activeTab === TABS.SOLD)
+      posts = allPosts.filter((p) => p.productStatus?.id == 6);
     setFilteredPosts(posts);
   }, [activeTab, allPosts]);
 
   // --- MENU ACTIONS ---
   const handleOpenMenu = (product: Product, pageY: number) => {
-    setSelectedProduct(product); // Lưu cả sản phẩm
+    setSelectedProduct(product);
     setMenuPosition({ top: pageY - 100, right: 20 });
     setIsMenuVisible(true);
-  }; /** Đóng menu 3 chấm */
+  };
 
   const handleCloseMenu = () => {
     setIsMenuVisible(false);
@@ -176,6 +184,22 @@ export default function ManageGroupPostsScreen() {
     }
   };
 
+  // 3. Thêm hàm Duyệt Gia Hạn
+  const handleApproveExtension = async (product: Product) => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      await axios.patch(
+        `${path}/products/${product.id}/approve-extension`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchAllPosts();
+      Alert.alert("Thành công", "Đã duyệt gia hạn.");
+    } catch (err: any) {
+      Alert.alert("Lỗi", "Duyệt gia hạn thất bại.");
+    }
+  };
+
   const renderProductItem = ({ item }: { item: Product }) => (
     <View className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow border border-gray-100">
       <TouchableOpacity
@@ -209,6 +233,7 @@ export default function ManageGroupPostsScreen() {
                   : "Liên hệ"}
           </Text>
 
+          {/* Nút Duyệt/Từ chối cho tab Chờ Duyệt */}
           {activeTab === TABS.PENDING && (
             <View className="flex-row mt-2 space-x-2">
               <TouchableOpacity
@@ -226,6 +251,18 @@ export default function ManageGroupPostsScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* 4. Nút Duyệt gia hạn cho tab Hết Hạn */}
+          {activeTab === TABS.EXPIRED && (
+            <TouchableOpacity
+              className="mt-2 py-1.5 bg-blue-500 rounded items-center self-start px-4"
+              onPress={() => handleApproveExtension(item)}
+            >
+              <Text className="text-white font-semibold text-xs">
+                Duyệt Gia Hạn
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </TouchableOpacity>
@@ -252,22 +289,29 @@ export default function ManageGroupPostsScreen() {
         <View className="w-6" />
       </View>
 
-      <View className="flex-row bg-white px-2 py-2">
-        {Object.values(TABS).map((tabName) => (
-          <TouchableOpacity
-            key={tabName}
-            className={`px-4 py-2 rounded-full mr-2 ${
-              activeTab === tabName ? "bg-indigo-600" : "bg-gray-100"
-            }`}
-            onPress={() => setActiveTab(tabName)}
-          >
-            <Text
-              className={`text-sm font-medium ${activeTab === tabName ? "text-white" : "text-gray-700"}`}
+      {/* 5. Sử dụng ScrollView cho Tabs giống bên ManageProductsUserScreen */}
+      <View className="bg-white py-2">
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10 }}
+        >
+          {Object.values(TABS).map((tabName) => (
+            <TouchableOpacity
+              key={tabName}
+              className={`px-4 py-2 rounded-full mr-2 ${
+                activeTab === tabName ? "bg-indigo-600" : "bg-gray-100"
+              }`}
+              onPress={() => setActiveTab(tabName)}
             >
-              {tabName}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                className={`text-sm font-medium ${activeTab === tabName ? "text-white" : "text-gray-700"}`}
+              >
+                {tabName}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {isLoading ? (

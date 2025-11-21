@@ -1048,9 +1048,10 @@ export class ProductService {
       this.notifyMatchingPosts(updatedProduct.id);
     }
 
-    if (dto.product_status_id !== 2) {
-      await this.notificationService.deleteNotificationsByProductId(id);
+    if (Number(dto.product_status_id) !== 2) {
+       await this.notificationService.deleteNotificationsByProductId(id);
     }
+    
     return updatedProduct;
   }
 
