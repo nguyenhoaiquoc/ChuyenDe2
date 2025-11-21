@@ -22,8 +22,6 @@ export class User {
 
   /** --------- Quan hệ & FK rõ ràng --------- */
 
-
-
   @ManyToOne(() => Role, { nullable: false })
   @JoinColumn({ name: 'role_id' })
   role: Role;
@@ -47,7 +45,7 @@ export class User {
 
   @Column({ nullable: true })
   hometown?: string;
-  
+
   // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
 
   @Column({ type: 'text', nullable: true })
@@ -56,6 +54,7 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: true })
   nickname: string; // Tên gợi nhớ
 
+  // ✅ BẮT ĐẦU THÊM 4 CỘT BỊ THIẾU:
   @Column({ type: 'varchar', length: 20, nullable: true })
   citizenId: string; // CCCD / CMND
 
@@ -81,11 +80,6 @@ export class User {
 
   @Column({ type: 'json', nullable: true })
   address_json: object;
-
-  /** --------- Trạng thái xác minh --------- */
-  @Column({ type: 'boolean', default: false })
-  is_verified: boolean;
-
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
@@ -102,13 +96,7 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true, name: 'reset_token_expires_at' })
   resetTokenExpiresAt?: Date | null;
-@Column({ default: false })
-is_cccd_verified: boolean;
-@Column({ type: 'json', nullable: true })
-cccd_verified_data: any;
 
-@Column({ type: 'json', nullable: true })
-cccd_pending_data: any;
   /** --------- Bảo mật bổ sung ---------
    *  - Thời điểm đổi mật khẩu gần nhất -> dùng để vô hiệu JWT cũ (nếu issuedAt < passwordChangedAt)
    */
@@ -133,4 +121,7 @@ cccd_pending_data: any;
 
   @DeleteDateColumn({ type: 'timestamp', name: 'deleted_at', nullable: true })
   deletedAt?: Date | null;
+
+  @Column({ default: false })
+  is_verified: boolean;
 }

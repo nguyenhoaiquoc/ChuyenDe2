@@ -352,10 +352,9 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
+    //  GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
     if (productStatusGr && productStatusGr.id === 2) {
-      // Mở comment này khi sẵn sàng
-      // this.notifyMatchingPosts(savedProduct.id);
+      this.notifyMatchingPosts(savedProduct.id);
     }
 
     // 4. Lưu ảnh
@@ -409,8 +408,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -454,8 +453,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+       
         'size',
         'brand',
         'color',
@@ -493,8 +492,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+       
+        
         'size',
         'brand',
         'color',
@@ -533,8 +532,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+        
+        
         'size',
         'brand',
         'color',
@@ -720,8 +719,9 @@ export class ProductService {
         category_change_id: p.category_change_id,
         sub_category_change_id: p.sub_category_change_id,
         status_id: p.status_id,
-        visibility_type: p.visibility_type,
-        group_id: p.group_id,
+        visibility_type:
+          p.visibility_type != null ? Number(p.visibility_type) : 0,
+        group_id: p.group_id || p.group?.id || null,
         group: p.group
           ? { id: p.group.id, name: p.group.name, isPublic: p.group.isPublic }
           : null,
@@ -796,7 +796,7 @@ export class ProductService {
   }
   async findById(id: number): Promise<any> {
     const product = await this.productRepo.findOne({
-      where: { id },
+      where: { id},
       relations: [
         'images',
         'user',
@@ -809,7 +809,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        'material',
+        
         'size',
         'brand',
         'color',
@@ -1034,18 +1034,159 @@ export class ProductService {
     }
 
     const updatedProduct = await this.productRepo.save(product); // Thông báo
-    // this.notificationService.notifyUserOfApproval(updatedProduct);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
     if (dto.product_status_id === 2) {
-      // Mở comment này khi sẵn sàng
-      // this.notifyMatchingPosts(updatedProduct.id);
+      this.notificationService
+        .notifyUserOfPostSuccess(updatedProduct)
+        .catch((err) =>
+          this.logger.error('Lỗi gửi thông báo duyệt bài:', err.message),
+        );
     }
+
+    //  GỬI THÔNG BÁO GỢI Ý
+    if (dto.product_status_id === 2) {
+      this.notifyMatchingPosts(updatedProduct.id);
+    }
+
+    if (Number(dto.product_status_id) !== 2) {
+       await this.notificationService.deleteNotificationsByProductId(id);
+    }
+    
     return updatedProduct;
   }
 
+  // hàm tìm kiếm
+  // Trong ProductService
+async searchProducts(params: {
+  name?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  category?: string;           // tên category hoặc subCategory
+  condition?: string | string[]; // "Mới", "Cũ" hoặc mảng
+  sortBy?: 'price' | 'created_at';
+  sort?: 'asc' | 'desc';
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> {
+  const {
+    name,
+    minPrice,
+    maxPrice,
+    category,
+    condition,
+    sortBy = 'created_at',
+    sort = 'desc',
+    page = 1,
+    limit = 20,
+  } = params;
+
+  const skip = (page - 1) * limit;
+
+  const query = this.productRepo
+    .createQueryBuilder('product')
+    .leftJoinAndSelect('product.images', 'images')
+    .leftJoinAndSelect('product.category', 'category')
+    .leftJoinAndSelect('product.subCategory', 'subCategory')
+    .leftJoinAndSelect('product.condition', 'condition')
+    .leftJoinAndSelect('product.user', 'user')
+    .where('product.product_status_id = :status', { status: 2 }) // chỉ lấy đã duyệt
+    .andWhere('product.visibility_type = 0 OR product.visibility_type IS NULL') // chỉ công khai
+    .select([
+      'product.id',
+      'product.name',
+      'product.price',
+      'product.created_at',
+      'product.thumbnail_url',
+      'product.condition',
+      'category.name',
+      'subCategory.name',
+      'images.image_url',
+      'user.id',
+      'user.fullName',
+    ]);
+
+  // Tìm kiếm tên sản phẩm
+  if (name) {
+    query.andWhere('product.name ILIKE :name', { name: `%${name.trim()}%` });
+  }
+
+  // Lọc giá
+  if (minPrice !== undefined && minPrice !== null) {
+    query.andWhere('product.price >= :minPrice', { minPrice });
+  }
+  if (maxPrice !== undefined && maxPrice !== null) {
+    query.andWhere('product.price <= :maxPrice', { maxPrice });
+  }
+
+  // Lọc theo danh mục (category.name HOẶC subCategory.name)
+  if (category) {
+    const likeCategory = `%${category.trim()}%`;
+    query.andWhere(
+      '(category.name ILIKE :category OR subCategory.name ILIKE :category)',
+      { category: likeCategory }
+    );
+  }
+
+  // Lọc tình trạng (Mới / Cũ) - hỗ trợ 1 hoặc nhiều
+  if (condition) {
+    const conditions = Array.isArray(condition) ? condition : [condition];
+    if (conditions.length > 0) {
+      query.andWhere('condition.name IN (:...conditions)', { conditions });
+    }
+  }
+
+  // Sắp xếp
+  const validSortBy = ['price', 'created_at'].includes(sortBy) ? sortBy : 'created_at';
+  const validSort = sort.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+  const order = sort.toUpperCase() as 'ASC' | 'DESC';
+  query.orderBy(`product.${validSortBy}`, validSort);
+  if (validSortBy !== 'created_at') {
+    query.addOrderBy('product.created_at', 'DESC'); // thứ tự phụ
+  }
+
+  // Phân trang
+  query.skip(skip).take(limit);
+
+  const [rawData, total] = await query.getManyAndCount();
+
+  // Format dữ liệu giống như formatProducts() để frontend dùng chung
+  const formattedData = rawData.map(p => ({
+    id: p.id,
+    name: p.name,
+    price: Number(p.price),
+    thumbnail_url: p.thumbnail_url || p.images?.[0]?.image_url || null,
+    created_at: p.created_at,
+    category: p.category ? { name: p.category.name } : null,
+    subCategory: p.subCategory ? { name: p.subCategory.name } : null,
+    condition: p.condition ? { name: p.condition.name } : null,
+    images: p.images?.map(img => ({ image_url: img.image_url })) || [],
+    user: p.user ? { id: p.user.id, fullName: p.user.fullName } : null,
+  }));
+
+  return {
+    data: formattedData,
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit),
+  };
+}
+
   //xóa vĩnh viễn
-  async hardDeleteProduct(productId: number, userId: number): Promise<string> {
+  async hardDeleteProduct(productId: number, reqUser: any): Promise<string> {
+    this.logger.log(`🔍 DEBUG USER: ${JSON.stringify(reqUser)}`);
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    this.logger.log(`🔍 DEBUG CURRENT_USER DB: ${JSON.stringify(currentUser)}`);
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['user', 'images', 'group'],
@@ -1055,7 +1196,13 @@ export class ProductService {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
     }
 
-    if (!product.user || product.user.id !== userId) {
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
       throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
     }
 
@@ -1065,6 +1212,8 @@ export class ProductService {
     if (product.images && product.images.length > 0) {
       await this.imageRepo.remove(product.images);
     }
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
 
     // Xóa sản phẩm vĩnh viễn
     await this.productRepo.remove(product);
@@ -1077,34 +1226,46 @@ export class ProductService {
   @Cron(CronExpression.EVERY_DAY_AT_1AM) //  EVERY_DAY_AT_1AM
   async handleExpiredProducts() {
     this.logger.log('[CRON] Bắt đầu quét các sản phẩm đã hết hạn...');
-
     const now = new Date();
-
-    const ACTIVE_STATUS_ID = 2; // Đã duyệt
-    const EXPIRED_STATUS_ID = 5; // Hết hạn
+    const ACTIVE_STATUS_ID = 2;
+    const EXPIRED_STATUS_ID = 5;
 
     try {
-      const { affected } = await this.productRepo.update(
-        {
-          // Điều kiện
-          expires_at: LessThan(now), // Hạn sử dụng đã ở trong quá khứ
-          product_status_id: ACTIVE_STATUS_ID, // Đang được duyệt (active)
+      // BƯỚC 1: Phải tìm ra ID trước thì mới biết đường mà xóa thông báo
+      const expiredProducts = await this.productRepo.find({
+        where: {
+          expires_at: LessThan(now),
+          product_status_id: ACTIVE_STATUS_ID,
         },
-        {
-          // Cập nhật
-          product_status_id: EXPIRED_STATUS_ID,
-        },
-      );
-      if (affected && affected > 0) {
+        select: ['id'], // Chỉ lấy ID cho nhẹ
+      });
+
+      if (expiredProducts.length > 0) {
+        const ids = expiredProducts.map((p) => p.id);
+
+        // BƯỚC 2: Cập nhật trạng thái hàng loạt
+        await this.productRepo.update(
+          { id: In(ids) },
+          { product_status_id: EXPIRED_STATUS_ID },
+        );
+
+        // BƯỚC 3: Xóa thông báo rác (Quan trọng)
+        // Dùng Promise.all để chạy song song cho nhanh
+        await Promise.all(
+          ids.map((id) =>
+            this.notificationService.deleteNotificationsByProductId(id),
+          ),
+        );
+
         this.logger.log(
-          `[CRON] Đã cập nhật ${affected} sản phẩm sang trạng thái hết hạn.`,
+          `[CRON] Đã hết hạn ${ids.length} sản phẩm và xóa các thông báo liên quan.`,
         );
       } else {
-        this.logger.log(`[CRON] Không tim thấy sản phẩm nào cần cập nhật.`);
+        this.logger.log(`[CRON] Không tìm thấy sản phẩm nào cần cập nhật.`);
       }
     } catch (error) {
       this.logger.error(
-        '[CRON] lỗi khi quét sản phẩm hết hạn: ',
+        '[CRON] Lỗi khi quét sản phẩm hết hạn: ',
         error.message,
       );
     }
@@ -1114,14 +1275,27 @@ export class ProductService {
    * (Người dùng) Ẩn tin đang hiển thị
    * Chuyển Status 2 (Đã duyệt) -> 4 (Đã ẩn)
    */
-  async hideProduct(productId: number, userId: number): Promise<Product> {
+  async hideProduct(productId: number, reqUser: any): Promise<Product> {
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['user'],
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    if (product.user?.id !== userId)
-      throw new UnauthorizedException('Bạn không có quyền ẩn tin này'); // Chỉ cho phép ẩn tin đang "Đã duyệt"
+
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
+      throw new UnauthorizedException('Bạn không có quyền ẩn tin này');
+    }
 
     if (product.product_status_id === 6) {
       throw new BadRequestException('Không thể ẩn sản phẩm đã bán.');
@@ -1136,11 +1310,20 @@ export class ProductService {
       throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã ẩn"');
 
     product.productStatus = hiddenStatus;
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
+
+    return savedProduct;
   }
 
   // (Người dùng) Hiện lại tin đã ẩn
-  async unhideProduct(productId: number, userId: number): Promise<Product> {
+  async unhideProduct(productId: number, reqUser: any): Promise<Product> {
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['user'],
@@ -1148,8 +1331,15 @@ export class ProductService {
 
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
 
-    if (product.user?.id !== userId)
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
       throw new UnauthorizedException('Bạn không có quyền hiện lại tin này');
+    }
 
     // Chỉ cho phép hiện lại tin "Đã ẩn"
     if (product.product_status_id !== 4) {
@@ -1165,9 +1355,8 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
-    // Mở comment này khi sẵn sàng
-    // this.notifyMatchingPosts(savedProduct.id);
+    this.notifyMatchingPosts(savedProduct.id);
+
     return savedProduct;
   }
 
@@ -1203,7 +1392,11 @@ export class ProductService {
     product.productStatus = soldStatus;
     // Hoặc bạn có thể dùng: product.product_status_id = 6;
 
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
+
+    return savedProduct;
   }
 
   //(Người dùng) Gửi yêu cầu gia hạn cho tin đã hết hạn (Status 5)
@@ -1275,6 +1468,7 @@ export class ProductService {
     }
 
     const approvedStatus = await this.productStatusService.findOne(2); // ID 2 = "Đã duyệt"
+
     if (!approvedStatus)
       throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã duyệt"');
 
@@ -1287,9 +1481,14 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
-    // Mở comment này khi sẵn sàng
-    // this.notifyMatchingPosts(savedProduct.id);
+    this.notificationService
+      .notifyUserOfPostSuccess(savedProduct)
+      .catch((err) =>
+        this.logger.error('Lỗi gửi thông báo duyệt gia hạn:', err.message),
+      );
+
+    //  GỬI THÔNG BÁO GỢI Ý
+    this.notifyMatchingPosts(savedProduct.id);
 
     return savedProduct;
   }
@@ -1571,6 +1770,10 @@ export class ProductService {
 
     const updatedProduct = await this.productRepo.save(product);
 
+    await this.notificationService.deleteNotificationsByProductId(
+      updatedProduct.id,
+    );
+
     // === 6. LƯU ẢNH MỚI (NẾU CÓ) ===
     if (files && files.length > 0) {
       const imagesToSave = files.map((file) =>
@@ -1832,49 +2035,72 @@ export class ProductService {
   async getSuggestionFeed(userId: number): Promise<any[]> {
     this.logger.log(`Đang lấy feed gợi ý cá nhân hóa cho userId: ${userId}`);
 
-    // 1. SỬA LỖI QUERYBUILDER: Dùng GROUP BY thay vì DISTINCT
+    // 1. Lấy danh sách các subCategory mà user đã từng đăng bài
     const distinctSubCategories = await this.productRepo
       .createQueryBuilder('product')
-      .select('product.sub_category_id', 'id') // Chọn ID
-      .addSelect('subCategory.name', 'name') // Chọn Name
+      .select('product.sub_category_id', 'id')
+      .addSelect('subCategory.name', 'name')
       .leftJoin('product.subCategory', 'subCategory')
       .where('product.user.id = :userId', { userId })
       .andWhere('product.sub_category_id IS NOT NULL')
-      .groupBy('product.sub_category_id') // Nhóm theo ID
-      .addGroupBy('subCategory.name') // Nhóm theo Tên
-      .getRawMany(); // Lấy kết quả [ { id: 40, name: 'Laptop' }, ... ]
+      .groupBy('product.sub_category_id')
+      .addGroupBy('subCategory.name')
+      .getRawMany();
 
     if (distinctSubCategories.length === 0) {
-      this.logger.log('User này chưa đăng tin, không có gì để gợi ý.');
       return [];
     }
 
-    // 2. Lặp và gọi các hàm "nhẹ" (Lean)
     const feedResults: any[] = [];
 
+    // 2. Duyệt qua từng danh mục
     for (const subCat of distinctSubCategories) {
       const subCatId = subCat.id;
       if (!subCatId) continue;
 
-      // 3. GỌI CÁC HÀM "LEAN" (NHẸ)
-      const [sellingSuggestions, buyingSuggestions] = await Promise.all([
-        this.suggestForSelling(subCatId, userId),
-        this.suggestForBuying(subCatId, userId),
-      ]);
+      let sellingSuggestions: Product[] = [];
+      let buyingSuggestions: Product[] = [];
 
-      // 4. Đóng gói kết quả
-      if (sellingSuggestions.length > 0 || buyingSuggestions.length > 0) {
-        feedResults.push({
-          subCategory: { id: subCatId, name: subCat.name },
-          sellingSuggestions: sellingSuggestions,
-          buyingSuggestions: buyingSuggestions,
-        });
+      // --- SỬA ĐỔI TỪ ĐÂY: Dùng count thay vì findOne ---
+
+      // Check 1: User có bài ĐĂNG BÁN (id=1) nào trong danh mục này không?
+      const hasSellingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 1 }, // 1 là Đăng bán
+        },
+      });
+
+      // Check 2: User có bài ĐĂNG MUA (id=2) nào trong danh mục này không?
+      const hasBuyingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 2 }, // 2 là Đăng mua
+        },
+      });
+
+      // --- XỬ LÝ LOGIC ---
+
+      // Nếu có bài Bán -> Cần tìm người Mua -> Gọi suggestForSelling
+      if (hasSellingPost > 0) {
+        sellingSuggestions = await this.suggestForSelling(subCatId, userId);
       }
+
+      // Nếu có bài Mua -> Cần tìm người Bán -> Gọi suggestForBuying
+      if (hasBuyingPost > 0) {
+        buyingSuggestions = await this.suggestForBuying(subCatId, userId);
+      }
+
+      // Luôn push vào kết quả để Frontend xử lý hiển thị (dù mảng rỗng)
+      feedResults.push({
+        subCategory: { id: subCatId, name: subCat.name },
+        sellingSuggestions: sellingSuggestions,
+        buyingSuggestions: buyingSuggestions,
+      });
     }
 
-    this.logger.log(
-      `Đã tìm thấy ${feedResults.length} khối gợi ý cho user ${userId}.`,
-    );
     return feedResults;
   }
 
@@ -1902,5 +2128,96 @@ export class ProductService {
     }
 
     return [];
+  }
+
+  // src/product/product.service.ts
+
+  async notifyMatchingPosts(productId: number) {
+    try {
+      console.log(
+        `-------------- START CHECK MATCHING FOR PRODUCT ${productId} --------------`,
+      );
+
+      // 1. Lấy thông tin bài viết
+      const product = await this.productRepo.findOne({
+        where: { id: productId },
+        relations: ['subCategory', 'postType', 'user'],
+      });
+
+      if (!product) {
+        console.log('❌ Lỗi: Không tìm thấy product trong DB');
+        return;
+      }
+
+      console.log(
+        `ℹ️ Thông tin bài đăng: ID=${product.id}, PostType=${product.postType?.id} (${product.postType?.name}), User=${product.user?.id}`,
+      );
+
+      // LOGIC: Chỉ chạy khi đây là bài ĐĂNG MUA (Giả sử ID 2 là "Cần mua")
+      if (Number(product.postType?.id) === 2) {
+        console.log(
+          `✅ Đây là bài ĐĂNG MUA (PostType=2). Bắt đầu tìm người bán...`,
+        );
+
+        if (!product.user) {
+          console.log('❌ Lỗi: Product không có User');
+          throw new Error('Sản phẩm không có người dùng');
+        }
+
+        // 2. Tìm tất cả bài ĐĂNG BÁN
+        const matchingSellPosts = await this.productRepo.find({
+          where: {
+            sub_category_id: product.subCategory.id,
+            post_type_id: 1, // 1 = Đăng bán
+            product_status_id: 2, // 2 = Đã duyệt
+            user: {
+              id: Not(product.user.id),
+            },
+          },
+          relations: ['user'],
+          select: {
+            id: true,
+            user: { id: true },
+          },
+        });
+
+        console.log(
+          `🔎 Tìm thấy ${matchingSellPosts.length} bài đăng bán phù hợp trong cùng danh mục.`,
+        );
+
+        if (matchingSellPosts.length > 0) {
+          const sellerIds = [
+            ...new Set(
+              matchingSellPosts
+                .filter((p) => p.user !== null)
+                .map((p) => p.user!.id),
+            ),
+          ];
+
+          console.log(
+            `🚀 Gửi thông báo cho các Seller ID: ${JSON.stringify(sellerIds)}`,
+          );
+
+          // 4. Gọi bên NotificationService để gửi
+          await this.notificationService.notifySellersOfBuyRequest(
+            product,
+            sellerIds,
+          );
+        } else {
+          console.log(
+            '⚠️ Không có người bán nào phù hợp (Matching list rỗng).',
+          );
+        }
+      } else {
+        // 👇👇👇 KHẢ NĂNG CAO LÀ NÓ RƠI VÀO ĐÂY 👇👇👇
+        console.log(
+          `⛔ BỎ QUA: Đây là bài ĐĂNG BÁN (PostType=${product.postType?.id}), logic chỉ chạy cho bài ĐĂNG MUA.`,
+        );
+      }
+
+      console.log(`-------------- END CHECK --------------`);
+    } catch (error) {
+      this.logger.error(`Lỗi trong notifyMatchingPosts: ${error.message}`);
+    }
   }
 }

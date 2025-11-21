@@ -14,6 +14,8 @@ import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
 import { useChat } from "./ChatContext";
+import { io } from "socket.io-client";
+import { path } from "../config"; // ✅ nhớ import path server (VD: http://192.168.x.x:3000)
 
 export default function Menu() {
   const navigation =

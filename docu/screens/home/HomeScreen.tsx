@@ -17,7 +17,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState, useCallback } from "react";
+import SearchProduct from "../products/SearchProduct";
+import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -415,12 +416,12 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* Thanh tìm kiếm */}
-        <View className="flex-1 mx-2">
-          <TextInput
-            placeholder="Tìm kiếm sản phẩm..."
-            className="bg-gray-100 rounded-full px-4 py-2 text-sm text-gray-700"
-          />
-        </View>
+        <TouchableOpacity
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 justify-center"
+          onPress={() => navigation.navigate("SearchProduct")}
+        >
+          <Text className="text-gray-500 text-sm">Tìm kiếm sản phẩm...</Text>
+        </TouchableOpacity>
 
         {/* Icon trái tim */}
         <TouchableOpacity className="p-2">

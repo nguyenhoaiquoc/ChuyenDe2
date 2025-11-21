@@ -14,24 +14,24 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
-    | {
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   ChooseSubCategoryScreen:
-    | {
-        category: Category;
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    category: Category;
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   PostFormScreen:
-    | {
-        category: { id: string; name: string };
-        subCategory: { id: string; name: string };
-      }
-    | undefined;
+  | {
+    category: { id: string; name: string };
+    subCategory: { id: string; name: string };
+  }
+  | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -39,19 +39,34 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  VerifyStudentScreen: undefined;
+
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
-  UserInforScreen: undefined;
-  EditProfileScreen: undefined;
+  ImageGalleryScreen?: {
+    onSelect?: (uri: string) => Promise<void>;
+  };
+  UserInforScreen: {
+    onUpdate?: (updatedUser: any) => void; 
+     userId: number | string;
+  } | undefined;
+  EditProfileScreen: {
+    onUpdate?: (updatedUser: any) => void;
+  } | undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
+  AdminVerification: undefined;
+  SearchProduct: undefined;
+  SearchResultScreen: {
+    query: string;
+  };
   ManageProductsUserScreen: undefined;
   ManageCategoriesScreen: undefined;  
   ManageGroupPostsScreen: undefined; 
@@ -411,4 +426,21 @@ export type StarRatingProps = {
   rating: number;
   onRatingChange?: (stars: number) => void;
   editable?: boolean;
+};
+
+export type RatingData = {
+  id: number;
+  stars: number;
+  content: string;
+  createdAt: string;
+  reviewer: {
+    id: number;
+    name: string;
+    avatar: string;
+  };
+  ratedUser?: {
+    id: number;
+    fullName: string;
+    image: string | null;
+  };
 };

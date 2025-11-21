@@ -5,11 +5,12 @@ import { FavoritesController } from './favorites.controller';
 import { FavoritesService } from './favorites.service';
 import { Product } from '../entities/product.entity';
 import { NotificationModule } from 'src/notification/notification.module';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
     // 👇 2. THÊM "Product" VÀO MẢNG NÀY
-    TypeOrmModule.forFeature([Favorite, Product]), 
+    TypeOrmModule.forFeature([Favorite, Product]), UsersModule,
     
     NotificationModule, 
   ],

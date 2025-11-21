@@ -157,6 +157,7 @@ const mapProductData = (item: any): Product => {
     graphicsCard:
       item.graphicsCard && item.graphicsCard.name ? item.graphicsCard : null,
     breed: item.breed && item.breed.name ? item.breed : null,
+    productStatus: item.productStatus && item.productStatus.name ? item.productStatus : null,
     ageRange: item.ageRange && item.ageRange.name ? item.ageRange : null,
     gender: item.gender && item.gender.name ? item.gender : null,
     engineCapacity:

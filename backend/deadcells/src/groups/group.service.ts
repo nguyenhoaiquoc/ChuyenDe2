@@ -38,7 +38,6 @@ export class GroupService {
     private readonly notificationService: NotificationService,
     private readonly favoritesService: FavoritesService,
     private readonly chatService: ChatService, // ⭐ Inject ở đây
-
   ) {}
 
   // ==================== UTILITY FUNCTIONS ====================
@@ -306,7 +305,6 @@ export class GroupService {
         const g = m.group;
         const memberCount = await this.countMembers(g.id);
         const postCount = await this.countProductsByGroup(g.id);
-        console.log(g.owner_id);
         return {
           id: g.id,
           name: g.name,
@@ -1014,7 +1012,7 @@ export class GroupService {
     };
   }
 
- // Thay thế hàm cũ bằng hàm này
+  // Thay thế hàm cũ bằng hàm này
   async getMyPublicJoinedGroups(userId: number) {
     // 1. Dùng hàm find của TypeORM để lấy dữ liệu an toàn nhất
     const members = await this.groupMemberRepo.find({

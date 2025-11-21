@@ -118,6 +118,31 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
+  //Tìm kiếm sản phẩm (hỗ trợ name, price, category, sort, phân trang)
+  @Get('search')
+async searchProducts(
+  @Query('name') name?: string,
+  @Query('minPrice') minPrice?: string,
+  @Query('maxPrice') maxPrice?: string,
+  @Query('category') category?: string,
+  @Query('condition') condition?: string | string[], // hỗ trợ cả 1 và mảng
+  @Query('sortBy') sortBy?: 'price' | 'created_at',
+  @Query('sort') sort?: 'asc' | 'desc',
+  @Query('page') page: string = '1',
+  @Query('limit') limit: string = '20',
+) {
+  return this.productService.searchProducts({
+    name,
+    minPrice: minPrice !== '' ? Number(minPrice) : undefined,
+    maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
+    category,
+    condition,
+    sortBy,
+    sort: sort || 'desc',
+    page: Number(page),
+    limit: Number(limit),
+  });
+}
   /**
    * (Người dùng) Cập nhật chi tiết tin đăng
    */
@@ -138,8 +163,7 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id;
-    return this.productService.hardDeleteProduct(id, userId);
+    return this.productService.hardDeleteProduct(id, req.user);
   }
 
   // 🟢 Lấy sản phẩm liên quan (ĐẶT TRƯỚC HÀM /:id)
@@ -171,15 +195,14 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id/hide')
   async hideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.hideProduct(id, req.user.id);
+    return this.productService.hideProduct(id, req.user);
   }
-
 
   // === HIỆN LẠI BÀI ĐÃ ẨN ===
   @UseGuards(JwtAuthGuard)
   @Patch(':id/unhide')
   async unhideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.unhideProduct(id, req.user.id);
+    return this.productService.unhideProduct(id, req.user);
   }
 
   // === ĐÁNH DẤU ĐÃ BÁN ===
@@ -216,5 +239,4 @@ export class ProductController {
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findById(id);
   }    
-  
 }

@@ -1,4 +1,6 @@
-// App.tsx
+import SearchProduct from './screens/products/SearchProduct';
+import SearchResultScreen from './screens/products/SearchResultScreen';
+import VerifyStudentScreen from './screens/profile/VerifyStudentScreen';
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { RootStackParamList } from "./types";
@@ -28,7 +30,6 @@ import UserScreen from "./screens/profile/UserScreen";
 import ChooseExchangeCategoryScreen from "./screens/post/ChooseExchangeCategoryScreen";
 import ChooseExchangeSubCategoryScreen from "./screens/post/ChooseExchangeSubCategoryScreen";
 import HomeAdminScreen from "./screens/admin/HomeAdminScreen";
-import UserDetail from "./screens/profile/UserDetail";
 import ManagerGroupsScreen from "./screens/groups/ManagerGroupsScreen";
 import UserInforScreen from "./screens/profile/UserInforScreen";
 import EditProfileScreen from "./screens/profile/EditProfileScreen";
@@ -50,7 +51,7 @@ import InviteMembersScreen from "./screens/groups/crud/InviteMembersScreen";
 import QRInviteScreen from "./screens/groups/crud/QRInviteScreen";
 import DeepLinkHandlerScreen from "./screens/groups/crud/DeepLinkHandlerScreen";
 import React, { useEffect } from "react";
-import ManageGroupPostsScreen from "./screens/admin/ManageProductsUserScreen";
+import ManageGroupPostsScreen from "./screens/admin/ManageGroupPostsScreen";
 import EditProductScreen from "./screens/products/EditProductScreen";
 import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
@@ -205,19 +206,13 @@ export default function App() {
               component={DeepLinkHandlerScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen
-              name="SuggestionScreen"
-              component={SuggestionScreen}
-            />
-            <Stack.Screen
-              name="ManageCategoriesScreen"
-              component={ManageCategoriesScreen}
-            />
-          </Stack.Navigator>
-        </NavigationContainer>
-        </ChatProvider>
-     
-      </NotificationProvider>
+          <Stack.Screen name="ManageGroupPostsScreen" component={ManageGroupPostsScreen} />
+          <Stack.Screen name="EditProductScreen" component={EditProductScreen} />
+          <Stack.Screen name="SuggestionScreen" component={SuggestionScreen} />
+          <Stack.Screen name="ManageCategoriesScreen" component={ManageCategoriesScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </NotificationProvider>
     </GestureHandlerRootView>
   );
 }

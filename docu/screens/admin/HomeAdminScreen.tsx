@@ -12,7 +12,6 @@ type Props = {
   navigation: HomeAdminScreenNavigationProp;
 };
 
-// Component Nút Chức Năng (để tái sử dụng)
 const AdminButton = ({
   icon,
   title,
@@ -58,7 +57,6 @@ export default function HomeAdminScreen({ navigation }: Props) {
       console.log("⚠️ [Admin] Lỗi khi gửi sự kiện logout:", err);
     }
 
-    // ✨ ĐÃ SỬA LẠI: Thêm 'role_id' vào danh sách xóa
     await AsyncStorage.multiRemove([
       "token",
       "userId",
@@ -73,7 +71,6 @@ export default function HomeAdminScreen({ navigation }: Props) {
     });
   };
 
-  // Hàm placeholder cho các màn hình chưa tạo
   const navigateToWIP = () => {
     Alert.alert("Chưa hoàn thiện", "Màn hình này đang được phát triển.");
   };
@@ -115,7 +112,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Quản lý Người Dùng"
             subtitle="Khóa/mở khóa tài khoản vi phạm"
             color="bg-red-600"
-            onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageUsersScreen")
+            onPress={() => navigation.navigate('AdminVerification')} 
           />
 
           {/* Quản lý danh mục */}
@@ -140,7 +137,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             Quản lý nội dung
           </Text>
 
-          {/* 4. Duyệt tin Công Khai (Đã đổi tên) */}
+          {/* 4. Duyệt tin Công Khai*/}
           <AdminButton
             icon="checkmark-done-circle-outline"
             title="Duyệt tin Công Khai"
@@ -149,7 +146,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             onPress={() => navigation.navigate("ManageProductsUserScreen")}
           />
 
-          {/* 5. Duyệt tin Nhóm (MỚI) */}
+          {/* 5. Duyệt tin Nhóm */}
           <AdminButton
             icon="file-tray-stacked-outline"
             title="Duyệt tin trong Nhóm"

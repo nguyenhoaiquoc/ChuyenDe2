@@ -1,9 +1,18 @@
 // register-user.dto.ts
-import { IsEmail, IsNotEmpty, IsNumber, IsOptional, Matches, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
-  @Matches(/@fit\.tdc\.edu\.vn$/, { message: 'Chỉ chấp nhận email sinh viên @fit.tdc.edu.vn' })
+  @Matches(/@fit\.tdc\.edu\.vn$/, {
+    message: 'Chỉ chấp nhận email sinh viên @fit.tdc.edu.vn',
+  })
   email: string;
 
   @IsNotEmpty({ message: 'Mật khẩu không được để trống' })
@@ -14,13 +23,12 @@ export class RegisterDto {
   password: string;
 
   @IsNotEmpty({ message: 'Họ tên không được để trống' })
-  fullName: string;
+  nickname: string;
 
   @IsOptional()
   @Matches(/^[0-9]{10}$/, { message: 'Số điện thoại phải gồm đúng 10 chữ số' })
   phone?: string;
 
-    @IsNumber()
-    group_id: number; 
-
+  @IsNumber()
+  group_id: number;
 }

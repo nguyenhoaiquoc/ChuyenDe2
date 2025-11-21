@@ -18,7 +18,7 @@ type Props = {
 };
 
 export default function RegisterScreen({ navigation }: Props) {
-  const [values, setValues] = useState<string[]>(["", "", "", "", ""]); // [fullName, email, phone, password, confirmPassword]
+  const [values, setValues] = useState<string[]>(["", "", "", "", ""]); // [nickname, email, phone, password, confirmPassword]
   const [showPasswords, setShowPasswords] = useState<boolean[]>([false, false]); // [password, confirm]
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,12 +64,12 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async () => {
     if (isLoading) return;
-    const [nickName, emailRaw, phoneRaw, password, confirmPassword] = values;
+    const [nickname, emailRaw, phoneRaw, password, confirmPassword] = values;
     const email = (emailRaw || "").trim().toLowerCase();
     const phone = (phoneRaw || "").trim();
 
     // kiểm tra cơ bản phía client
-    if (!nickName?.trim() || !email || !password || !confirmPassword) {
+    if (!nickname?.trim() || !email || !password || !confirmPassword) {
       Alert.alert("Vui lòng điền đầy đủ thông tin");
       return;
     }
@@ -90,7 +90,7 @@ export default function RegisterScreen({ navigation }: Props) {
       const res = await axios.post(
         `${path}/auth/register`,
         {
-          nickname: nickName.trim(),
+          nickname: nickname.trim(),
           email,
           password,
           phone,
