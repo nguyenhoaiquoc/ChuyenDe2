@@ -2,7 +2,6 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
-
 import { Group } from '../entities/group.entity';
 import { GroupMember } from '../entities/group-member.entity';
 import { GroupRole } from '../entities/group-role.entity';
@@ -10,7 +9,6 @@ import { GroupInvitation } from '../entities/group-invitation.entity';
 import { Product } from 'src/entities/product.entity';
 import { ProductStatus } from 'src/entities/product-status.entity';
 import { FavoritesModule } from 'src/favorites/favorites.module';
-import { GroupInvitation } from 'src/entities/group-invitation.entity';
 import { NotificationModule } from 'src/notification/notification.module';
 import { User } from 'src/entities/user.entity';
 import { AuthModule } from 'src/auth/auth.module';
