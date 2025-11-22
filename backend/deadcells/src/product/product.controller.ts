@@ -24,6 +24,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
 import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { Product } from 'src/entities/product.entity';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Controller('products')
 export class ProductController {
@@ -119,29 +120,9 @@ export class ProductController {
   }
 
   //Tìm kiếm sản phẩm (hỗ trợ name, price, category, sort, phân trang)
-  @Get('search')
-async searchProducts(
-  @Query('name') name?: string,
-  @Query('minPrice') minPrice?: string,
-  @Query('maxPrice') maxPrice?: string,
-  @Query('category') category?: string,
-  @Query('condition') condition?: string | string[], // hỗ trợ cả 1 và mảng
-  @Query('sortBy') sortBy?: 'price' | 'created_at',
-  @Query('sort') sort?: 'asc' | 'desc',
-  @Query('page') page: string = '1',
-  @Query('limit') limit: string = '20',
-) {
-  return this.productService.searchProducts({
-    name,
-    minPrice: minPrice !== '' ? Number(minPrice) : undefined,
-    maxPrice: maxPrice !== '' ? Number(maxPrice) : undefined,
-    category,
-    condition,
-    sortBy,
-    sort: sort || 'desc',
-    page: Number(page),
-    limit: Number(limit),
-  });
+@Get("search")
+async searchProducts(@Query() query: SearchProductDto) {
+  return this.productService.searchProducts(query);
 }
   /**
    * (Người dùng) Cập nhật chi tiết tin đăng

@@ -51,13 +51,13 @@ import InviteMembersScreen from "./screens/groups/crud/InviteMembersScreen";
 import QRInviteScreen from "./screens/groups/crud/QRInviteScreen";
 import DeepLinkHandlerScreen from "./screens/groups/crud/DeepLinkHandlerScreen";
 import React, { useEffect } from "react";
-import ManageGroupPostsScreen from "./screens/admin/ManageProductsUserScreen";
 import EditProductScreen from "./screens/products/EditProductScreen";
 import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupDeepLink } from "./src/navigation/DeepLinkHandler";
 import AdminVerificationScreen from './screens/admin/user/AdminVerificationScreen';
+import ManageProductsScreen from './screens/admin/ManageProductsUserScreen'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -118,6 +118,7 @@ export default function App() {
           <Stack.Screen name="GroupMembersScreen" component={GroupMembersScreen} />
           <Stack.Screen name="ApprovePostsScreen" component={ApprovePostsScreen} />
           <Stack.Screen name="EditGroupScreen" component={EditGroupScreen} />
+         
           <Stack.Screen name="AdminVerification" component={AdminVerificationScreen} />
         </Stack.Navigator>
       </NavigationContainer>

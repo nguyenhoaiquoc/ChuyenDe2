@@ -48,11 +48,15 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Favorite } from 'src/entities/favorite.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
+
+
   constructor(
+
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImage)
@@ -115,7 +119,7 @@ export class ProductService {
     private readonly groupMemberRepo: Repository<GroupMember>,
 
     private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   // Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
   async create(data: CreateProductDto, files?: Express.Multer.File[]) {
@@ -409,8 +413,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        
-       
+
+
         'size',
         'brand',
         'color',
@@ -453,8 +457,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        
-       
+
+
         'size',
         'brand',
         'color',
@@ -491,8 +495,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-       
-        
+
+
         'size',
         'brand',
         'color',
@@ -530,8 +534,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        
-        
+
+
         'size',
         'brand',
         'color',
@@ -587,9 +591,9 @@ export class ProductService {
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
           : categoryName ||
-            subCategoryName ||
-            p.dealType?.name ||
-            'Không có danh mục';
+          subCategoryName ||
+          p.dealType?.name ||
+          'Không có danh mục';
 
       return {
         id: p.id,
@@ -601,11 +605,11 @@ export class ProductService {
         user_id: p.user?.id,
         user: p.user
           ? {
-              id: p.user.id,
-              name: p.user.fullName,
-              email: p.user.email,
-              phone: p.user.phone,
-            }
+            id: p.user.id,
+            name: p.user.fullName,
+            email: p.user.email,
+            phone: p.user.phone,
+          }
           : null,
         author_name: p.user?.fullName || 'Người bán',
         author: p.author || null,
@@ -667,37 +671,37 @@ export class ProductService {
 
         category: p.category
           ? {
-              id: p.category.id,
-              name: p.category.name,
-              image: p.category.image,
-              hot: p.category.hot,
-            }
+            id: p.category.id,
+            name: p.category.name,
+            image: p.category.image,
+            hot: p.category.hot,
+          }
           : null,
         subCategory: p.subCategory
           ? {
-              id: p.subCategory.id,
-              name: p.subCategory.name,
-              parent_category_id: p.subCategory.parent_category_id,
-              source_table: p.subCategory.source_table,
-              source_id: p.subCategory.source_id,
-            }
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            parent_category_id: p.subCategory.parent_category_id,
+            source_table: p.subCategory.source_table,
+            source_id: p.subCategory.source_id,
+          }
           : null,
 
         category_change: p.category_change
           ? {
-              id: p.category_change.id,
-              name: p.category_change.name,
-              image: p.category_change.image,
-            }
+            id: p.category_change.id,
+            name: p.category_change.name,
+            image: p.category_change.image,
+          }
           : null,
         sub_category_change: p.sub_category_change
           ? {
-              id: p.sub_category_change.id,
-              name: p.sub_category_change.name,
-              parent_category_id: p.sub_category_change.parent_category_id,
-              source_table: p.sub_category_change.source_table,
-              source_id: p.sub_category_change.source_id,
-            }
+            id: p.sub_category_change.id,
+            name: p.sub_category_change.name,
+            parent_category_id: p.sub_category_change.parent_category_id,
+            source_table: p.sub_category_change.source_table,
+            source_id: p.sub_category_change.source_id,
+          }
           : null,
 
         images:
@@ -792,7 +796,7 @@ export class ProductService {
   }
   async findById(id: number): Promise<any> {
     const product = await this.productRepo.findOne({
-      where: { id},
+      where: { id },
       relations: [
         'images',
         'user',
@@ -805,7 +809,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        
+
         'size',
         'brand',
         'color',
@@ -1037,127 +1041,147 @@ export class ProductService {
   }
 
   // hàm tìm kiếm
-  // Trong ProductService
-async searchProducts(params: {
-  name?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  category?: string;           // tên category hoặc subCategory
-  condition?: string | string[]; // "Mới", "Cũ" hoặc mảng
-  sortBy?: 'price' | 'created_at';
-  sort?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
-}): Promise<{
-  data: any[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}> {
-  const {
-    name,
-    minPrice,
-    maxPrice,
-    category,
-    condition,
-    sortBy = 'created_at',
-    sort = 'desc',
-    page = 1,
-    limit = 20,
-  } = params;
 
-  const skip = (page - 1) * limit;
 
-  const query = this.productRepo
-    .createQueryBuilder('product')
-    .leftJoinAndSelect('product.images', 'images')
-    .leftJoinAndSelect('product.category', 'category')
-    .leftJoinAndSelect('product.subCategory', 'subCategory')
-    .leftJoinAndSelect('product.condition', 'condition')
-    .leftJoinAndSelect('product.user', 'user')
-    .where('product.product_status_id = :status', { status: 2 }) // chỉ lấy đã duyệt
-    .andWhere('product.visibility_type = 0 OR product.visibility_type IS NULL') // chỉ công khai
-    .select([
-      'product.id',
-      'product.name',
-      'product.price',
-      'product.created_at',
-      'product.thumbnail_url',
-      'product.condition',
-      'category.name',
-      'subCategory.name',
-      'images.image_url',
-      'user.id',
-      'user.fullName',
-    ]);
+  async searchProducts(query: SearchProductDto) {
+    const {
+      name,
+      description,
+      minPrice,
+      maxPrice,
+      category,
+      condition,
+      sortBy = "created_at",
+      sort = "desc",
+      page = 1,
+      limit = 20,
+    } = query;
 
-  // Tìm kiếm tên sản phẩm
-  if (name) {
-    query.andWhere('product.name ILIKE :name', { name: `%${name.trim()}%` });
-  }
+    const take = Math.min(Number(limit) || 20, 100);
+    const skip = (Number(page) - 1) * take;
 
-  // Lọc giá
-  if (minPrice !== undefined && minPrice !== null) {
-    query.andWhere('product.price >= :minPrice', { minPrice });
-  }
-  if (maxPrice !== undefined && maxPrice !== null) {
-    query.andWhere('product.price <= :maxPrice', { maxPrice });
-  }
+    const qb = this.productRepo
+      .createQueryBuilder("product")
+      .leftJoinAndSelect("product.images", "images")
+      .leftJoinAndSelect("product.user", "user")
+      .leftJoinAndSelect("product.category", "categoryTable")
+      .leftJoinAndSelect("product.subCategory", "subCategory")
+      .leftJoinAndSelect("product.condition", "conditionTable")
+      .leftJoinAndSelect("product.dealType", "dealType")
+      .leftJoinAndSelect("product.postType", "postType")
+      .leftJoinAndSelect("product.brand", "brand")
+      .leftJoinAndSelect("product.color", "color")
+      .leftJoinAndSelect("product.size", "size")
+      .leftJoinAndSelect("product.productStatus", "productStatus");
 
-  // Lọc theo danh mục (category.name HOẶC subCategory.name)
-  if (category) {
-    const likeCategory = `%${category.trim()}%`;
-    query.andWhere(
-      '(category.name ILIKE :category OR subCategory.name ILIKE :category)',
-      { category: likeCategory }
-    );
-  }
 
-  // Lọc tình trạng (Mới / Cũ) - hỗ trợ 1 hoặc nhiều
-  if (condition) {
-    const conditions = Array.isArray(condition) ? condition : [condition];
-    if (conditions.length > 0) {
-      query.andWhere('condition.name IN (:...conditions)', { conditions });
+
+    qb.andWhere("productStatus.id = :statusId", { statusId: 2 });
+    // ==================================================
+    // 🔍 FILTER NAME
+    // ==================================================
+    if (name && name.trim().length >= 2) {
+      qb.andWhere("LOWER(product.name) LIKE LOWER(:name)", {
+        name: `%${name.trim()}%`,
+      });
     }
+
+
+    // 🔍 FILTER DESCRIPTION
+    if (description && description.trim().length >= 2) {
+      qb.andWhere("LOWER(product.description) LIKE LOWER(:des)", {
+        des: `%${description.trim()}%`,
+      });
+    }
+    // ==================================================
+    // 💰 PRICE FILTER
+    // ==================================================
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+
+    if (!isNaN(min) && !isNaN(max) && min <= max) {
+      qb.andWhere("product.price BETWEEN :min AND :max", { min, max });
+    } else {
+      if (!isNaN(min)) qb.andWhere("product.price >= :min", { min });
+      if (!isNaN(max)) qb.andWhere("product.price <= :max", { max });
+    }
+
+    // ==================================================
+    // 🏷 CATEGORY & SUBCATEGORY
+    // ==================================================
+    if (category?.trim()) {
+      const cat = `%${category.trim().toLowerCase()}%`;
+
+      qb.andWhere(
+        "(LOWER(categoryTable.name) LIKE :cat OR LOWER(subCategory.name) LIKE :cat)",
+        { cat }
+      );
+    }
+
+    // ==================================================
+    // 📌 CONDITION FILTER
+    // ==================================================
+    const validConditions = [
+      "Mới 100%",
+      "Cũ",
+      "Đã qua sử dụng",
+      "Miễn phí",
+      "Trao đổi",
+      "Mua bán",
+    ];
+    // 🔌 POST TYPE
+    if (query.postType && query.postType.length > 0) {
+      qb.andWhere("postType.name IN (:...postTypes)", { postTypes: query.postType });
+    }
+
+    // 🔌 DEAL TYPE
+    if (query.dealType && query.dealType.length > 0) {
+      qb.andWhere("dealType.name IN (:...dealTypes)", { dealTypes: query.dealType });
+    }
+
+
+    if (condition) {
+      const condArray = Array.isArray(condition) ? condition : [condition];
+      const filtered = condArray
+        .map((c) => c.trim())
+        .filter((c) => validConditions.includes(c));
+
+      if (filtered.length > 0) {
+        qb.andWhere("conditionTable.name IN (:...conds)", { conds: filtered });
+      }
+    }
+
+    // ==================================================
+    // 📌 SORT
+    // ==================================================
+    const sortableFields = {
+      created_at: "product.created_at",
+      price: "product.price",
+    };
+
+    const sortField =
+      sortableFields[sortBy] ?? sortableFields["created_at"];
+
+    qb.orderBy(sortField, sort.toUpperCase() === "ASC" ? "ASC" : "DESC");
+
+    // ==================================================
+    // 📌 PAGINATION
+    // ==================================================
+    qb.skip(skip).take(take);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: take,
+        total,
+        totalPages: Math.ceil(total / take),
+      },
+    };
   }
 
-  // Sắp xếp
-  const validSortBy = ['price', 'created_at'].includes(sortBy) ? sortBy : 'created_at';
-  const validSort = sort.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-  const order = sort.toUpperCase() as 'ASC' | 'DESC';
-  query.orderBy(`product.${validSortBy}`, validSort);
-  if (validSortBy !== 'created_at') {
-    query.addOrderBy('product.created_at', 'DESC'); // thứ tự phụ
-  }
-
-  // Phân trang
-  query.skip(skip).take(limit);
-
-  const [rawData, total] = await query.getManyAndCount();
-
-  // Format dữ liệu giống như formatProducts() để frontend dùng chung
-  const formattedData = rawData.map(p => ({
-    id: p.id,
-    name: p.name,
-    price: Number(p.price),
-    thumbnail_url: p.thumbnail_url || p.images?.[0]?.image_url || null,
-    created_at: p.created_at,
-    category: p.category ? { name: p.category.name } : null,
-    subCategory: p.subCategory ? { name: p.subCategory.name } : null,
-    condition: p.condition ? { name: p.condition.name } : null,
-    images: p.images?.map(img => ({ image_url: img.image_url })) || [],
-    user: p.user ? { id: p.user.id, fullName: p.user.fullName } : null,
-  }));
-
-  return {
-    data: formattedData,
-    total,
-    page,
-    limit,
-    totalPages: Math.ceil(total / limit),
-  };
-}
 
   //xóa vĩnh viễn
   async hardDeleteProduct(productId: number, userId: number): Promise<string> {
@@ -1653,8 +1677,8 @@ async searchProducts(params: {
     if (data.sub_category_change_id !== undefined) {
       product.sub_category_change = data.sub_category_change_id
         ? await this.subCategoryRepo.findOneBy({
-            id: data.sub_category_change_id,
-          })
+          id: data.sub_category_change_id,
+        })
         : null;
     }
 

@@ -8,7 +8,6 @@ import {
   ScrollView,
   Keyboard,
   Animated,
-  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,32 +19,28 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type SearchNavProp = NativeStackNavigationProp<RootStackParamList, "SearchProduct">;
 
-// TỰ ĐỘNG GHI LẠI MỖI LẦN TÌM KIẾM → TẠO HOT KEYWORD REALTIME
+const HOT_KEYWORDS_KEY = "HOT_KEYWORDS_2025";
+
+// Ghi lại từ khóa tìm kiếm
 const recordSearch = async (keyword: string) => {
-  if (!keyword.trim()) return;
-  const trimmed = keyword.trim().toLowerCase();
+  const key = keyword.trim().toLowerCase();
+  if (!key) return;
   try {
-    const raw = await AsyncStorage.getItem("HOT_KEYWORDS_2025");
+    const raw = await AsyncStorage.getItem(HOT_KEYWORDS_KEY);
     const stats: Record<string, number> = raw ? JSON.parse(raw) : {};
-
-    stats[trimmed] = (stats[trimmed] || 0) + 1;
-
-    const sorted = Object.entries(stats)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 100);
-
-    await AsyncStorage.setItem("HOT_KEYWORDS_2025", JSON.stringify(Object.fromEntries(sorted)));
+    stats[key] = (stats[key] || 0) + 1;
+    const sorted = Object.entries(stats).sort((a, b) => b[1] - a[1]).slice(0, 100);
+    await AsyncStorage.setItem(HOT_KEYWORDS_KEY, JSON.stringify(Object.fromEntries(sorted)));
   } catch (err) {
-    console.log("Lỗi ghi hot keyword:", err);
+    console.log("Error recording hot keyword:", err);
   }
 };
 
-// LẤY TOP HOT KEYWORDS TỪ NGƯỜI DÙNG THẬT
+// Lấy hot keywords
 const getRealtimeHotKeywords = async (limit = 12): Promise<string[]> => {
   try {
-    const raw = await AsyncStorage.getItem("HOT_KEYWORDS_2025");
+    const raw = await AsyncStorage.getItem(HOT_KEYWORDS_KEY);
     if (!raw) return [];
-
     const stats: Record<string, number> = JSON.parse(raw);
     return Object.keys(stats)
       .sort((a, b) => stats[b] - stats[a])
@@ -67,22 +62,16 @@ const SearchProduct = () => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
   }, []);
 
-  // TẢI HOT KEYWORDS REALTIME TỪ NGƯỜI DÙNG THẬT (AsyncStorage)
+  // Load hot keywords
   useEffect(() => {
     (async () => {
       const realtime = await getRealtimeHotKeywords(12);
-      setHotKeywords(
-        realtime.length > 0
-          ? realtime
-          : ["iPhone 15", "Tai nghe", "Áo thun", "Giày sneaker", "Laptop", "Điện thoại cũ", "Máy lạnh", "Tủ lạnh"]
-      );
+      setHotKeywords(realtime.length ? realtime : [
+        "iPhone 15", "Tai nghe", "Áo thun", "Giày sneaker", "Laptop", "Điện thoại cũ", "Máy lạnh", "Tủ lạnh"
+      ]);
     })();
   }, []);
 
@@ -94,23 +83,18 @@ const SearchProduct = () => {
     })();
   }, []);
 
-  // GỢI Ý KHI GÕ – GIẢ TẠM SIÊU ĐẸP (không gọi API → không lỗi 400)
+  // Debounce gợi ý
   const fetchSuggestions = useCallback(
     debounce((text: string) => {
-      if (!text.trim()) {
-        setSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-      const fake = [
+      if (!text.trim()) return setShowSuggestions(false);
+      setSuggestions([
         text,
         `${text} chính hãng`,
         `${text} giá rẻ`,
         `${text} cũ đẹp 99%`,
         `${text} mới 100%`,
         `Mua ${text} ở đâu rẻ nhất`,
-      ];
-      setSuggestions(fake);
+      ]);
       setShowSuggestions(true);
     }, 300),
     []
@@ -121,19 +105,22 @@ const SearchProduct = () => {
     return () => fetchSuggestions.cancel();
   }, [query]);
 
+  // Lưu lịch sử
   const saveHistory = async (keyword: string) => {
-    const newHistory = [keyword, ...history.filter(h => h !== keyword)].slice(0, 10);
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+    const newHistory = [trimmed, ...history.filter(h => h !== trimmed)].slice(0, 10);
     setHistory(newHistory);
     await AsyncStorage.setItem("search_history", JSON.stringify(newHistory));
   };
 
+  // Tìm kiếm
   const handleSearch = async (keyword?: string) => {
     const searchText = (keyword || query).trim();
     if (!searchText) return;
-
     Keyboard.dismiss();
     await saveHistory(searchText);
-    await recordSearch(searchText); // TỰ ĐỘNG TẠO HOT KEYWORD REALTIME
+    await recordSearch(searchText);
     setShowSuggestions(false);
     setQuery("");
     navigation.navigate("SearchResultScreen", { query: searchText });
@@ -147,20 +134,15 @@ const SearchProduct = () => {
   const renderItem = ({ item }: { item: string }) => (
     <TouchableOpacity
       onPress={() => handleSearch(item)}
-      style={{
-        flexDirection: "row",
-        paddingVertical: 14,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f2f2f2",
-        alignItems: "center",
-      }}
+      style={{ flexDirection: "row", padding: 14, borderBottomWidth: 1, borderBottomColor: "#f2f2f2", alignItems: "center" }}
     >
       <Feather name="search" size={18} color="#888" style={{ marginRight: 12 }} />
       <Text style={{ flex: 1, fontSize: 16, color: "#333" }}>{item}</Text>
       <Feather name="arrow-up-left" size={16} color="#ccc" />
     </TouchableOpacity>
   );
+
+  const hasQuery = query.trim().length > 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={["top"]}>
@@ -169,7 +151,6 @@ const SearchProduct = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Feather name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-
         <View style={{ flex: 1, flexDirection: "row", alignItems: "center", backgroundColor: "#f5f5f7", borderRadius: 12, paddingHorizontal: 12, marginHorizontal: 12 }}>
           <Feather name="search" size={18} color="#999" />
           <TextInput
@@ -179,7 +160,7 @@ const SearchProduct = () => {
             placeholderTextColor="#aaa"
             style={{ flex: 1, marginLeft: 10, fontSize: 16, paddingVertical: 10 }}
             returnKeyType="search"
-            onSubmitEditing={() => handleSearch()}
+            onSubmitEditing={() => hasQuery && handleSearch()}
             autoFocus
           />
           {query ? (
@@ -188,30 +169,26 @@ const SearchProduct = () => {
             </TouchableOpacity>
           ) : null}
         </View>
-
-        <TouchableOpacity onPress={() => handleSearch()} style={{ backgroundColor: "#007AFF", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 }}>
+        <TouchableOpacity
+          onPress={() => hasQuery && handleSearch()}
+          style={{ backgroundColor: hasQuery ? "#007AFF" : "#ccc", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 }}
+          disabled={!hasQuery}
+        >
           <Text style={{ color: "#fff", fontWeight: "600" }}>Tìm</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Nội dung */}
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         {showSuggestions ? (
-          <View style={{ flex: 1 }}>
-            {suggestions.length > 0 ? (
-              <FlatList
-                data={suggestions}
-                renderItem={renderItem}
-                keyExtractor={(_, i) => i.toString()}
-                keyboardShouldPersistTaps="handled"
-              />
-            ) : (
-              <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>Không có gợi ý</Text>
-            )}
-          </View>
+          <FlatList
+            data={suggestions}
+            renderItem={renderItem}
+            keyExtractor={(_, i) => i.toString()}
+            keyboardShouldPersistTaps="handled"
+          />
         ) : (
           <ScrollView keyboardShouldPersistTaps="handled">
-            {/* Lịch sử tìm kiếm */}
+            {/* Lịch sử */}
             {history.length > 0 && (
               <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -221,11 +198,7 @@ const SearchProduct = () => {
                   </TouchableOpacity>
                 </View>
                 {history.map((h, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => handleSearch(h)}
-                    style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10 }}
-                  >
+                  <TouchableOpacity key={i} onPress={() => handleSearch(h)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10 }}>
                     <Feather name="clock" size={16} color="#888" />
                     <Text style={{ marginLeft: 12, fontSize: 15, color: "#333" }}>{h}</Text>
                   </TouchableOpacity>
@@ -233,13 +206,12 @@ const SearchProduct = () => {
               </View>
             )}
 
-            {/* Đang thịnh hành – 100% realtime từ người dùng */}
-            <View style={{ paddingHorizontal: 16, marginTop: history.length > 0 ? 20 : 30 }}>
+            {/* Hot Keywords */}
+            <View style={{ paddingHorizontal: 16, marginTop: history.length ? 20 : 30 }}>
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
                 <Feather name="zap" size={22} color="#FF3B30" />
                 <Text style={{ fontSize: 17, fontWeight: "600", marginLeft: 8 }}>Đang thịnh hành</Text>
               </View>
-
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
                 {hotKeywords.map((kw, i) => (
                   <TouchableOpacity

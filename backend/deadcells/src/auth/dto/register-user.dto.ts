@@ -14,7 +14,7 @@ export class RegisterDto {
   password: string;
 
   @IsNotEmpty({ message: 'Họ tên không được để trống' })
-  fullName: string;
+  nickname: string;
 
   @IsOptional()
   @Matches(/^[0-9]{10}$/, { message: 'Số điện thoại phải gồm đúng 10 chữ số' })

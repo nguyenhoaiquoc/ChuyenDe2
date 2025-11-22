@@ -52,7 +52,7 @@ constructor(
 
     if (existing && !existing.is_verified) {
       // ✅ KHÔNG xoá hard; chỉ cập nhật lại thông tin & regenerate OTP
-      existing.fullName = dto.fullName;
+      existing.nickname = dto.nickname;
       existing.phone = dto.phone ?? existing.phone;
       existing.passwordHash = passwordHash;
       user = await this.userRepository.save(existing);
@@ -60,7 +60,7 @@ constructor(
       user = this.userRepository.create({
         email: dto.email,
         passwordHash,
-        fullName: dto.fullName,
+        nickname: dto.nickname,
         phone: dto.phone,
         roleId: 2, // mặc định member
         statusId: existing?.statusId ?? 1, // tuỳ hệ thống: 1 = active
@@ -157,7 +157,7 @@ constructor(
     return {
       token,
       role: user.role?.name,
-      fullName: user.fullName,
+      nickname: user.nickname,
       id: user.id,
       tokenType: 'Bearer',
     };
