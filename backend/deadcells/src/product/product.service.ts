@@ -354,8 +354,14 @@ export class ProductService {
 
     // 🚀 GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
     if (productStatusGr && productStatusGr.id === 2) {
-      // Mở comment này khi sẵn sàng
-      // this.notifyMatchingPosts(savedProduct.id);
+      this.notificationService
+        .notifyFollowersOfNewPost(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi thông báo user follow đnăgh bài:',
+            err.message,
+          ),
+        );
     }
 
     // 4. Lưu ảnh
@@ -1011,7 +1017,10 @@ export class ProductService {
     id: number,
     dto: UpdateProductStatusDto,
   ): Promise<Product> {
-    const product = await this.productRepo.findOneBy({ id });
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
     if (!product) {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
     }
@@ -1030,8 +1039,11 @@ export class ProductService {
 
     // 🚀 GỬI THÔNG BÁO GỢI Ý
     if (dto.product_status_id === 2) {
-      // Mở comment này khi sẵn sàng
-      // this.notifyMatchingPosts(updatedProduct.id);
+      try {
+        await this.notificationService.notifyFollowersOfNewPost(updatedProduct);
+      } catch (err) {
+        this.logger.error('Lỗi notifyFollowersOfNewPost:', err.message);
+      }
     }
     return updatedProduct;
   }

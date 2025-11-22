@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, FindManyOptions } from 'typeorm';
+import { Repository, Not, FindManyOptions, In } from 'typeorm';
 import { Notification } from 'src/entities/notification.entity';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { Product } from 'src/entities/product.entity';
@@ -9,6 +9,7 @@ import { TargetType } from 'src/entities/target-type.entity';
 import { NotificationGateway } from './notification.gateway';
 import { User } from 'src/entities/user.entity';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { Follower } from 'src/entities/follower.entity';
 
 @Injectable()
 export class NotificationService {
@@ -24,6 +25,8 @@ export class NotificationService {
     private readonly groupMemberRepo: Repository<GroupMember>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Follower)
+    private readonly followerRepo: Repository<Follower>,
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
@@ -84,7 +87,7 @@ export class NotificationService {
     }
   }
 
-  // HÀM : Thông báo cho chính người đăng
+  // Thông báo cho chính người đăng
   async notifyUserOfPostSuccess(product: Product) {
     try {
       const action = await this.actionRepo.findOneByOrFail({
@@ -110,26 +113,90 @@ export class NotificationService {
     }
   }
 
-  //  Thông báo cho người bị theo dõ
+  // Thông báo cho người bị theo dõi
   async notifyUserOfNewFollower(actorId: number, followedUserId: number) {
     try {
-      // 'new_follow' (ông vừa thêm ở Bước 1)
-      const action = await this.actionRepo.findOneByOrFail({ name: 'new_follow' }); 
-      // 'user' (ông đã có)
-      const targetType = await this.targetTypeRepo.findOneByOrFail({ name: 'user' }); 
-
+      const action = await this.actionRepo.findOneByOrFail({
+        name: 'new_follow',
+      });
+      const targetType = await this.targetTypeRepo.findOneByOrFail({
+        name: 'user',
+      });
       const dto: CreateNotificationDto = {
-        userId: followedUserId, // Người NHẬN là người BỊ theo dõi
-        actorId: actorId,       // Người LÀM là người đi theo dõi
+        userId: followedUserId,
+        actorId: actorId,
         actionId: action.id,
         targetTypeId: targetType.id,
-        targetId: actorId,      // Đối tượng là chính người đi theo dõi
-        productId: undefined,   // Không liên quan đến sản phẩm
+        targetId: actorId,
+        productId: undefined,
       };
       await this.create(dto);
-      
     } catch (error) {
-      this.logger.error(`Lỗi tạo thông báo new_follow: ${error.message}`, error.stack);
+      this.logger.error(
+        `Lỗi tạo thông báo new_follow: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  // Thông báo cho TẤT CẢ FOLLOWER khi user đăng bài mới
+  async notifyFollowersOfNewPost(product: Product) {
+    try {
+      const authorId = Number(product.user_id);
+
+      // 1. Tìm action 'following_new_post'
+      const action = await this.actionRepo.findOneBy({
+        name: 'following_new_post',
+      });
+      if (!action) {
+        this.logger.warn(' Không tìm thấy action "following_new_post".');
+        return;
+      }
+
+      // 2. Tìm targetType 'product'
+      const targetType = await this.targetTypeRepo.findOneByOrFail({
+        name: 'product',
+      });
+
+      // 3. Lấy danh sách người đang follow author này
+      const followers = await this.followerRepo.find({
+        where: { following: { id: authorId } },
+        relations: ['follower'],
+      });
+
+      if (followers.length === 0) {
+        this.logger.log(`User ${authorId} không có follower nào.`);
+        return;
+      }
+
+      this.logger.log(
+        `📢 Gửi thông báo bài mới đến ${followers.length} follower của user ${authorId}`,
+      );
+
+      // 4. Tạo thông báo cho từng follower
+      const notificationPromises = followers
+        .filter((f) => f.follower.id !== authorId) // Không gửi cho chính mình
+        .map((f) => {
+          const dto: CreateNotificationDto = {
+            userId: f.follower.id, // Người NHẬN (follower)
+            actorId: authorId, // Người ĐĂNG BÀI
+            actionId: action.id,
+            targetTypeId: targetType.id,
+            targetId: product.id,
+            productId: product.id,
+          };
+          return this.create(dto);
+        });
+
+      await Promise.allSettled(notificationPromises);
+      this.logger.log(
+        `Đã gửi thông báo bài mới cho ${followers.length} follower.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `❌ Lỗi notifyFollowersOfNewPost: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -320,7 +387,7 @@ export class NotificationService {
       'action', // Cần cho item.action.name
       'targetType', // Cần cho item.targetType.name
       'product', // Cần cho thông báo sản phẩm
-      'group', // 👈 Cần cho thông báo lời mời nhóm
+      'group', // Cần cho thông báo lời mời nhóm
     ];
 
     // 2. Cấu hình query cơ bản
@@ -333,20 +400,20 @@ export class NotificationService {
       take: 50, // Luôn giới hạn số lượng
     };
 
-    // 3. Xử lý logic 2 tab
-    const newsActionName = 'admin_new_post'; // Tên action "Tin tức" (ví dụ)
+    // 3.  Khai báo mảng các action cho tab Tin tức(bài viết admin và bài viết được follow)
+    const newsActions = ['admin_new_post', 'following_new_post'];
 
     if (tab === 'news') {
       // Nếu là tab "Tin tức", chỉ lấy action "admin_new_post"
       queryOptions.where = {
         ...queryOptions.where,
-        action: { name: newsActionName },
+        action: { name: In(newsActions) },
       };
     } else {
       // Nếu là tab "Hoạt động" (mặc định), lấy TẤT CẢ TRỪ "admin_new_post"
       queryOptions.where = {
         ...queryOptions.where,
-        action: { name: Not(newsActionName) },
+        action: { name: Not(In(newsActions)) },
       };
     }
 

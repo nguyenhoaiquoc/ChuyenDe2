@@ -45,7 +45,7 @@ export type RootStackParamList = {
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
   UserInforScreen: {
-    userId: number | string;
+    userId?: number | string;
   };
   EditProfileScreen: undefined;
   SellProductScreen: undefined;

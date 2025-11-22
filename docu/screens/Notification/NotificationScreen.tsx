@@ -352,6 +352,12 @@ export default function NotificationScreen({ navigation }: Props) {
       );
 
       switch (item.action?.name) {
+        case "following_new_post":
+          return (
+            <Text>
+              {actorName} đã đăng một bài viết mới: {productName}
+            </Text>
+          );
         case "post_success":
           return <Text>Bạn đã đăng thành công {productName}.</Text>;
         case "admin_new_post":
@@ -368,6 +374,8 @@ export default function NotificationScreen({ navigation }: Props) {
           );
         case "favorite_confirmation":
           return <Text>Bạn đã thích {productName}.</Text>;
+        case "new_follow":
+          return <Text>{actorName} đã đang theo dõi bạn.</Text>;
         default:
           return <Text>{actorName} đã có một hoạt động mới.</Text>;
       }
@@ -383,11 +391,11 @@ export default function NotificationScreen({ navigation }: Props) {
         disabled={isNavigating}
       >
         <Image
-          source={{
-            uri: item.actor?.image
-              ? `${path}${item.actor.image}`
-              : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-          }}
+          source={
+            item.actor?.image
+              ? { uri: item.actor.image }
+              : require("../../assets/khi.png")
+          }
           className="w-10 h-10 rounded-full"
         />
         <View className="flex-1 ml-3">

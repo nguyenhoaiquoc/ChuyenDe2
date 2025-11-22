@@ -16,7 +16,15 @@ export class FollowService {
   ) {}
 
   async toggleFollow(followerId: number, followingId: number) {
-    // 1. Kiểm tra xem đã follow chưa
+    // Không cho phép tự follow chính mình
+    if (followerId === followingId) {
+      return {
+        isFollowing: false,
+        message: 'Không thể tự theo dõi chính mình.',
+        followerCount: await this.getFollowerCountNumber(followingId),
+      };
+    }
+
     const existingFollow = await this.followerRepo.findOne({
       where: {
         follower: { id: followerId },
@@ -25,25 +33,37 @@ export class FollowService {
     });
 
     if (existingFollow) {
-      // 2a. Đã follow -> Hủy (Unfollow)
+      // Đã follow -> Hủy (Unfollow)
       await this.followerRepo.remove(existingFollow);
-      // (Không cần gửi thông báo khi Hủy theo dõi)
-      return { isFollowing: false, message: 'Đã hủy theo dõi.' };
+      const followerCount = await this.getFollowerCountNumber(followingId);
+      return {
+        isFollowing: false,
+        message: 'Đã hủy theo dõi.',
+        followerCount,
+      };
     } else {
-      // 2b. Chưa follow -> Theo dõi (Follow)
+      // Chưa follow -> Theo dõi (Follow)
       const newFollow = this.followerRepo.create({
         follower: { id: followerId },
         following: { id: followingId },
       });
       await this.followerRepo.save(newFollow);
-      this.notificationService.notifyUserOfNewFollower(followerId, followingId)
-        .catch(err => this.logger.error(`Lỗi (từ service) notifyFollow: ${err.message}`));
-        
-      return { isFollowing: true, message: 'Theo dõi thành công.' };
+
+      // Gửi thông báo (async, không block)
+      this.notificationService
+        .notifyUserOfNewFollower(followerId, followingId)
+        .catch((err) => this.logger.error(`Lỗi notifyFollow: ${err.message}`));
+
+      const followerCount = await this.getFollowerCountNumber(followingId);
+      return {
+        isFollowing: true,
+        message: 'Theo dõi thành công.',
+        followerCount,
+      };
     }
   }
 
-  // Hàm kiểm tra trạng thái (cho frontend)
+  // Hàm kiểm tra trạng thái follow
   async checkFollowStatus(followerId: number, followingId: number) {
     const isFollowing = await this.followerRepo.exist({
       where: {
@@ -54,50 +74,42 @@ export class FollowService {
     return { isFollowing };
   }
 
-  /**
-   * ✅ HÀM MỚI: Đếm xem user này CÓ BAO NHIÊU người theo dõi
-   */
-  async getFollowerCount(userId: number): Promise<{ count: number }> {
-    const count = await this.followerRepo.count({
-      where: {
-        following: { id: userId }, // Đếm xem ai đang "following" (theo dõi) user này
-      },
+  // Hàm helper trả về số (dùng nội bộ)
+  private async getFollowerCountNumber(userId: number): Promise<number> {
+    return this.followerRepo.count({
+      where: { following: { id: userId } },
     });
+  }
+
+  // Đếm số người theo dõi user này
+  async getFollowerCount(userId: number): Promise<{ count: number }> {
+    const count = await this.getFollowerCountNumber(userId);
     return { count };
   }
 
- 
-//    *  HÀM MỚI: Đếm xem user này ĐANG THEO DÕI bao nhiêu người
-  
+  // Đếm số người user này đang theo dõi
   async getFollowingCount(userId: number): Promise<{ count: number }> {
     const count = await this.followerRepo.count({
-      where: {
-        follower: { id: userId }, 
-      },
+      where: { follower: { id: userId } },
     });
     return { count };
   }
 
+  // Lấy danh sách người theo dõi user này
   async getFollowers(userId: number): Promise<User[]> {
     const follows = await this.followerRepo.find({
-      where: {
-        following: { id: userId },
-      },
+      where: { following: { id: userId } },
       relations: ['follower'],
     });
-    // Trả về mảng các user là "follower"
-    return follows.map(follow => follow.follower);
+    return follows.map((f) => f.follower);
   }
 
-  /** Lấy danh sách NHỮNG NGƯỜI MÀ user này đang theo dõi
-   */
+  // Lấy danh sách người mà user này đang theo dõi
   async getFollowing(userId: number): Promise<User[]> {
     const follows = await this.followerRepo.find({
-      where: {
-        follower: { id: userId },
-      },
-      relations: ['following'], 
+      where: { follower: { id: userId } },
+      relations: ['following'],
     });
-    return follows.map(follow => follow.following);
+    return follows.map((f) => f.following);
   }
 }
