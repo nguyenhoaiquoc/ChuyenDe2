@@ -99,7 +99,7 @@ export default function FeedbackScreen() {
                         ? item.ratedUser.image
                         : `${path}${item.ratedUser.image}`,
                     }
-                  : require("../../assets/meo.jpg")
+                  : require("../../assets/default.png")
               }
               className="w-12 h-12 rounded-full mr-3"
             />

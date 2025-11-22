@@ -138,13 +138,14 @@ export default function AdminDashboardScreen() {
 
       products.forEach((p: any) => {
         // 🟢 1. THÊM DÒNG NÀY: Chỉ lấy bài đã duyệt (Status 2)
-        const isApproved = p.productStatus?.id === 2 || Number(p.statusId) === 2;
+        const isApproved =
+          p.productStatus?.id === 2 || Number(p.statusId) === 2;
         if (!isApproved) return; // Nếu không phải bài đã duyệt thì bỏ qua ngay
 
         // Logic đếm ngày (giữ nguyên)
         const pDate = dayjs(p.createdAt);
         const foundDay = last7Days.find((d) => d.date.isSame(pDate, "day"));
-        
+
         if (foundDay) {
           foundDay.count++;
         }
@@ -158,8 +159,10 @@ export default function AdminDashboardScreen() {
 
       // 🟢 THÊM ĐOẠN LOG NÀY ĐỂ IN RA KẾT QUẢ
       console.log("📊 THỐNG KÊ BÀI ĐĂNG 7 NGÀY GẦN NHẤT:");
-      last7Days.forEach(day => {
-          console.log(`📅 Ngày ${day.date.format("DD/MM/YYYY")}: ${day.count} bài`);
+      last7Days.forEach((day) => {
+        console.log(
+          `📅 Ngày ${day.date.format("DD/MM/YYYY")}: ${day.count} bài`
+        );
       });
 
       setChartData(last7Days.map((d) => d.count));
@@ -178,7 +181,7 @@ export default function AdminDashboardScreen() {
             userPostCount[uid] = {
               name: p.user.name || p.user.email,
               count: 0,
-              avatar: fullUser?.image || p.user.image || "", 
+              avatar: fullUser?.image || p.user.image || "",
             };
           }
           userPostCount[uid].count++;
@@ -238,11 +241,13 @@ export default function AdminDashboardScreen() {
     </View>
   );
 
-// Biểu đồ cột Dynamic (Đã thêm số lượng trên đầu cột)
+  // Biểu đồ cột Dynamic (Đã thêm số lượng trên đầu cột)
   const SimpleBarChart = () => {
     const maxVal = Math.max(...chartData, 1); // Tránh chia cho 0
     const days = Array.from({ length: 7 }, (_, i) =>
-      dayjs().subtract(6 - i, "day").format("dd")
+      dayjs()
+        .subtract(6 - i, "day")
+        .format("dd")
     );
 
     return (
@@ -250,17 +255,20 @@ export default function AdminDashboardScreen() {
         <Text className="font-bold text-gray-700 mb-4">
           Thống kê bài đăng (7 ngày)
         </Text>
-        
+
         {/* Container chính của các cột */}
         <View className="flex-row justify-between items-end h-40 border-b border-gray-100 pb-2">
           {chartData.map((val, index) => {
             const heightPercent = (val / maxVal) * 100;
             // Giới hạn chiều cao hiển thị tối đa khoảng 70% khung để chừa chỗ cho số
-            const safeHeight = heightPercent > 0 ? `${heightPercent * 0.7}%` : "5%";
+            const safeHeight =
+              heightPercent > 0 ? `${heightPercent * 0.7}%` : "5%";
 
             return (
-              <View key={index} className="items-center flex-1 justify-end h-full">
-                
+              <View
+                key={index}
+                className="items-center flex-1 justify-end h-full"
+              >
                 {/* 🟢 1. HIỂN THỊ SỐ LƯỢNG (MỚI THÊM) */}
                 <Text className="text-xs text-indigo-600 font-bold mb-1">
                   {val > 0 ? val : ""}
@@ -273,7 +281,7 @@ export default function AdminDashboardScreen() {
                     index === 6 ? "bg-indigo-600" : "bg-indigo-300"
                   } rounded-t-full`}
                 />
-                
+
                 {/* Nhãn ngày (T2, T3...) */}
                 <Text className="text-[10px] text-gray-400 mt-1">
                   {days[index]}
@@ -463,47 +471,47 @@ export default function AdminDashboardScreen() {
             className="mb-10"
           >
             {topUsers.map((user) => {
-  // 🟢 LOGIC MỚI: Xử lý ảnh ngay tại đây
-  let imageSource;
-  if (user.avatar && user.avatar.trim() !== "") {
-    // Nếu có link thì kiểm tra xem có http chưa
-    const uri = user.avatar.startsWith("http")
-      ? user.avatar
-      : `${path}${user.avatar.startsWith("/") ? "" : "/"}${user.avatar}`;
-    imageSource = { uri: uri };
-  } else {
-    // Không có link thì dùng ảnh mặc định
-    imageSource = DEFAULT_AVATAR;
-  }
+              // 🟢 LOGIC MỚI: Xử lý ảnh ngay tại đây
+              let imageSource;
+              if (user.avatar && user.avatar.trim() !== "") {
+                // Nếu có link thì kiểm tra xem có http chưa
+                const uri = user.avatar.startsWith("http")
+                  ? user.avatar
+                  : `${path}${user.avatar.startsWith("/") ? "" : "/"}${user.avatar}`;
+                imageSource = { uri: uri };
+              } else {
+                // Không có link thì dùng ảnh mặc định
+                imageSource = DEFAULT_AVATAR;
+              }
 
-  return (
-    <View
-      key={user.id}
-      className="bg-white p-3 rounded-2xl mr-3 items-center shadow-sm border border-gray-100 w-28"
-    >
-      <View className="w-12 h-12 rounded-full mb-2 bg-gray-200 items-center justify-center overflow-hidden border border-gray-100">
-        {/* Luôn hiển thị Image với source đã xử lý ở trên */}
-        <Image
-          source={imageSource}
-          className="w-full h-full"
-          resizeMode="cover"
-        />
-      </View>
+              return (
+                <View
+                  key={user.id}
+                  className="bg-white p-3 rounded-2xl mr-3 items-center shadow-sm border border-gray-100 w-28"
+                >
+                  <View className="w-12 h-12 rounded-full mb-2 bg-gray-200 items-center justify-center overflow-hidden border border-gray-100">
+                    {/* Luôn hiển thị Image với source đã xử lý ở trên */}
+                    <Image
+                      source={imageSource}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  </View>
 
-      <Text
-        className="font-bold text-xs text-gray-700 text-center mb-1"
-        numberOfLines={1}
-      >
-        {user.name}
-      </Text>
-      <View className="bg-indigo-100 px-2 py-1 rounded-md">
-        <Text className="text-[10px] text-indigo-700 font-bold">
-          {user.posts} bài
-        </Text>
-      </View>
-    </View>
-  );
-})}
+                  <Text
+                    className="font-bold text-xs text-gray-700 text-center mb-1"
+                    numberOfLines={1}
+                  >
+                    {user.name}
+                  </Text>
+                  <View className="bg-indigo-100 px-2 py-1 rounded-md">
+                    <Text className="text-[10px] text-indigo-700 font-bold">
+                      {user.posts} bài
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
           </ScrollView>
         ) : (
           <Text className="text-gray-400 text-center text-xs italic mb-10">

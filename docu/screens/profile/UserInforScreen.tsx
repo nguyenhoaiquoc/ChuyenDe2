@@ -26,8 +26,8 @@ import { path } from "../../config";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 
-const DEFAULT_AVATAR = require("../../assets/khi.png");
-const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+const DEFAULT_AVATAR = require("../../assets/default.png");
+const DEFAULT_COVER = require("../../assets/cover_default.jpg");
 interface User {
   id: string;
   name: string;
@@ -37,7 +37,6 @@ interface User {
   followerCount?: number;
   postCount?: number;
   soldCount?: number;
-  
 }
 // Star Rating Component
 const StarRating = ({ rating, editable = false, onChange }: any) => (
@@ -96,41 +95,6 @@ const RatingCard = ({ rating }: any) => {
     </View>
   );
 };
-
-// Tabs Content
-const DisplayingRoute = () => (
-  <View className="flex-1 items-center justify-center py-10">
-    <Text className="font-semibold text-gray-800">
-      Bạn chưa có tin đăng nào
-    </Text>
-    <TouchableOpacity
-      onPress={() => {
-        /* Logic điều hướng đến trang đăng tin */
-      }}
-    >
-      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
-        Đăng tin Ngay
-      </Text>
-    </TouchableOpacity>
-  </View>
-);
-
-const SoldRoute = () => (
-  <View className="flex-1 items-center justify-center py-10">
-    <Text className="font-semibold text-gray-500">
-      Bạn chưa bán sản phẩm nào
-    </Text>
-    <TouchableOpacity
-      onPress={() => {
-        /* Logic điều hướng đến trang đăng tin */
-      }}
-    >
-      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
-        Đăng tin mới
-      </Text>
-    </TouchableOpacity>
-  </View>
-);
 
 const mapProductData = (item: any) => {
   // Xử lý ảnh thumbnail
@@ -256,10 +220,59 @@ export default function UserInforScreen({ navigation, route }: any) {
     { key: "sold", title: "Đã bán (0)" },
   ]);
 
-  const renderScene = SceneMap({
-    displaying: DisplayingRoute,
-    sold: SoldRoute,
-  });
+  const renderScene = ({ route }: any) => {
+    switch (route.key) {
+      case "displaying":
+        return (
+          <ScrollView
+            className="flex-1 bg-gray-50 pt-3"
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {displayingProducts.length > 0 ? (
+              displayingProducts.map((item) => (
+                <RenderProductItem
+                  key={item.id}
+                  item={item}
+                  navigation={navigation}
+                />
+              ))
+            ) : (
+              <View className="items-center mt-10">
+                <Text className="text-gray-500">
+                  Chưa có sản phẩm nào đang hiển thị
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        );
+
+      case "sold":
+        return (
+          <ScrollView
+            className="flex-1 bg-gray-50 pt-3"
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+            {soldProducts.length > 0 ? (
+              soldProducts.map((item) => (
+                <RenderProductItem
+                  key={item.id}
+                  item={item}
+                  navigation={navigation}
+                />
+              ))
+            ) : (
+              <View className="items-center mt-10">
+                <Text className="text-gray-500">
+                  Chưa có sản phẩm nào đã bán
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        );
+      default:
+        return null;
+    }
+  };
 
   // States
   const [index, setIndex] = useState(0);
@@ -279,7 +292,7 @@ export default function UserInforScreen({ navigation, route }: any) {
     AsyncStorage.getItem("userId").then(setCurrentUserId);
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (!currentUserId || !profileUserId) return;
 
     const loadFollowStatus = async () => {
@@ -289,18 +302,17 @@ export default function UserInforScreen({ navigation, route }: any) {
           params: { followerId: currentUserId, followingId: profileUserId },
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
-       setUser((prev: User | null) =>
-  prev
-    ? {
-        ...prev,
-        isFollowing: res.data.isFollowing,
-        followerCount: res.data.isFollowing
-          ? (prev.followerCount || 0) + 1
-          : (prev.followerCount || 1) - 1,
-      }
-    : null
-);
-
+        setUser((prev: User | null) =>
+          prev
+            ? {
+                ...prev,
+                isFollowing: res.data.isFollowing,
+                followerCount: res.data.isFollowing
+                  ? (prev.followerCount || 0) + 1
+                  : (prev.followerCount || 1) - 1,
+              }
+            : null
+        );
       } catch (err) {
         console.log("Check follow status error:", err);
       }
@@ -315,22 +327,23 @@ export default function UserInforScreen({ navigation, route }: any) {
     if (!profileUserId) return; // Đảm bảo có profileUserId
 
     try {
-      const [profileRes, ratingsRes, avgRes, checkRes, productsRes] = await Promise.all([
-        axios.get(`${path}/users/${profileUserId}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
-        }),
-        axios.get(`${path}/users/${profileUserId}/ratings`),
-        axios.get(`${path}/users/${profileUserId}/rating-average`),
-        // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
-        token && !isOwnProfile
-          ? axios
-            .get(`${path}/users/${profileUserId}/check-rating`, {
-              headers: { Authorization: `Bearer ${token}` },
-            })
-            .catch(() => ({ data: { hasRated: false } }))
-          : Promise.resolve({ data: { hasRated: false } }),
+      const [profileRes, ratingsRes, avgRes, checkRes, productsRes] =
+        await Promise.all([
+          axios.get(`${path}/users/${profileUserId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
+          }),
+          axios.get(`${path}/users/${profileUserId}/ratings`),
+          axios.get(`${path}/users/${profileUserId}/rating-average`),
+          // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
+          token && !isOwnProfile
+            ? axios
+                .get(`${path}/users/${profileUserId}/check-rating`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .catch(() => ({ data: { hasRated: false } }))
+            : Promise.resolve({ data: { hasRated: false } }),
           axios.get(`${path}/products/my-posts/${profileUserId}`),
-      ]);
+        ]);
 
       setUser(profileRes.data);
       setAvatar(profileRes.data.image || null);
@@ -405,7 +418,6 @@ export default function UserInforScreen({ navigation, route }: any) {
 
   // Follow Function (chỉ thực hiện khi xem hồ sơ người khác)
 
-
   // Rating Functions (chỉ cho phép khi xem hồ sơ người khác)
   const handleSubmitRating = async () => {
     if (isOwnProfile || selectedStars === 0)
@@ -416,7 +428,6 @@ export default function UserInforScreen({ navigation, route }: any) {
     try {
       const endpoint = `${path}/users/${user.id}/rate`;
       await axios.post(
-
         endpoint,
         { stars: selectedStars, content: ratingContent },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -713,10 +724,10 @@ export default function UserInforScreen({ navigation, route }: any) {
           source={
             coverImage
               ? {
-                uri: coverImage.startsWith("http")
-                  ? coverImage
-                  : `${path}/${coverImage.replace(/\\/g, "/")}`,
-              }
+                  uri: coverImage.startsWith("http")
+                    ? coverImage
+                    : `${path}/${coverImage.replace(/\\/g, "/")}`,
+                }
               : DEFAULT_COVER
           }
           style={{ backgroundColor: "#d1d5db" }}
@@ -728,7 +739,8 @@ export default function UserInforScreen({ navigation, route }: any) {
             onPress={async () => {
               if (!user) return;
               const token = await AsyncStorage.getItem("token");
-              if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+              if (!token)
+                return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
 
               try {
                 let updatedUser;
@@ -757,14 +769,18 @@ export default function UserInforScreen({ navigation, route }: any) {
                 }
                 setUser(updatedUser);
               } catch (err: any) {
-                console.log("Follow Error:", err.response?.data || err.message || err);
+                console.log(
+                  "Follow Error:",
+                  err.response?.data || err.message || err
+                );
                 Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
               }
             }}
-            className={`py-2 px-4 rounded-md ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"
-              }`}
+            className={`py-2 px-4 rounded-md ${
+              user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"
+            }`}
           >
-            <Text className="text-white font-medium text-sm">
+            <Text className="text-white font-medium text-lg">
               {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
             </Text>
           </TouchableOpacity>
@@ -778,10 +794,10 @@ export default function UserInforScreen({ navigation, route }: any) {
             source={
               avatar
                 ? {
-                  uri: avatar.startsWith("http")
-                    ? avatar
-                    : `${path}/${avatar.replace(/\\/g, "/")}`,
-                }
+                    uri: avatar.startsWith("http")
+                      ? avatar
+                      : `${path}/${avatar.replace(/\\/g, "/")}`,
+                  }
                 : DEFAULT_AVATAR
             }
             style={{ backgroundColor: "#d1d5db" }}
@@ -810,51 +826,54 @@ export default function UserInforScreen({ navigation, route }: any) {
       <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
         {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
         {!isOwnProfile && (
-  <TouchableOpacity
-    onPress={async () => {
-      if (!user) return;
-      const token = await AsyncStorage.getItem("token");
-      if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+          <TouchableOpacity
+            onPress={async () => {
+              if (!user) return;
+              const token = await AsyncStorage.getItem("token");
+              if (!token)
+                return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
 
-      try {
-        let updatedUser;
-        if (user.isFollowing) {
-          // Unfollow
-          await axios.delete(`${path}/users/${user.id}/follow`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          updatedUser = {
-            ...user,
-            isFollowing: false,
-            followerCount: (user.followerCount || 1) - 1,
-          };
-        } else {
-          // Follow
-          await axios.post(
-            `${path}/users/${user.id}/follow`,
-            {}, // không cần body
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          updatedUser = {
-            ...user,
-            isFollowing: true,
-            followerCount: (user.followerCount || 0) + 1,
-          };
-        }
-        setUser(updatedUser);
-      } catch (err: any) {
-        console.log("Follow Error:", err.response?.data || err.message || err);
-        Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
-      }
-    }}
-    className={`text-xs p-1 rounded-md px-2 ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"}`}
-  >
-    <Text className="text-white font-medium px-4">
-      {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
-    </Text>
-  </TouchableOpacity>
-)}
-
+              try {
+                let updatedUser;
+                if (user.isFollowing) {
+                  // Unfollow
+                  await axios.delete(`${path}/users/${user.id}/follow`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  updatedUser = {
+                    ...user,
+                    isFollowing: false,
+                    followerCount: (user.followerCount || 1) - 1,
+                  };
+                } else {
+                  // Follow
+                  await axios.post(
+                    `${path}/users/${user.id}/follow`,
+                    {}, // không cần body
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  updatedUser = {
+                    ...user,
+                    isFollowing: true,
+                    followerCount: (user.followerCount || 0) + 1,
+                  };
+                }
+                setUser(updatedUser);
+              } catch (err: any) {
+                console.log(
+                  "Follow Error:",
+                  err.response?.data || err.message || err
+                );
+                Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
+              }
+            }}
+            className={`text-xs p-1 rounded-md px-2 ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"}`}
+          >
+            <Text className="text-white font-medium px-4">
+              {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Nút Menu 3 chấm (dành cho cả hai) */}
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
