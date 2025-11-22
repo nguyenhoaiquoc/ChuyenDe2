@@ -26,8 +26,8 @@ import { useFocusEffect, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { TextInput } from "react-native-gesture-handler";
 
-const DEFAULT_AVATAR = require("../../assets/khi.png");
-const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+const DEFAULT_AVATAR = require("../../assets/default.png");
+const DEFAULT_COVER = require("../../assets/cover_default.jpg");
 
 // Star Rating Component
 const StarRating = ({ rating, editable = false, onChange }: any) => (
@@ -97,11 +97,7 @@ const DisplayingRoute = () => (
       onPress={() => {
         /* Logic điều hướng đến trang đăng tin */
       }}
-    >
-      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
-        Đăng tin Ngay
-      </Text>
-    </TouchableOpacity>
+    ></TouchableOpacity>
   </View>
 );
 
@@ -114,13 +110,99 @@ const SoldRoute = () => (
       onPress={() => {
         /* Logic điều hướng đến trang đăng tin */
       }}
-    >
-      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
-        Đăng tin mới
-      </Text>
-    </TouchableOpacity>
+    ></TouchableOpacity>
   </View>
 );
+
+const mapProductData = (item: any) => {
+  // Xử lý ảnh thumbnail
+  const imageUrl = (() => {
+    if (!item.thumbnail_url && item.images?.length)
+      return item.images[0].image_url;
+    const url = item.thumbnail_url || "";
+    if (url.startsWith("http")) return url;
+    return `${path}${url}`;
+  })();
+
+  return {
+    ...item, 
+    
+    authorName: item.author_name || item.user?.name || item.user?.fullName || "Người dùng",
+    
+    image: imageUrl,
+    price: item.price ? item.price.toString() : "0",
+    user: item.user || { id: item.user_id, name: "Người dùng" },
+  };
+};
+
+const RenderProductItem = ({ item, navigation }: any) => {
+  const imageUrl =
+    item.thumbnail_url ||
+    (item.images?.length ? item.images[0].image_url : null);
+  const finalImage = imageUrl
+    ? imageUrl.startsWith("http")
+      ? imageUrl
+      : `${path}${imageUrl}`
+    : null;
+
+  const displayPrice =
+    item.dealType?.name === "Miễn phí"
+      ? "Miễn phí"
+      : item.dealType?.name === "Trao đổi"
+        ? "Trao đổi"
+        : item.price
+          ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+          : "Liên hệ";
+
+  return (
+    <TouchableOpacity
+      className="flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-sm border border-gray-100 mx-4"
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    >
+      <Image
+        source={
+          finalImage ? { uri: finalImage } : require("../../assets/default.png")
+        }
+        className="w-20 h-20 rounded-lg bg-gray-200"
+        resizeMode="cover"
+      />
+      <View className="flex-1 ml-3 justify-center">
+        {/* 1. Tên sản phẩm */}
+        <Text
+          className="text-base font-semibold text-gray-800 mb-1"
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+
+        {/* 2. Tên nhóm / Toàn trường */}
+        <View className="flex-row items-center mb-1">
+          <MaterialIcons
+            name={item.group ? "group" : "public"}
+            size={12}
+            color="#6b7280"
+          />
+          <Text className="text-xs text-gray-500 ml-1">
+            {item.group && item.group.name ? item.group.name : "Toàn trường"}
+          </Text>
+        </View>
+
+        {/* 3. Tag danh mục */}
+        <View className="flex-row items-center mb-1">
+          <MaterialIcons name="label" size={12} color="#6b7280" />
+          <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
+            {item.tag || item.category?.name || "Khác"}
+          </Text>
+        </View>
+
+        {/* 4. Giá tiền */}
+        <Text className="text-sm font-medium text-indigo-600">
+          {displayPrice}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 export default function UserInforScreen({ navigation }: any) {
   const layout = useWindowDimensions();
@@ -139,15 +221,69 @@ export default function UserInforScreen({ navigation }: any) {
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
-  const [routes] = useState([
+  const [displayingProducts, setDisplayingProducts] = useState<any[]>([]);
+  const [soldProducts, setSoldProducts] = useState<any[]>([]);
+
+  const [routes, setRoutes] = useState([
     { key: "displaying", title: "Đang hiển thị (0)" },
     { key: "sold", title: "Đã bán (0)" },
   ]);
 
-  const renderScene = SceneMap({
-    displaying: DisplayingRoute,
-    sold: SoldRoute,
-  });
+  const renderScene = ({ route }: any) => {
+    switch (route.key) {
+      case "displaying":
+        return (
+          <ScrollView
+            className="flex-1 bg-gray-50 pt-3"
+            contentContainerStyle={{ paddingBottom: 20 }}
+            scrollEnabled={false}
+          >
+            {displayingProducts.length > 0 ? (
+              displayingProducts.map((item) => (
+                <RenderProductItem
+                  key={item.id}
+                  item={item}
+                  navigation={navigation}
+                />
+              ))
+            ) : (
+              <View className="items-center mt-10">
+                <Text className="text-gray-500">
+                  Chưa có sản phẩm nào đang hiển thị
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        );
+
+      case "sold":
+        return (
+          <ScrollView
+            className="flex-1 bg-gray-50 pt-3"
+            contentContainerStyle={{ paddingBottom: 20 }}
+            scrollEnabled={false}
+          >
+            {soldProducts.length > 0 ? (
+              soldProducts.map((item) => (
+                <RenderProductItem
+                  key={item.id}
+                  item={item}
+                  navigation={navigation}
+                />
+              ))
+            ) : (
+              <View className="items-center mt-10">
+                <Text className="text-gray-500">
+                  Chưa có sản phẩm nào đã bán
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        );
+      default:
+        return null;
+    }
+  };
 
   // States
   const [index, setIndex] = useState(0);
@@ -171,21 +307,23 @@ export default function UserInforScreen({ navigation }: any) {
     if (!profileUserId) return; // Đảm bảo có profileUserId
 
     try {
-      const [profileRes, ratingsRes, avgRes, checkRes] = await Promise.all([
-        axios.get(`${path}/users/${profileUserId}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
-        }),
-        axios.get(`${path}/users/${profileUserId}/ratings`),
-        axios.get(`${path}/users/${profileUserId}/rating-average`),
-        // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
-        token && !isOwnProfile
-          ? axios
-              .get(`${path}/users/${profileUserId}/check-rating`, {
-                headers: { Authorization: `Bearer ${token}` },
-              })
-              .catch(() => ({ data: { hasRated: false } }))
-          : Promise.resolve({ data: { hasRated: false } }),
-      ]);
+      const [profileRes, ratingsRes, avgRes, productsRes, checkRes] =
+        await Promise.all([
+          axios.get(`${path}/users/${profileUserId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
+          }),
+          axios.get(`${path}/users/${profileUserId}/ratings`),
+          axios.get(`${path}/users/${profileUserId}/rating-average`),
+          axios.get(`${path}/products/my-posts/${profileUserId}`),
+          // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
+          token && !isOwnProfile
+            ? axios
+                .get(`${path}/users/${profileUserId}/check-rating`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                })
+                .catch(() => ({ data: { hasRated: false } }))
+            : Promise.resolve({ data: { hasRated: false } }),
+        ]);
 
       setUser(profileRes.data);
       setAvatar(profileRes.data.image || null);
@@ -208,9 +346,30 @@ export default function UserInforScreen({ navigation }: any) {
         setRatingContent("");
       }
 
-      // Cập nhật số lượng bài đăng vào Tabs
-      routes[0].title = `Đang hiển thị (${profileRes.data.postCount || 0})`;
-      routes[1].title = `Đã bán (${profileRes.data.soldCount || 0})`;
+      const rawProducts = productsRes?.data;
+
+      const allProducts = Array.isArray(rawProducts) 
+        ? rawProducts.map(mapProductData) 
+        : [];
+        
+      // Lọc status 2 (Đang hiển thị)
+      const active = allProducts.filter(
+        (p: any) => p.productStatus?.id === 2 || p.status_id === 2
+      );
+
+      // Lọc status 6 (Đã bán)
+      const sold = allProducts.filter(
+        (p: any) => p.productStatus?.id === 6 || p.status_id === 6
+      );
+
+      setDisplayingProducts(active);
+      setSoldProducts(sold);
+
+      // Cập nhật tiêu đề Tab kèm số lượng
+      setRoutes([
+        { key: "displaying", title: `Đang hiển thị (${active.length})` },
+        { key: "sold", title: `Đã bán (${sold.length})` },
+      ]);
     } catch (err: any) {
       console.log("Lỗi khi lấy dữ liệu:", err.message);
       Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
@@ -479,6 +638,10 @@ export default function UserInforScreen({ navigation }: any) {
     Alert.alert("Thành công", "Liên kết đã được sao chép");
     setMenuVisible(false);
   };
+
+  const currentTabProducts = index === 0 ? displayingProducts : soldProducts;
+  const listHeight =
+    currentTabProducts.length > 0 ? currentTabProducts.length * 120 + 100 : 350;
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
@@ -771,7 +934,7 @@ export default function UserInforScreen({ navigation }: any) {
       </View>
 
       {/* Tabs */}
-      <View className="mt-8 h-[350px]">
+      <View className="mt-8" style={{ height: listHeight }}>
         <TabView
           navigationState={{ index, routes }}
           renderScene={renderScene}

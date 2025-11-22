@@ -24,15 +24,15 @@ export class GroupMember {
   @Column({ type: 'smallint', default: 1 })
   pending: number;
 
-  @ManyToOne(() => Group)
+  @ManyToOne(() => Group, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_id' })
   group: Group;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ManyToOne(() => GroupRole)
+  @ManyToOne(() => GroupRole, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_role_id' })
   role: GroupRole;
 

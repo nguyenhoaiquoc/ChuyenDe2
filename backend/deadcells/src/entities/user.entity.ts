@@ -134,4 +134,7 @@ export class User {
 
   @Column({ default: false })
   is_verified: boolean;
+
+  @OneToMany(() => Product, (product) => product.user) 
+  products: Product[];
 }

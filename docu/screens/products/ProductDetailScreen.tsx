@@ -795,7 +795,7 @@ const handleChatPress = async () => {
           {/* Mô tả chi tiết */}
           <View className="my-3 border-t border-b border-gray-300 px-3 py-3 bg-white rounded-lg">
             <Text className="text-lg font-bold mb-2">Mô tả chi tiết</Text>
-            <Text className="text-gray-700 leading-6 text-lg">
+            <Text className="text-gray-700 leading-6 text-mb">
               {product.description || "Mô tả sản phẩm..."}
             </Text>
           </View>
@@ -836,7 +836,7 @@ const handleChatPress = async () => {
                   className="text-gray-800 text-sm font-medium"
                   style={{ flexShrink: 1, flexWrap: "wrap" }}
                 >
-                  {product.name || "Chưa rõ"}
+                  {formatAgeRangeName(product.name || "Chưa rõ")}
                 </Text>
               </View>
               <View className="flex-row justify-between px-4 py-3 border-b border-gray-200">

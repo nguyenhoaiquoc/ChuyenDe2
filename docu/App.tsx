@@ -58,6 +58,8 @@ import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScr
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupDeepLink } from "./src/navigation/DeepLinkHandler";
 import { ChatProvider } from "./components/ChatContext";
+import AdminVerificationScreen from "./screens/admin/user/AdminVerificationScreen";
+import AdminDashboardScreen from "./screens/admin/AdminDashboardScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -234,6 +236,8 @@ export default function App() {
                 name="ManageCategoriesScreen"
                 component={ManageCategoriesScreen}
               />
+              <Stack.Screen name="AdminVerification" component={AdminVerificationScreen} />
+              <Stack.Screen name="AdminDashboardScreen" component={AdminDashboardScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </ChatProvider>
