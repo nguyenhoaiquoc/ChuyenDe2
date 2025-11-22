@@ -315,7 +315,7 @@ export default function UserInforScreen({ navigation, route }: any) {
     if (!profileUserId) return; // Đảm bảo có profileUserId
 
     try {
-      const [profileRes, ratingsRes, avgRes, checkRes] = await Promise.all([
+      const [profileRes, ratingsRes, avgRes, checkRes, productsRes] = await Promise.all([
         axios.get(`${path}/users/${profileUserId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
         }),
@@ -330,6 +330,7 @@ export default function UserInforScreen({ navigation, route }: any) {
             .catch(() => ({ data: { hasRated: false } }))
           : Promise.resolve({ data: { hasRated: false } }),
       ]);
+axios.get(`${path}/products/my-posts/${profileUserId}`),
 
       setUser(profileRes.data);
       setAvatar(profileRes.data.image || null);
