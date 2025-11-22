@@ -7,6 +7,8 @@ import {
   BadRequestException,
   HttpCode,
   HttpStatus,
+  Query,
+  Delete,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
@@ -52,6 +54,33 @@ export class AdminController {
       success: true,
       message: 'Đã từ chối yêu cầu',
       user: { id: user.id, fullName: user.fullName },
+    };
+  }
+
+  @Get('users')
+  async getAllUsers(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('search') search: string = '',
+    @Query('status') status: string = 'all',
+  ) {
+    return this.adminService.getAllUsers(Number(page), Number(limit), search, status);
+  }
+
+  @Get('users/:id')
+  async getUserDetail(@Param('id') id: string) {
+    return this.adminService.getUserDetail(Number(id));
+  }
+
+  @Delete('users/:id')
+  async deleteUser(@Param('id') id: string) {
+    const userId = Number(id);
+    if (isNaN(userId)) throw new BadRequestException('ID không hợp lệ');
+
+    await this.adminService.deleteUser(userId);
+    return {
+      success: true,
+      message: 'Đã xóa người dùng và toàn bộ dữ liệu liên quan vĩnh viễn.',
     };
   }
 }

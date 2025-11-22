@@ -80,6 +80,7 @@ export class User {
 
   @Column({ type: 'json', nullable: true })
   address_json: object;
+
   @Column({ type: 'timestamp', nullable: true, name: 'verified_at' })
   verifiedAt: Date | null;
 
@@ -133,4 +134,7 @@ export class User {
 
   @Column({ default: false })
   is_verified: boolean;
+
+  @OneToMany(() => Product, (product) => product.user) 
+  products: Product[];
 }

@@ -1,4 +1,3 @@
-// src/screens/groups/crud/QRInviteScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,

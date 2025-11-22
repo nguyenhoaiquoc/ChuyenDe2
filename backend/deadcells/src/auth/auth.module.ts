@@ -1,4 +1,4 @@
-import { forwardRef,Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,12 +14,13 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { UsersModule } from '../users/users.module'; 
 import { GroupMember } from 'src/entities/group-member.entity';
+import { ChatModule } from 'src/chat/chat.module';
 
 @Module({
   imports: [
    forwardRef(() => UsersModule),
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),
+    TypeOrmModule.forFeature([User, Role, Status, OtpVerification,GroupMember]),  forwardRef(() => ChatModule),
 
     // ✅ import PassportModule
     PassportModule.register({ defaultStrategy: 'jwt' }),
