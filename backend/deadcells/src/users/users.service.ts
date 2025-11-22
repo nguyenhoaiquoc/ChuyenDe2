@@ -23,6 +23,10 @@ export class UsersService {
   ) {}
 
   async findOne(id: number): Promise<User> {
+    if (!id || isNaN(id)) {
+      // Nếu id bị null, undefined hoặc NaN thì báo lỗi ngay, không gọi DB nữa
+      throw new NotFoundException(`ID người dùng không hợp lệ (NaN/Null)`);
+    }
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) {
       throw new NotFoundException(`Người dùng với id ${id} không tồn tại`);

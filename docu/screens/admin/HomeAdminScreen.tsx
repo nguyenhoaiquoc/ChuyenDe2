@@ -103,7 +103,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Dashboard Thống Kê"
             subtitle="Số lượng người dùng, bài đăng, báo cáo"
             color="bg-purple-600"
-            onPress={navigateToWIP} // Đổi thành navigation.navigate("AdminDashboardScreen")
+             onPress={() => navigation.navigate('AdminDashboardScreen')} 
           />
 
           {/* 2. Quản lý người dùng */}

@@ -123,7 +123,7 @@ export default function UserScreen() {
                           ? user.avatar
                           : `${path}${user.avatar}`,
                       }
-                    : require("../../assets/meo.jpg")
+                    : require("../../assets/default.png")
                 }
                 style={{ width: "100%", height: "100%", borderRadius: 48 }}
               />

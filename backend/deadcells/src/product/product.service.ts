@@ -1307,7 +1307,7 @@ export class ProductService {
 
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      relations: ['user'],
+      relations: ['user', 'productStatus'],
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
 
