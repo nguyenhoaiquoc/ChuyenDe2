@@ -5,33 +5,47 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UsersService } from '../users/users.service'; 
+import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
+    private readonly reflector: Reflector,
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    // HTTP only (controller). WS bạn đã verify trong Gateway rồi.
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
-    // Ưu tiên: Authorization: Bearer <token>
+    // Lấy token như cũ
     const authHeader: string = req.headers?.authorization || '';
     let token = '';
     if (authHeader.startsWith('Bearer ')) token = authHeader.slice(7).trim();
-
-    // Fallback: query ?token=... hoặc cookie access_token
     if (!token) token = (req.query?.token as string) || req.cookies?.access_token;
 
-    if (!token) throw new UnauthorizedException('Missing access token');
+    if (!token) {
+      throw new UnauthorizedException('Missing access token');
+    }
 
     try {
-      const payload = this.jwtService.verify(token); // dùng secret đã cấu hình trong JwtModule
-      // Gắn user cho request để controller/service dùng
+      const payload = this.jwtService.verify(token);
+
+      // LẤY USER THẬT TỪC TỪ DB (để có roleId chính xác)
+      const user = await this.usersService.findOne(payload.sub || payload.id);
+
+      if (!user) {
+        throw new UnauthorizedException('User không tồn tại');
+      }
+
+      // GÁN ĐÚNG req.user VỚI DỮ LIỆU TỪ DB → roleId SẼ CÓ!!!
       req.user = {
-        id: payload.sub ?? payload.id,
-        email: payload.email,
-        role: payload.role,
+        id: user.id,
+        email: user.email,
+        roleId: user.roleId, 
       };
+
       return true;
     } catch (e) {
       throw new UnauthorizedException('Invalid or expired token');

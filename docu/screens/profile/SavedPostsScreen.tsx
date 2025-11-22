@@ -7,17 +7,17 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList, Product } from "../../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { path } from "../../config";
-import ProductCard from "../../components/ProductCard";
 import Menu from "../../components/Menu";
 import "../../global.css";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "react-native";
 
 type NavProps = NativeStackNavigationProp<
   RootStackParamList,
@@ -157,6 +157,8 @@ const mapProductData = (item: any): Product => {
     graphicsCard:
       item.graphicsCard && item.graphicsCard.name ? item.graphicsCard : null,
     breed: item.breed && item.breed.name ? item.breed : null,
+    productStatus:
+      item.productStatus && item.productStatus.name ? item.productStatus : null,
     ageRange: item.ageRange && item.ageRange.name ? item.ageRange : null,
     gender: item.gender && item.gender.name ? item.gender : null,
     engineCapacity:
@@ -169,7 +171,6 @@ const mapProductData = (item: any): Product => {
     phone: item.user?.phone || null,
     author: item.author || null,
     year: item.year || null,
-productStatus: item.productStatus || null,
     created_at: item.created_at || new Date().toISOString(),
     updated_at: item.updated_at || undefined,
 
@@ -177,27 +178,91 @@ productStatus: item.productStatus || null,
     status_id: item.status_id?.toString() || undefined,
     visibility_type: item.visibility_type?.toString() || undefined,
     group_id: item.group_id || null,
+    group: item.group || null,
   };
+};
+
+const RenderSavedItem = ({ item, navigation, onToggleFavorite }: any) => {
+  // Xử lý ảnh
+  const imageUrl =
+    item.thumbnail_url ||
+    (item.images?.length ? item.images[0].image_url : null);
+  const finalImage = imageUrl
+    ? imageUrl.startsWith("http")
+      ? imageUrl
+      : `${path}${imageUrl}`
+    : null;
+
+  return (
+    <TouchableOpacity
+      className="flex-row items-center bg-white rounded-xl p-3 mb-3 shadow-sm border border-gray-100 mx-4"
+      onPress={() => navigation.navigate("ProductDetail", { product: item })}
+    >
+      {/* Ảnh sản phẩm */}
+      <Image
+        source={
+          finalImage ? { uri: finalImage } : require("../../assets/default.png")
+        }
+        className="w-20 h-20 rounded-lg bg-gray-200"
+        resizeMode="cover"
+      />
+
+      {/* Thông tin */}
+      <View className="flex-1 ml-3 justify-center">
+        <Text
+          className="text-base font-semibold text-gray-800 mb-1"
+          numberOfLines={1}
+        >
+          {item.name}
+        </Text>
+
+        {/* Tên nhóm / Toàn trường */}
+        <View className="flex-row items-center mb-1">
+          <MaterialIcons
+            name={item.group ? "group" : "public"}
+            size={12}
+            color="#6b7280"
+          />
+          <Text className="text-xs text-gray-500 ml-1">
+            {item.group && item.group.name ? item.group.name : "Toàn trường"}
+          </Text>
+        </View>
+
+        {/* Tag danh mục */}
+        <View className="flex-row items-center mb-1">
+          <MaterialIcons name="label" size={12} color="#6b7280" />
+          <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
+            {item.tag || item.category?.name || "Khác"}
+          </Text>
+        </View>
+
+        <Text className="text-sm font-medium text-indigo-600">
+          {item.price}
+        </Text>
+      </View>
+
+      {/* Nút Bỏ Lưu (Tim đỏ) */}
+      <TouchableOpacity onPress={onToggleFavorite} className="p-2">
+        <Ionicons name="heart" size={24} color="#ef4444" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
 };
 
 export default function SavedPostsScreen() {
   const navigation = useNavigation<NavProps>();
-  const isFocused = useIsFocused(); // Hook để biết khi nào quay lại màn hình
+  const isFocused = useIsFocused();
   const [isLoading, setIsLoading] = useState(true);
   const [savedProducts, setSavedProducts] = useState<Product[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Hàm load data
   const fetchSavedPosts = async (currentUserId: string) => {
     setIsLoading(true);
     try {
-      // Gọi API MỚI mà ông vừa tạo (dùng ?userId=... như đã sửa)
       const response = await axios.get(
         `${path}/favorites/my-list?userId=${currentUserId}`
       );
 
-      // Backend trả về mảng Product đầy đủ
-      // Map lại dữ liệu (giá, ảnh,...) giống như HomeScreen
       const mappedData = response.data.map(mapProductData);
       setSavedProducts(mappedData);
     } catch (error: any) {
@@ -208,7 +273,6 @@ export default function SavedPostsScreen() {
     }
   };
 
-  // Dùng useIsFocused để load lại data mỗi khi quay lại màn hình này
   useEffect(() => {
     const loadData = async () => {
       const id = await AsyncStorage.getItem("userId");
@@ -218,46 +282,47 @@ export default function SavedPostsScreen() {
           fetchSavedPosts(id);
         }
       } else {
-        // Xử lý nếu không có user
         Alert.alert("Lỗi", "Không tìm thấy người dùng. Vui lòng đăng nhập.");
         setIsLoading(false);
       }
     };
     loadData();
-  }, [isFocused]); //
+  }, [isFocused]);
 
-  // Hàm Bỏ lưu nhanh
-  const handleToggleFavorite = async (productId: string) => {
-    // 1. Lấy userId TRỰC TIẾP từ Storage (để đảm bảo luôn có)
-    const userIdStr = await AsyncStorage.getItem("userId");
-    if (!userIdStr) {
-      Alert.alert("Lỗi", "Không tìm thấy người dùng, vui lòng thử lại.");
+const handleToggleFavorite = async (productId: string) => {
+    // 1. Lấy Token từ storage
+    const token = await AsyncStorage.getItem("token");
+    
+    if (!token) {
+      Alert.alert("Lỗi", "Vui lòng đăng nhập lại.");
       return;
     }
 
-    // 2. Cập nhật UI trước (Optimistic Update)
-    // Dòng này của ông đã đúng, nó sẽ làm sản phẩm biến mất ngay
+    // Optimistic Update: Xóa ngay trên giao diện cho mượt
     setSavedProducts((prevProducts) =>
       prevProducts.filter((product) => product.id !== productId)
     );
 
     try {
-      // 3. Gọi API với userId đã lấy được
-      // (Backend sẽ xóa 'favorite' VÀ xóa 'thông báo')
+      // 2. Gọi API với Header chứa Token
+      // Lưu ý: Không cần truyền ?userId=... vì Backend tự lấy từ Token rồi
       await axios.post(
-        `${path}/favorites/toggle/${productId}?userId=${userIdStr}`
+        `${path}/favorites/toggle/${productId}`,
+        {}, // Body rỗng
+        {
+          headers: { Authorization: `Bearer ${token}` }, // 👇 QUAN TRỌNG: Phải có dòng này
+        }
       );
 
-      // Bỏ lưu thành công, không cần làm gì thêm vì UI đã cập nhật
       console.log(`Đã bỏ lưu sản phẩm ${productId}`);
     } catch (err: any) {
-      // 4. NẾU LỖI: Tải lại danh sách (để khôi phục lại cái vừa xóa)
       console.log("Lỗi khi bỏ lưu:", err.response?.data || err.message);
 
       Alert.alert("Lỗi", "Bỏ lưu thất bại, vui lòng thử lại.");
 
-      // Tải lại danh sách để đồng bộ, vì UI đã lỡ xóa rồi
-      if (isFocused) {
+      // Nếu lỗi thì tải lại danh sách để hoàn tác hành động xóa ảo lúc nãy
+      const userIdStr = await AsyncStorage.getItem("userId");
+      if (userIdStr && isFocused) {
         fetchSavedPosts(userIdStr);
       }
     }
@@ -278,7 +343,7 @@ export default function SavedPostsScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text className="text-lg font-semibold">Tin đăng đã lưu</Text>
+        <Text className="text-lg font-semibold">Tin đăng đã thích</Text>
         <View className="w-6" />
         {/* Spacer */}
       </View>
@@ -286,29 +351,19 @@ export default function SavedPostsScreen() {
       {/* Danh sách */}
       {savedProducts.length === 0 ? (
         <View className="flex-1 items-center justify-center bg-gray-50/50">
-          <Text className="text-gray-500">Bạn chưa lưu tin đăng nào.</Text>
+          <Text className="text-gray-500">Bạn chưa thích tin đăng nào.</Text>
         </View>
       ) : (
         <FlatList
           data={savedProducts}
-          numColumns={2}
           keyExtractor={(item) => item.id}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
-          contentContainerStyle={{ paddingBottom: 80 }}
-          scrollEnabled={false}
+          contentContainerStyle={{ paddingBottom: 80, paddingTop: 10 }}
+          scrollEnabled={true}
           renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              isFavorite={true}
+            <RenderSavedItem
+              item={item}
+              navigation={navigation}
               onToggleFavorite={() => handleToggleFavorite(item.id)}
-              onPress={() =>
-                navigation.navigate("ProductDetail", { product: item })
-              }
-              onPressPostType={(pt) => {
-                if (pt.id == "1") navigation.navigate("SellProductScreen");
-                else if (pt.id == "2")
-                  navigation.navigate("PurchaseRequestScreen");
-              }}
             />
           )}
         />

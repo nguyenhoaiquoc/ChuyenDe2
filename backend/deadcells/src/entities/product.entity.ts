@@ -48,7 +48,6 @@ export class Product {
   @Column({ name: 'product_type_id', type: 'bigint', nullable: true })
   product_type_id: number | null;
 
-
   @ManyToOne(() => ProductType, { nullable: true })
   @JoinColumn({ name: 'product_type_id', referencedColumnName: 'id' })
   productType: ProductType | null;
@@ -191,7 +190,9 @@ export class Product {
   @Column({ type: 'bigint', nullable: true })
   user_id: number | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, (user) => user.products, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'user_id' })
   user: User | null;
 
@@ -252,9 +253,6 @@ export class Product {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  @OneToMany(() => Report, (report) => report.product)
-  reports: Report[];
-
   @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
   // ===== Trạng thái bài đăng =====
@@ -266,11 +264,11 @@ export class Product {
   visibility_type: number; //0 toàn trường, 1 trong nhóm
 
   @Column({ type: 'bigint', nullable: true })
-  group_id: number;
+  group_id: number | null;
 
-  @ManyToOne(() => Group, { nullable: true })
+  @ManyToOne(() => Group, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'group_id' })
-  group: Group;
+  group: Group | null;
 
   // ===== Thông tin tài liệu khoa =====
   @Column({ type: 'varchar', length: 191, nullable: true })

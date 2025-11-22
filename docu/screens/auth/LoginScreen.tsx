@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { Text, View, Alert, Linking } from "react-native";
+import { Text, View, Alert, Linking, Pressable, TextInput } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import "../../global.css";
 import { useState } from "react";
@@ -11,6 +11,8 @@ import { RootStackParamList } from "../../types";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { path } from "../../config";
+import React from "react";
+import { Modal } from "react-native";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
@@ -22,6 +24,58 @@ export default function LoginScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [isComplaintModalVisible, setIsComplaintModalVisible] = useState(false);
+  const [complaintReason, setComplaintReason] = useState("");
+  const [isSendingComplaint, setIsSendingComplaint] = useState(false);
+  const [bannedMsg, setBannedMsg] = useState("");
+
+ const handleComplaintSubmit = async () => {
+    if (complaintReason.trim().length < 10) {
+      return Alert.alert("Lỗi", "Vui lòng nhập chi tiết khiếu nại (tối thiểu 10 ký tự).");
+    }
+
+    setIsSendingComplaint(true);
+    const emailTrim = (email || "").trim().toLowerCase();
+    
+    try {
+      // Bước 1: Lấy ID user (giữ nguyên)
+      const userRes = await axios.get(`${path}/users/email/${emailTrim}`);
+      const reportedUserId = userRes.data.id; 
+      
+      // Bước 2: Gửi Report
+      const fullReason = `[KHIẾU NẠI MỞ KHÓA] ${bannedMsg}. Lý do chi tiết: ${complaintReason.trim()}`;
+
+      await axios.post(
+        `${path}/reports`,
+        {
+          reason: fullReason,
+          reported_user_id: reportedUserId, 
+        },
+      );
+
+      setIsComplaintModalVisible(false);
+      setComplaintReason("");
+
+      Alert.alert(
+        "Thành công",
+        "Khiếu nại của bạn đã được gửi tới Admin. Vui lòng chờ phản hồi.",
+      );
+      
+    } catch (err: any) {
+      // ✅ CẬP NHẬT: HIỂN THỊ THÔNG BÁO LỖI TỪ BACKEND (VÍ DỤ: ĐỢI 24H)
+      const serverMsg = err.response?.data?.message;
+      
+      if (serverMsg && serverMsg.includes("Vui lòng đợi")) {
+         Alert.alert("Thông báo", serverMsg); // Hiển thị chính xác câu "Vui lòng đợi X giờ..."
+      } else {
+         console.error("Lỗi gửi khiếu nại:", serverMsg || err.message);
+         Alert.alert("Lỗi", serverMsg || "Gửi khiếu nại thất bại. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setIsSendingComplaint(false);
+    }
+  };
 
   const setEmailSafe = (t: string) => {
     if (loginError) setLoginError(null);
@@ -64,8 +118,8 @@ export default function LoginScreen({ navigation }: Props) {
       }
 
       await AsyncStorage.setItem("token", accessToken);
-      if (data.fullName)
-        await AsyncStorage.setItem("userName", String(data.fullName));
+      if (data.nickname)
+        await AsyncStorage.setItem("userName", String(data.nickname));
       if (data.id != null)
         await AsyncStorage.setItem("userId", String(data.id));
       if (data.role) await AsyncStorage.setItem("role", String(data.role));
@@ -88,12 +142,32 @@ export default function LoginScreen({ navigation }: Props) {
 
       // Nếu tài khoản chưa xác thực → điều hướng Verify
       const lower = msg.toLowerCase();
+      const isBanned = lower.includes("bị khóa bởi admin");
       const unverified =
         lower.includes("chưa xác thực") ||
         lower.includes("unverified") ||
         lower.includes("verify");
 
-      if (unverified) {
+      if (isBanned) {
+        setLoginError(msg);
+        setBannedMsg(msg); // ✅ LƯU thông báo bị khóa
+        
+        // HIỂN THỊ ALERT MỞ MODAL
+        Alert.alert(
+          "Tài khoản bị khóa",
+          `${msg}\n\nNhấn 'Gửi khiếu nại' để gửi yêu cầu mở khóa.`,
+          [
+            { text: "Hủy", style: "cancel" },
+            {
+              text: "Gửi khiếu nại",
+              onPress: () => {
+                setIsComplaintModalVisible(true); // ✅ MỞ MODAL KHIẾU NẠI
+              },
+            },
+          ]
+        );
+        
+      } else if (unverified) {
         setLoginError(msg);
         // điều hướng kèm email để user chỉ cần nhập OTP
         navigation.navigate("VerifyAccountScreen" as any, {
@@ -204,6 +278,47 @@ export default function LoginScreen({ navigation }: Props) {
           Liên hệ hỗ trợ
         </Text>
       </View>
+
+      <Modal
+        visible={isComplaintModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsComplaintModalVisible(false)}
+      >
+        <Pressable
+          className="flex-1 bg-black/50 justify-center items-center"
+          onPress={() => setIsComplaintModalVisible(false)}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            className="bg-white w-11/12 rounded-xl p-6 shadow-xl"
+          >
+            <Text className="text-xl font-bold text-gray-800 mb-2">
+              Gửi Khiếu Nại Mở Khóa
+            </Text>
+            <Text className="text-sm text-red-600 mb-4">
+              {bannedMsg}
+            </Text>
+
+            <TextInput
+              className="border border-gray-300 rounded-lg p-3 h-32 text-sm mb-4"
+              placeholder="Nhập chi tiết lý do bạn cho rằng tài khoản bị khóa là sai (tối thiểu 10 ký tự)..."
+              multiline
+              value={complaintReason}
+              onChangeText={setComplaintReason}
+              style={{ textAlignVertical: "top" }}
+              editable={!isSendingComplaint}
+            />
+
+            <Button
+              value={isSendingComplaint ? "Đang gửi..." : "Gửi Yêu Cầu Mở Khóa"}
+              onPress={handleComplaintSubmit}
+              loading={isSendingComplaint}
+              disabled={isSendingComplaint || complaintReason.trim().length < 10}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

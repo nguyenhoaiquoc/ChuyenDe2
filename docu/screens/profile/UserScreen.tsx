@@ -60,20 +60,20 @@ export default function UserScreen() {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        const fullName = res.data.fullName || res.data.name || "";
+        const nickname = res.data.nickname || res.data.name || "";
         const image = res.data.image || null;
         const apiRoleId =
           res.data.roleId != null ? String(res.data.roleId) : null;
 
         setUser({
           id: userId,
-          name: fullName,
+          name: nickname,
           avatar: image,
           roleId: apiRoleId,
         });
 
         await AsyncStorage.multiSet([
-          ["userName", fullName],
+          ["userName", nickname],
           ["userAvatar", image || ""],
           ["role_id", apiRoleId || ""],
         ]);
@@ -123,7 +123,7 @@ export default function UserScreen() {
                           ? user.avatar
                           : `${path}${user.avatar}`,
                       }
-                    : require("../../assets/meo.jpg")
+                    : require("../../assets/default.png")
                 }
                 style={{ width: "100%", height: "100%", borderRadius: 48 }}
               />

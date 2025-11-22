@@ -13,7 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('favorites')
 export class FavoritesController {
-  constructor(private readonly favoritesService: FavoritesService) {}
+    constructor(private readonly favoritesService: FavoritesService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('toggle/:productId')

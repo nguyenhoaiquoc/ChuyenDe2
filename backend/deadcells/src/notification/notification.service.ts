@@ -31,6 +31,76 @@ export class NotificationService {
   ) {}
 
   /**
+   * Xóa tất cả thông báo liên quan đến một sản phẩm cụ thể.
+   * Dùng khi sản phẩm bị Ẩn, Xóa, hoặc Hết hạn.
+   */
+  async deleteNotificationsByProductId(productId: number) {
+    try {
+      const result = await this.notificationRepo.delete({
+        product: { id: productId },
+      });
+      this.logger.log(
+        `🗑️ Đã xóa ${result.affected} thông báo liên quan đến Product ID ${productId} (do sản phẩm không còn Active)`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Lỗi khi xóa thông báo theo productId ${productId}: ${error.message}`,
+      );
+    }
+  }
+
+  // Thông báo cho các người bán
+  async notifySellersOfBuyRequest(
+    newBuyPost: Product,
+    sellerIds: number[],
+  ) {
+    if (!sellerIds || sellerIds.length === 0) return;
+
+    try {
+      const ACTION_NAME = 'matching_buy_request';
+
+      // 1. Tìm xem action này đã có trong DB chưa
+      let action = await this.actionRepo.findOne({
+        where: { name: ACTION_NAME },
+      });
+
+      // 🟢 TỰ ĐỘNG TẠO: Nếu chưa có thì tạo mới luôn (Bạn không cần chạy SQL tay)
+      if (!action) {
+        this.logger.log(`Action '${ACTION_NAME}' chưa tồn tại, đang tạo mới...`);
+        const newAction = this.actionRepo.create({ name: ACTION_NAME });
+        action = await this.actionRepo.save(newAction);
+      }
+
+      const targetType = await this.targetTypeRepo.findOneByOrFail({
+        name: 'product',
+      });
+
+      // 2. Tạo thông báo cho từng người bán
+      const notifications = sellerIds.map((sellerId) => {
+        // Không gửi cho chính mình
+        if (sellerId === newBuyPost.user_id) return null;
+
+        const dto: CreateNotificationDto = {
+          userId: sellerId,                 // Người nhận: Người đang bán
+          actorId: Number(newBuyPost.user_id), // Người gây ra: Người đăng mua
+          actionId: action.id,
+          targetTypeId: targetType.id,
+          targetId: newBuyPost.id,          // Bấm vào sẽ ra bài đăng mua
+          productId: newBuyPost.id,
+        };
+        // Gọi hàm create có sẵn để lưu và push socket
+        return this.create(dto); 
+      });
+
+      await Promise.all(notifications);
+      this.logger.log(`Đã gửi thông báo "${ACTION_NAME}" tới ${sellerIds.length} người bán.`);
+      
+    } catch (error) {
+      this.logger.error(`Lỗi gửi thông báo matching_buy_request: ${error.message}`);
+    }
+  }
+
+  /**
    * Hàm này được gọi bởi các service khác (CommentService, MessageService...)
    */
   async create(dto: CreateNotificationDto): Promise<Notification> {
@@ -89,6 +159,14 @@ export class NotificationService {
 
   // Thông báo cho chính người đăng
   async notifyUserOfPostSuccess(product: Product) {
+    const statusId = product.productStatus?.id || product.product_status_id;
+
+    if (statusId !== 2) {
+      this.logger.log(
+        `Sản phẩm ID ${product.id} có status là ${statusId} (Chưa duyệt). Không gửi thông báo post_success.`,
+      );
+      return;
+    }
     try {
       const action = await this.actionRepo.findOneByOrFail({
         name: 'post_success',
@@ -531,4 +609,6 @@ export class NotificationService {
       );
     }
   }
+
+  
 }

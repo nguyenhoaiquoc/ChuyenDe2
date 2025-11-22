@@ -48,11 +48,15 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { Product } from 'src/entities/product.entity';
 import { Favorite } from 'src/entities/favorite.entity';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
+
+
   constructor(
+
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
     @InjectRepository(ProductImage)
@@ -115,7 +119,7 @@ export class ProductService {
     private readonly groupMemberRepo: Repository<GroupMember>,
 
     private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   // Thêm sản phẩm mới (tự động tạo sub_category nếu chưa tồn tại)
   async create(data: CreateProductDto, files?: Express.Multer.File[]) {
@@ -352,16 +356,17 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
+    //  GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
     if (productStatusGr && productStatusGr.id === 2) {
       this.notificationService
         .notifyFollowersOfNewPost(savedProduct)
         .catch((err) =>
           this.logger.error(
-            'Lỗi thông báo user follow đnăgh bài:',
+            'Lỗi thông báo user follow đăng bài:',
             err.message,
           ),
         );
+      this.notifyMatchingPosts(savedProduct.id);
     }
 
     // 4. Lưu ảnh
@@ -415,8 +420,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+
+
         'size',
         'brand',
         'color',
@@ -432,6 +437,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -459,8 +465,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+
+
         'size',
         'brand',
         'color',
@@ -476,6 +482,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
 
       order: { created_at: 'DESC' },
@@ -497,8 +504,8 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
+
+
         'size',
         'brand',
         'color',
@@ -514,6 +521,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
     });
@@ -522,9 +530,66 @@ export class ProductService {
   }
 
   // Format dữ liệu cho client (React Native)
-  async findAllFormatted(userId?: number): Promise<any[]> {
-    const products = await this.productRepo.find({
-      where: { product_status_id: 2 },
+  // async findAllFormatted(userId?: number, view?: string): Promise<any[]> {
+  //   const products = await this.productRepo.find({
+  //     where: { product_status_id: 2 },
+  //     relations: [
+  //       'images',
+  //       'user',
+  //       'dealType',
+  //       'condition',
+  //       'category',
+  //       'subCategory',
+  //       'category_change',
+  //       'sub_category_change',
+  //       'postType',
+  //       'productType',
+
+
+  //       'size',
+  //       'brand',
+  //       'color',
+  //       'capacity',
+  //       'warranty',
+  //       'productModel',
+  //       'processor',
+  //       'ramOption',
+  //       'storageType',
+  //       'graphicsCard',
+  //       'breed',
+  //       'ageRange',
+  //       'gender',
+  //       'engineCapacity',
+  //       'productStatus',
+  //       'group',
+  //     ],
+  //     order: { created_at: 'DESC' },
+  //   });
+
+  //   if (view !== 'admin_all') {
+  //     findOptions.where = { product_status_id: 2 };
+  //   }
+
+  //   const visibleProducts: Product[] = [];
+
+  //   for (const p of products) {
+  //     const vis = Number(p.visibility_type);
+
+  //     if (vis === 0 || p.visibility_type == null) {
+  //       visibleProducts.push(p);
+  //     } else if (vis === 1 && p.group_id && userId) {
+  //       const isMember = await this.groupService.isMember(p.group_id, userId);
+  //       if (isMember) visibleProducts.push(p);
+  //     }
+  //   }
+
+  //   return this.formatProducts(visibleProducts);
+  // }
+// Thêm tham số view?: string vào định nghĩa hàm
+  async findAllFormatted(userId?: number, view?: string): Promise<any[]> {
+    
+    // 1. Cấu hình query cơ bản (luôn lấy relation và sắp xếp)
+    const findOptions: any = {
       relations: [
         'images',
         'user',
@@ -536,8 +601,6 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-        'origin',
-        'material',
         'size',
         'brand',
         'color',
@@ -553,11 +616,28 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
-    });
+    };
 
-    const visibleProducts: Product[] = [];
+    // 🟢 2. LOGIC QUAN TRỌNG:
+    // Nếu KHÔNG PHẢI là 'admin_all' thì mới ép buộc lọc status = 2.
+    // Nếu là 'admin_all', ta bỏ qua dòng này => Lấy hết (1, 2, 3...)
+    if (view !== 'admin_all') {
+      findOptions.where = { product_status_id: 2 };
+    }
+
+    const products = await this.productRepo.find(findOptions);
+
+    // 🟢 3. Nếu là Admin xem tất cả, trả về luôn (bỏ qua logic lọc hiển thị nhóm/công khai)
+    // Để Admin đếm được chính xác số lượng trong DB
+    if (view === 'admin_all') {
+       return this.formatProducts(products);
+    }
+
+    // --- Logic lọc hiển thị cho User thường (Giữ nguyên code cũ của bạn) ---
+    const visibleProducts: any[] = []; // Sửa type Product[] thành any[] nếu cần
 
     for (const p of products) {
       const vis = Number(p.visibility_type);
@@ -572,7 +652,6 @@ export class ProductService {
 
     return this.formatProducts(visibleProducts);
   }
-
   // Format danh sách sản phẩm
   async formatProducts(products: Product[], userId?: number): Promise<any[]> {
     // 1. Lấy danh sách ID sản phẩm yêu thích (chỉ 1 lần)
@@ -593,9 +672,9 @@ export class ProductService {
         categoryName && subCategoryName
           ? `${categoryName} - ${subCategoryName}`
           : categoryName ||
-            subCategoryName ||
-            p.dealType?.name ||
-            'Không có danh mục';
+          subCategoryName ||
+          p.dealType?.name ||
+          'Không có danh mục';
 
       return {
         id: p.id,
@@ -607,13 +686,13 @@ export class ProductService {
         user_id: p.user?.id,
         user: p.user
           ? {
-              id: p.user.id,
-              name: p.user.fullName,
-              email: p.user.email,
-              phone: p.user.phone,
-            }
+            id: p.user.id,
+            name: p.user.nickname,
+            email: p.user.email,
+            phone: p.user.phone,
+          }
           : null,
-        author_name: p.user?.fullName || 'Người bán',
+        author_name: p.user?.nickname || 'Người bán',
         author: p.author || null,
         year: p.year || null,
         mileage: p.mileage ?? null,
@@ -673,37 +752,37 @@ export class ProductService {
 
         category: p.category
           ? {
-              id: p.category.id,
-              name: p.category.name,
-              image: p.category.image,
-              hot: p.category.hot,
-            }
+            id: p.category.id,
+            name: p.category.name,
+            image: p.category.image,
+            hot: p.category.hot,
+          }
           : null,
         subCategory: p.subCategory
           ? {
-              id: p.subCategory.id,
-              name: p.subCategory.name,
-              parent_category_id: p.subCategory.parent_category_id,
-              source_table: p.subCategory.source_table,
-              source_id: p.subCategory.source_id,
-            }
+            id: p.subCategory.id,
+            name: p.subCategory.name,
+            parent_category_id: p.subCategory.parent_category_id,
+            source_table: p.subCategory.source_table,
+            source_id: p.subCategory.source_id,
+          }
           : null,
 
         category_change: p.category_change
           ? {
-              id: p.category_change.id,
-              name: p.category_change.name,
-              image: p.category_change.image,
-            }
+            id: p.category_change.id,
+            name: p.category_change.name,
+            image: p.category_change.image,
+          }
           : null,
         sub_category_change: p.sub_category_change
           ? {
-              id: p.sub_category_change.id,
-              name: p.sub_category_change.name,
-              parent_category_id: p.sub_category_change.parent_category_id,
-              source_table: p.sub_category_change.source_table,
-              source_id: p.sub_category_change.source_id,
-            }
+            id: p.sub_category_change.id,
+            name: p.sub_category_change.name,
+            parent_category_id: p.sub_category_change.parent_category_id,
+            source_table: p.sub_category_change.source_table,
+            source_id: p.sub_category_change.source_id,
+          }
           : null,
 
         images:
@@ -722,8 +801,9 @@ export class ProductService {
         category_change_id: p.category_change_id,
         sub_category_change_id: p.sub_category_change_id,
         status_id: p.status_id,
-        visibility_type: p.visibility_type,
-        group_id: p.group_id,
+        visibility_type:
+          p.visibility_type != null ? Number(p.visibility_type) : 0,
+        group_id: p.group_id || p.group?.id || null,
         group: p.group
           ? { id: p.group.id, name: p.group.name, isPublic: p.group.isPublic }
           : null,
@@ -811,7 +891,7 @@ export class ProductService {
         'postType',
         'productType',
         'origin',
-        'material',
+
         'size',
         'brand',
         'color',
@@ -828,6 +908,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -878,6 +959,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
       order: { created_at: 'DESC' },
       take: limit,
@@ -925,6 +1007,7 @@ export class ProductService {
           'gender',
           'engineCapacity',
           'productStatus',
+          'group',
         ],
         order: { created_at: 'DESC' },
         take: needed,
@@ -969,6 +1052,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -1035,31 +1119,200 @@ export class ProductService {
     }
 
     const updatedProduct = await this.productRepo.save(product); // Thông báo
-    // this.notificationService.notifyUserOfApproval(updatedProduct);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
     if (dto.product_status_id === 2) {
       try {
         await this.notificationService.notifyFollowersOfNewPost(updatedProduct);
       } catch (err) {
         this.logger.error('Lỗi notifyFollowersOfNewPost:', err.message);
       }
+      this.notificationService
+        .notifyUserOfPostSuccess(updatedProduct)
+        .catch((err) =>
+          this.logger.error('Lỗi gửi thông báo duyệt bài:', err.message),
+        );
     }
+
+    //  GỬI THÔNG BÁO GỢI Ý
+    if (dto.product_status_id === 2) {
+      this.notifyMatchingPosts(updatedProduct.id);
+    }
+
+    if (Number(dto.product_status_id) !== 2) {
+       await this.notificationService.deleteNotificationsByProductId(id);
+    }
+    
     return updatedProduct;
   }
 
+  // hàm tìm kiếm
+
+
+  async searchProducts(query: SearchProductDto) {
+    const {
+      name,
+      description,
+      minPrice,
+      maxPrice,
+      category,
+      condition,
+      sortBy = "created_at",
+      sort = "desc",
+      page = 1,
+      limit = 20,
+    } = query;
+
+    const take = Math.min(Number(limit) || 20, 100);
+    const skip = (Number(page) - 1) * take;
+
+    const qb = this.productRepo
+      .createQueryBuilder("product")
+      .leftJoinAndSelect("product.images", "images")
+      .leftJoinAndSelect("product.user", "user")
+      .leftJoinAndSelect("product.category", "categoryTable")
+      .leftJoinAndSelect("product.subCategory", "subCategory")
+      .leftJoinAndSelect("product.condition", "conditionTable")
+      .leftJoinAndSelect("product.dealType", "dealType")
+      .leftJoinAndSelect("product.postType", "postType")
+      .leftJoinAndSelect("product.brand", "brand")
+      .leftJoinAndSelect("product.color", "color")
+      .leftJoinAndSelect("product.size", "size")
+      .leftJoinAndSelect("product.productStatus", "productStatus");
+
+
+
+    qb.andWhere("productStatus.id = :statusId", { statusId: 2 });
+    // ==================================================
+    // 🔍 FILTER NAME
+    // ==================================================
+    if (name && name.trim().length >= 2) {
+      qb.andWhere("LOWER(product.name) LIKE LOWER(:name)", {
+        name: `%${name.trim()}%`,
+      });
+    }
+
+
+    // 🔍 FILTER DESCRIPTION
+    if (description && description.trim().length >= 2) {
+      qb.andWhere("LOWER(product.description) LIKE LOWER(:des)", {
+        des: `%${description.trim()}%`,
+      });
+    }
+    // ==================================================
+    // 💰 PRICE FILTER
+    // ==================================================
+    const min = Number(minPrice);
+    const max = Number(maxPrice);
+
+    if (!isNaN(min) && !isNaN(max) && min <= max) {
+      qb.andWhere("product.price BETWEEN :min AND :max", { min, max });
+    } else {
+      if (!isNaN(min)) qb.andWhere("product.price >= :min", { min });
+      if (!isNaN(max)) qb.andWhere("product.price <= :max", { max });
+    }
+
+    // ==================================================
+    // 🏷 CATEGORY & SUBCATEGORY
+    // ==================================================
+    if (category?.trim()) {
+      const cat = `%${category.trim().toLowerCase()}%`;
+
+      qb.andWhere(
+        "(LOWER(categoryTable.name) LIKE :cat OR LOWER(subCategory.name) LIKE :cat)",
+        { cat }
+      );
+    }
+
+    // ==================================================
+    // 📌 CONDITION FILTER
+    // ==================================================
+    const validConditions = [
+      "Mới 100%",
+      "Cũ",
+      "Đã qua sử dụng",
+      "Miễn phí",
+      "Trao đổi",
+      "Mua bán",
+    ];
+    // 🔌 POST TYPE
+    if (query.postType && query.postType.length > 0) {
+      qb.andWhere("postType.name IN (:...postTypes)", { postTypes: query.postType });
+    }
+
+    // 🔌 DEAL TYPE
+    if (query.dealType && query.dealType.length > 0) {
+      qb.andWhere("dealType.name IN (:...dealTypes)", { dealTypes: query.dealType });
+    }
+
+
+    if (condition) {
+      const condArray = Array.isArray(condition) ? condition : [condition];
+      const filtered = condArray
+        .map((c) => c.trim())
+        .filter((c) => validConditions.includes(c));
+
+      if (filtered.length > 0) {
+        qb.andWhere("conditionTable.name IN (:...conds)", { conds: filtered });
+      }
+    }
+
+    // ==================================================
+    // 📌 SORT
+    // ==================================================
+    const sortableFields = {
+      created_at: "product.created_at",
+      price: "product.price",
+    };
+
+    const sortField =
+      sortableFields[sortBy] ?? sortableFields["created_at"];
+
+    qb.orderBy(sortField, sort.toUpperCase() === "ASC" ? "ASC" : "DESC");
+
+    // ==================================================
+    // 📌 PAGINATION
+    // ==================================================
+    qb.skip(skip).take(take);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data,
+      meta: {
+        page: Number(page),
+        limit: take,
+        total,
+        totalPages: Math.ceil(total / take),
+      },
+    };
+  }
+
+
   //xóa vĩnh viễn
-  async hardDeleteProduct(productId: number, userId: number): Promise<string> {
+  async hardDeleteProduct(productId: number, reqUser: any): Promise<string> {
+    this.logger.log(`🔍 DEBUG USER: ${JSON.stringify(reqUser)}`);
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    this.logger.log(`🔍 DEBUG CURRENT_USER DB: ${JSON.stringify(currentUser)}`);
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      relations: ['user', 'images'],
+      relations: ['user', 'images', 'group'],
     });
 
     if (!product) {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${productId}`);
     }
 
-    if (!product.user || product.user.id !== userId) {
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
       throw new UnauthorizedException('Bạn không có quyền xóa sản phẩm này.');
     }
 
@@ -1069,6 +1322,8 @@ export class ProductService {
     if (product.images && product.images.length > 0) {
       await this.imageRepo.remove(product.images);
     }
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
 
     // Xóa sản phẩm vĩnh viễn
     await this.productRepo.remove(product);
@@ -1081,34 +1336,46 @@ export class ProductService {
   @Cron(CronExpression.EVERY_DAY_AT_1AM) //  EVERY_DAY_AT_1AM
   async handleExpiredProducts() {
     this.logger.log('[CRON] Bắt đầu quét các sản phẩm đã hết hạn...');
-
     const now = new Date();
-
-    const ACTIVE_STATUS_ID = 2; // Đã duyệt
-    const EXPIRED_STATUS_ID = 5; // Hết hạn
+    const ACTIVE_STATUS_ID = 2;
+    const EXPIRED_STATUS_ID = 5;
 
     try {
-      const { affected } = await this.productRepo.update(
-        {
-          // Điều kiện
-          expires_at: LessThan(now), // Hạn sử dụng đã ở trong quá khứ
-          product_status_id: ACTIVE_STATUS_ID, // Đang được duyệt (active)
+      // BƯỚC 1: Phải tìm ra ID trước thì mới biết đường mà xóa thông báo
+      const expiredProducts = await this.productRepo.find({
+        where: {
+          expires_at: LessThan(now),
+          product_status_id: ACTIVE_STATUS_ID,
         },
-        {
-          // Cập nhật
-          product_status_id: EXPIRED_STATUS_ID,
-        },
-      );
-      if (affected && affected > 0) {
+        select: ['id'], // Chỉ lấy ID cho nhẹ
+      });
+
+      if (expiredProducts.length > 0) {
+        const ids = expiredProducts.map((p) => p.id);
+
+        // BƯỚC 2: Cập nhật trạng thái hàng loạt
+        await this.productRepo.update(
+          { id: In(ids) },
+          { product_status_id: EXPIRED_STATUS_ID },
+        );
+
+        // BƯỚC 3: Xóa thông báo rác (Quan trọng)
+        // Dùng Promise.all để chạy song song cho nhanh
+        await Promise.all(
+          ids.map((id) =>
+            this.notificationService.deleteNotificationsByProductId(id),
+          ),
+        );
+
         this.logger.log(
-          `[CRON] Đã cập nhật ${affected} sản phẩm sang trạng thái hết hạn.`,
+          `[CRON] Đã hết hạn ${ids.length} sản phẩm và xóa các thông báo liên quan.`,
         );
       } else {
-        this.logger.log(`[CRON] Không tim thấy sản phẩm nào cần cập nhật.`);
+        this.logger.log(`[CRON] Không tìm thấy sản phẩm nào cần cập nhật.`);
       }
     } catch (error) {
       this.logger.error(
-        '[CRON] lỗi khi quét sản phẩm hết hạn: ',
+        '[CRON] Lỗi khi quét sản phẩm hết hạn: ',
         error.message,
       );
     }
@@ -1118,14 +1385,27 @@ export class ProductService {
    * (Người dùng) Ẩn tin đang hiển thị
    * Chuyển Status 2 (Đã duyệt) -> 4 (Đã ẩn)
    */
-  async hideProduct(productId: number, userId: number): Promise<Product> {
+  async hideProduct(productId: number, reqUser: any): Promise<Product> {
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      relations: ['user'],
+      relations: ['user', 'productStatus'],
     });
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
-    if (product.user?.id !== userId)
-      throw new UnauthorizedException('Bạn không có quyền ẩn tin này'); // Chỉ cho phép ẩn tin đang "Đã duyệt"
+
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
+      throw new UnauthorizedException('Bạn không có quyền ẩn tin này');
+    }
 
     if (product.product_status_id === 6) {
       throw new BadRequestException('Không thể ẩn sản phẩm đã bán.');
@@ -1140,11 +1420,20 @@ export class ProductService {
       throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã ẩn"');
 
     product.productStatus = hiddenStatus;
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
+
+    return savedProduct;
   }
 
   // (Người dùng) Hiện lại tin đã ẩn
-  async unhideProduct(productId: number, userId: number): Promise<Product> {
+  async unhideProduct(productId: number, reqUser: any): Promise<Product> {
+    const currentUser = await this.userRepo.findOne({
+      where: { id: reqUser.id },
+    });
+    if (!currentUser) throw new UnauthorizedException('User không tồn tại');
+
     const product = await this.productRepo.findOne({
       where: { id: productId },
       relations: ['user'],
@@ -1152,8 +1441,15 @@ export class ProductService {
 
     if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
 
-    if (product.user?.id !== userId)
+    const userAny = currentUser as any;
+    const roleId = userAny.roleId ?? userAny.role_id;
+
+    const isAdmin = Number(roleId) === 1;
+    const isOwner = product.user && product.user.id === currentUser.id;
+
+    if (!isOwner && !isAdmin) {
       throw new UnauthorizedException('Bạn không có quyền hiện lại tin này');
+    }
 
     // Chỉ cho phép hiện lại tin "Đã ẩn"
     if (product.product_status_id !== 4) {
@@ -1169,9 +1465,8 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
-    // Mở comment này khi sẵn sàng
-    // this.notifyMatchingPosts(savedProduct.id);
+    this.notifyMatchingPosts(savedProduct.id);
+
     return savedProduct;
   }
 
@@ -1207,7 +1502,11 @@ export class ProductService {
     product.productStatus = soldStatus;
     // Hoặc bạn có thể dùng: product.product_status_id = 6;
 
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+
+    await this.notificationService.deleteNotificationsByProductId(productId);
+
+    return savedProduct;
   }
 
   //(Người dùng) Gửi yêu cầu gia hạn cho tin đã hết hạn (Status 5)
@@ -1279,6 +1578,7 @@ export class ProductService {
     }
 
     const approvedStatus = await this.productStatusService.findOne(2); // ID 2 = "Đã duyệt"
+
     if (!approvedStatus)
       throw new Error('Lỗi CSDL: Không tìm thấy trạng thái "Đã duyệt"');
 
@@ -1291,9 +1591,14 @@ export class ProductService {
 
     const savedProduct = await this.productRepo.save(product);
 
-    // 🚀 GỬI THÔNG BÁO GỢI Ý
-    // Mở comment này khi sẵn sàng
-    // this.notifyMatchingPosts(savedProduct.id);
+    this.notificationService
+      .notifyUserOfPostSuccess(savedProduct)
+      .catch((err) =>
+        this.logger.error('Lỗi gửi thông báo duyệt gia hạn:', err.message),
+      );
+
+    //  GỬI THÔNG BÁO GỢI Ý
+    this.notifyMatchingPosts(savedProduct.id);
 
     return savedProduct;
   }
@@ -1307,7 +1612,6 @@ export class ProductService {
   ): Promise<Product> {
     const product = await this.productRepo.findOne({
       where: { id: productId },
-      // Tải sẵn các relations để kiểm tra
       relations: [
         'images',
         'user',
@@ -1336,6 +1640,7 @@ export class ProductService {
         'gender',
         'engineCapacity',
         'productStatus',
+        'group',
       ],
     });
 
@@ -1423,8 +1728,6 @@ export class ProductService {
 
     // --- 4b. Xử lý Condition (Tùy chọn) ---
     if (data.condition_id !== undefined) {
-      // (undefined nghĩa là người dùng không gửi lên,
-      // null nghĩa là người dùng muốn 'xóa' tình trạng)
       product.condition = data.condition_id
         ? await this.conditionRepo.findOneBy({ id: data.condition_id })
         : null;
@@ -1542,9 +1845,30 @@ export class ProductService {
     if (data.sub_category_change_id !== undefined) {
       product.sub_category_change = data.sub_category_change_id
         ? await this.subCategoryRepo.findOneBy({
-            id: data.sub_category_change_id,
-          })
+          id: data.sub_category_change_id,
+        })
         : null;
+    }
+
+    if (data.visibility_type !== undefined) {
+      const vis = Number(data.visibility_type);
+      product.visibility_type = vis;
+
+      if (vis === 0) {
+        // 1. Nếu chọn "Toàn trường" -> Xóa sạch quan hệ nhóm
+        product.group_id = null;
+        product.group = null;
+      } else if (vis === 1 && data.group_id) {
+        // 2. Nếu chọn "Nhóm" -> Phải tìm Group Entity và gán vào
+        const newGroupId = Number(data.group_id);
+        product.group_id = newGroupId;
+
+        // Gọi GroupService để lấy thông tin nhóm
+        const groupEntity = await this.groupService.findOneById(newGroupId);
+        if (groupEntity) {
+          product.group = groupEntity;
+        }
+      }
     }
 
     // === 5. CHUYỂN VỀ CHỜ DUYỆT ===
@@ -1555,6 +1879,10 @@ export class ProductService {
     product.productStatus = pendingStatus;
 
     const updatedProduct = await this.productRepo.save(product);
+
+    await this.notificationService.deleteNotificationsByProductId(
+      updatedProduct.id,
+    );
 
     // === 6. LƯU ẢNH MỚI (NẾU CÓ) ===
     if (files && files.length > 0) {
@@ -1571,7 +1899,43 @@ export class ProductService {
       );
     }
 
-    return updatedProduct;
+    const fullProduct = await this.productRepo.findOne({
+      where: { id: updatedProduct.id },
+      relations: [
+        'images',
+        'user',
+        'dealType',
+        'condition',
+        'category',
+        'subCategory',
+        'category_change',
+        'sub_category_change',
+        'postType',
+        'productType',
+        'origin',
+        'material',
+        'size',
+        'brand',
+        'color',
+        'capacity',
+        'warranty',
+        'productModel',
+        'processor',
+        'ramOption',
+        'storageType',
+        'graphicsCard',
+        'breed',
+        'ageRange',
+        'gender',
+        'engineCapacity',
+        'productStatus',
+        'group',
+      ],
+    });
+
+    if (!fullProduct) throw new Error('Không tìm thấy sản phẩm sau khi lưu.');
+
+    return this.formatProduct(fullProduct);
   }
 
   // Lấy danh sách sản phẩm miễn phí (loại bỏ sản phẩm do chính user đăng)
@@ -1781,49 +2145,72 @@ export class ProductService {
   async getSuggestionFeed(userId: number): Promise<any[]> {
     this.logger.log(`Đang lấy feed gợi ý cá nhân hóa cho userId: ${userId}`);
 
-    // 1. SỬA LỖI QUERYBUILDER: Dùng GROUP BY thay vì DISTINCT
+    // 1. Lấy danh sách các subCategory mà user đã từng đăng bài
     const distinctSubCategories = await this.productRepo
       .createQueryBuilder('product')
-      .select('product.sub_category_id', 'id') // Chọn ID
-      .addSelect('subCategory.name', 'name') // Chọn Name
+      .select('product.sub_category_id', 'id')
+      .addSelect('subCategory.name', 'name')
       .leftJoin('product.subCategory', 'subCategory')
       .where('product.user.id = :userId', { userId })
       .andWhere('product.sub_category_id IS NOT NULL')
-      .groupBy('product.sub_category_id') // Nhóm theo ID
-      .addGroupBy('subCategory.name') // Nhóm theo Tên
-      .getRawMany(); // Lấy kết quả [ { id: 40, name: 'Laptop' }, ... ]
+      .groupBy('product.sub_category_id')
+      .addGroupBy('subCategory.name')
+      .getRawMany();
 
     if (distinctSubCategories.length === 0) {
-      this.logger.log('User này chưa đăng tin, không có gì để gợi ý.');
       return [];
     }
 
-    // 2. Lặp và gọi các hàm "nhẹ" (Lean)
     const feedResults: any[] = [];
 
+    // 2. Duyệt qua từng danh mục
     for (const subCat of distinctSubCategories) {
       const subCatId = subCat.id;
       if (!subCatId) continue;
 
-      // 3. GỌI CÁC HÀM "LEAN" (NHẸ)
-      const [sellingSuggestions, buyingSuggestions] = await Promise.all([
-        this.suggestForSelling(subCatId, userId),
-        this.suggestForBuying(subCatId, userId),
-      ]);
+      let sellingSuggestions: Product[] = [];
+      let buyingSuggestions: Product[] = [];
 
-      // 4. Đóng gói kết quả
-      if (sellingSuggestions.length > 0 || buyingSuggestions.length > 0) {
-        feedResults.push({
-          subCategory: { id: subCatId, name: subCat.name },
-          sellingSuggestions: sellingSuggestions,
-          buyingSuggestions: buyingSuggestions,
-        });
+      // --- SỬA ĐỔI TỪ ĐÂY: Dùng count thay vì findOne ---
+
+      // Check 1: User có bài ĐĂNG BÁN (id=1) nào trong danh mục này không?
+      const hasSellingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 1 }, // 1 là Đăng bán
+        },
+      });
+
+      // Check 2: User có bài ĐĂNG MUA (id=2) nào trong danh mục này không?
+      const hasBuyingPost = await this.productRepo.count({
+        where: {
+          user: { id: userId },
+          subCategory: { id: subCatId },
+          postType: { id: 2 }, // 2 là Đăng mua
+        },
+      });
+
+      // --- XỬ LÝ LOGIC ---
+
+      // Nếu có bài Bán -> Cần tìm người Mua -> Gọi suggestForSelling
+      if (hasSellingPost > 0) {
+        sellingSuggestions = await this.suggestForSelling(subCatId, userId);
       }
+
+      // Nếu có bài Mua -> Cần tìm người Bán -> Gọi suggestForBuying
+      if (hasBuyingPost > 0) {
+        buyingSuggestions = await this.suggestForBuying(subCatId, userId);
+      }
+
+      // Luôn push vào kết quả để Frontend xử lý hiển thị (dù mảng rỗng)
+      feedResults.push({
+        subCategory: { id: subCatId, name: subCat.name },
+        sellingSuggestions: sellingSuggestions,
+        buyingSuggestions: buyingSuggestions,
+      });
     }
 
-    this.logger.log(
-      `Đã tìm thấy ${feedResults.length} khối gợi ý cho user ${userId}.`,
-    );
     return feedResults;
   }
 
@@ -1851,5 +2238,96 @@ export class ProductService {
     }
 
     return [];
+  }
+
+  // src/product/product.service.ts
+
+  async notifyMatchingPosts(productId: number) {
+    try {
+      console.log(
+        `-------------- START CHECK MATCHING FOR PRODUCT ${productId} --------------`,
+      );
+
+      // 1. Lấy thông tin bài viết
+      const product = await this.productRepo.findOne({
+        where: { id: productId },
+        relations: ['subCategory', 'postType', 'user'],
+      });
+
+      if (!product) {
+        console.log('❌ Lỗi: Không tìm thấy product trong DB');
+        return;
+      }
+
+      console.log(
+        `ℹ️ Thông tin bài đăng: ID=${product.id}, PostType=${product.postType?.id} (${product.postType?.name}), User=${product.user?.id}`,
+      );
+
+      // LOGIC: Chỉ chạy khi đây là bài ĐĂNG MUA (Giả sử ID 2 là "Cần mua")
+      if (Number(product.postType?.id) === 2) {
+        console.log(
+          `✅ Đây là bài ĐĂNG MUA (PostType=2). Bắt đầu tìm người bán...`,
+        );
+
+        if (!product.user) {
+          console.log('❌ Lỗi: Product không có User');
+          throw new Error('Sản phẩm không có người dùng');
+        }
+
+        // 2. Tìm tất cả bài ĐĂNG BÁN
+        const matchingSellPosts = await this.productRepo.find({
+          where: {
+            sub_category_id: product.subCategory.id,
+            post_type_id: 1, // 1 = Đăng bán
+            product_status_id: 2, // 2 = Đã duyệt
+            user: {
+              id: Not(product.user.id),
+            },
+          },
+          relations: ['user'],
+          select: {
+            id: true,
+            user: { id: true },
+          },
+        });
+
+        console.log(
+          `🔎 Tìm thấy ${matchingSellPosts.length} bài đăng bán phù hợp trong cùng danh mục.`,
+        );
+
+        if (matchingSellPosts.length > 0) {
+          const sellerIds = [
+            ...new Set(
+              matchingSellPosts
+                .filter((p) => p.user !== null)
+                .map((p) => p.user!.id),
+            ),
+          ];
+
+          console.log(
+            `🚀 Gửi thông báo cho các Seller ID: ${JSON.stringify(sellerIds)}`,
+          );
+
+          // 4. Gọi bên NotificationService để gửi
+          await this.notificationService.notifySellersOfBuyRequest(
+            product,
+            sellerIds,
+          );
+        } else {
+          console.log(
+            '⚠️ Không có người bán nào phù hợp (Matching list rỗng).',
+          );
+        }
+      } else {
+        // 👇👇👇 KHẢ NĂNG CAO LÀ NÓ RƠI VÀO ĐÂY 👇👇👇
+        console.log(
+          `⛔ BỎ QUA: Đây là bài ĐĂNG BÁN (PostType=${product.postType?.id}), logic chỉ chạy cho bài ĐĂNG MUA.`,
+        );
+      }
+
+      console.log(`-------------- END CHECK --------------`);
+    } catch (error) {
+      this.logger.error(`Lỗi trong notifyMatchingPosts: ${error.message}`);
+    }
   }
 }

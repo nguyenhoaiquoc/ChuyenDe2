@@ -1,3 +1,4 @@
+// Menu.tsx
 import { View, Text, TouchableOpacity } from "react-native";
 import {
   FontAwesome,
@@ -10,6 +11,8 @@ import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import React from "react";
+import { useChat } from "./ChatContext";
 import { io } from "socket.io-client";
 import { path } from "../config";
 import React, { useState, useEffect } from "react";
@@ -18,16 +21,24 @@ export default function Menu() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const [activeTab, setActiveTab] = useState("home");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  // ✅ Lấy route hiện tại trực tiếp từ navigation state
-  const activeRouteName = useNavigationState(
-    (state) => state.routes[state.index].name
-  );
-  const activeTab = activeRouteName.toLowerCase();
+  // ✅ Lấy unreadCount từ ChatContext
+  const { unreadCount } = useChat();
 
-  // ✅ Kiểm tra đăng nhập
+  // Theo dõi thay đổi route để tô màu tab hiện tại
+  useEffect(() => {
+    const unsub = navigation.addListener("state", () => {
+      const state = navigation.getState();
+      const route = state.routes[state.index];
+      const name = route?.name ?? "Home";
+      setActiveTab(name.toString().toLowerCase());
+    });
+    return unsub;
+  }, [navigation]);
+
+  // Kiểm tra đăng nhập
   useEffect(() => {
     const checkLogin = async () => {
       const token = await AsyncStorage.getItem("token");
@@ -126,7 +137,7 @@ export default function Menu() {
           </Text>
         </TouchableOpacity>
 
-        {/* Chat */}
+        {/* Chat + badge tổng unread */}
         <TouchableOpacity
           className="items-center flex-1"
           onPress={() => navigation.navigate("ChatListScreen")}

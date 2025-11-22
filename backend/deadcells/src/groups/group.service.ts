@@ -659,7 +659,7 @@ export class GroupService {
     const group = await this.groupRepo.findOne({ where: { id: groupId } });
     if (!group) throw new NotFoundException('Nhóm không tồn tại');
 
-    await this.chatService.createRoomGroup(groupId);
+   
 
     const existing = await this.groupMemberRepo.findOne({
       where: { group_id: groupId, user_id: userId },
@@ -682,9 +682,8 @@ export class GroupService {
       group_role_id: 1,
       pending: pendingStatus,
     });
-
     await this.groupMemberRepo.save(member);
-
+    await this.chatService.createRoomGroup(groupId);
     return {
       success: true,
       message: group.isPublic
@@ -797,6 +796,10 @@ export class GroupService {
     });
     if (!post) throw new NotFoundException('Bài viết không tồn tại');
 
+    if (!post.group_id) {
+      throw new BadRequestException('Bài viết này không thuộc nhóm nào (Không thể duyệt qua GroupService).');
+    }
+    
     const role = await this.getUserRole(post.group_id, userId);
     if (role !== 'leader') {
       throw new ForbiddenException('Chỉ trưởng nhóm mới được duyệt bài viết');

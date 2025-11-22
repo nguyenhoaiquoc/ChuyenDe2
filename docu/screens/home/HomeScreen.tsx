@@ -10,6 +10,8 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  Linking,
+  Modal,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
 import Menu from "../../components/Menu";
@@ -17,7 +19,8 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Category, Product, RootStackParamList } from "../../types";
 import { Feather, FontAwesome5, MaterialIcons } from "@expo/vector-icons";
 import ProductCard from "../../components/ProductCard";
-import { useEffect, useState, useCallback } from "react";
+import SearchProduct from "../products/SearchProduct";
+import { useEffect, useState, useCallback } from "react"; // 2. Thêm useCallback
 import axios from "axios";
 import "../../global.css";
 import { path } from "../../config";
@@ -46,6 +49,8 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [isLoading, setIsLoading] = useState(false);
   const { unreadCount, setUnreadCount, fetchUnreadCount } = useNotification();
+
+  const [isMenuModalVisible, setMenuModalVisible] = useState(false);
 
   const fetchCategories = () => {
     return axios
@@ -403,6 +408,28 @@ export default function HomeScreen({ navigation }: Props) {
     }
   }, [selectedFilter, fetchUnreadCount]); // fetchUnreadCount là dependency ổn định từ context
 
+  const handleOpenWebsite = () => {
+    Alert.alert(
+      "Thông báo",
+      "Website ttgb.id.vn hiện đang trong giai đoạn phát triển và chưa hoàn thiện 100%. Chúng mình đang nỗ lực hết sức để cập nhật trong thời gian sớm nhất.\n\nRất xin lỗi vì sự bất tiện này và mong bạn thông cảm!\n\nBạn vẫn muốn tiếp tục truy cập để tham khảo trước chứ?",
+      [
+        {
+          text: "Quay lại",
+          style: "cancel",
+          onPress: () => console.log("Đã hủy"),
+        },
+        {
+          text: "Tiếp tục",
+          onPress: () => {
+            Linking.openURL("https://ttgb.id.vn").catch((err) =>
+              console.error("Không thể mở link:", err)
+            );
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View className="flex-1 bg-[#f5f6fa] mt-8">
       <StatusBar hidden={true} />
@@ -410,20 +437,26 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Header */}
       <View className="flex-row items-center px-3 py-2 bg-white shadow z-10">
         {/* Icon menu */}
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity
+          className="p-2"
+          onPress={() => setMenuModalVisible(true)}
+        >
           <Feather name="menu" size={24} color="#333" />
         </TouchableOpacity>
 
         {/* Thanh tìm kiếm */}
-        <View className="flex-1 mx-2">
-          <TextInput
-            placeholder="Tìm kiếm sản phẩm..."
-            className="bg-gray-100 rounded-full px-4 py-2 text-sm text-gray-700"
-          />
-        </View>
+        <TouchableOpacity
+          className="flex-1 bg-gray-100 rounded-full px-4 py-2 justify-center"
+          onPress={() => navigation.navigate("SearchProduct")}
+        >
+          <Text className="text-gray-500 text-sm">Tìm kiếm sản phẩm...</Text>
+        </TouchableOpacity>
 
         {/* Icon trái tim */}
-        <TouchableOpacity className="p-2">
+        <TouchableOpacity
+          className="p-2"
+          onPress={() => navigation.navigate("SavedPostsScreen")}
+        >
           <FontAwesome name="heart-o" size={22} color="#333" />
         </TouchableOpacity>
 
@@ -587,6 +620,66 @@ export default function HomeScreen({ navigation }: Props) {
       </ScrollView>
       {/* Menu dưới */}
       <Menu />
+
+      {/* 👇 Modal Menu hiển thị từ dưới lên */}
+      <Modal
+        visible={isMenuModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setMenuModalVisible(false)}
+      >
+        {/* Vùng background: Đã xóa 'bg-black/50' để trong suốt */}
+        <TouchableOpacity
+          className="flex-1 justify-end"
+          activeOpacity={1}
+          onPress={() => setMenuModalVisible(false)}
+        >
+          {/* Nội dung modal: Thêm shadow-2xl và shadow-black để đổ bóng */}
+          <TouchableOpacity
+            activeOpacity={1}
+            className="bg-white rounded-t-2xl p-6 shadow-2xl shadow-black elevation-10"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="items-center mb-4">
+              <View className="w-12 h-1.5 bg-gray-300 rounded-full" />
+            </View>
+
+            <Text className="text-lg font-bold text-gray-800 mb-4 text-center">
+              Menu mở rộng
+            </Text>
+
+            {/* ... (Phần nút bấm giữ nguyên) ... */}
+
+            {/* Link Website */}
+            <TouchableOpacity
+              className="flex-row items-center bg-gray-50 p-4 rounded-xl border border-gray-200 mb-4 active:bg-gray-100"
+              onPress={() => {
+                setMenuModalVisible(false);
+                handleOpenWebsite();
+              }}
+            >
+              <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                <FontAwesome5 name="globe" size={20} color="#3b82f6" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-gray-800">
+                  Truy cập Website
+                </Text>
+                <Text className="text-xs text-gray-500">ttgb.id.vn</Text>
+              </View>
+              <Feather name="chevron-right" size={20} color="#9ca3af" />
+            </TouchableOpacity>
+
+            {/* Nút Đóng */}
+            <TouchableOpacity
+              className="bg-gray-200 py-3 rounded-xl items-center"
+              onPress={() => setMenuModalVisible(false)}
+            >
+              <Text className="font-semibold text-gray-700">Đóng</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }

@@ -24,6 +24,7 @@ import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from 'src/auth/optional-jwt-auth.guard';
 import { UpdateProductStatusDto } from './dto/update-status.dto';
 import { Product } from 'src/entities/product.entity';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @Controller('products')
 export class ProductController {
@@ -44,12 +45,12 @@ export class ProductController {
   // 🟢 Lấy danh sách bài hiển thị ngoài trang chủ
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
-  async findAll(@Req() req, @Query('category_id') category_id?: string) {
+  async findAll(@Req() req, @Query('category_id') category_id?: string, @Query('view') view?: string) {
     const userId = req.user?.id || null;
     if (category_id) {
       return await this.productService.findByCategoryId(Number(category_id));
     }
-    return await this.productService.findAllFormatted(userId);
+    return await this.productService.findAllFormatted(userId, view);
   }
 
   // 🟢 Người dùng xem tất cả bài đăng của chính mình
@@ -118,6 +119,11 @@ export class ProductController {
     return this.productService.updateProductStatus(id, dto);
   }
 
+  //Tìm kiếm sản phẩm (hỗ trợ name, price, category, sort, phân trang)
+@Get("search")
+async searchProducts(@Query() query: SearchProductDto) {
+  return this.productService.searchProducts(query);
+}
   /**
    * (Người dùng) Cập nhật chi tiết tin đăng
    */
@@ -138,8 +144,7 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   hardDelete(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    const userId = req.user.id;
-    return this.productService.hardDeleteProduct(id, userId);
+    return this.productService.hardDeleteProduct(id, req.user);
   }
 
   // 🟢 Lấy sản phẩm liên quan (ĐẶT TRƯỚC HÀM /:id)
@@ -171,15 +176,14 @@ export class ProductController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id/hide')
   async hideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.hideProduct(id, req.user.id);
+    return this.productService.hideProduct(id, req.user);
   }
-
 
   // === HIỆN LẠI BÀI ĐÃ ẨN ===
   @UseGuards(JwtAuthGuard)
   @Patch(':id/unhide')
   async unhideProduct(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    return this.productService.unhideProduct(id, req.user.id);
+    return this.productService.unhideProduct(id, req.user);
   }
 
   // === ĐÁNH DẤU ĐÃ BÁN ===
@@ -216,5 +220,4 @@ export class ProductController {
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findById(id);
   }    
-  
 }

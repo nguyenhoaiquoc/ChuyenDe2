@@ -25,7 +25,7 @@ export class Rating {
   @Column({ name: 'user_id' })
   user_id: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   reviewer: User;
 
@@ -33,7 +33,7 @@ export class Rating {
   @Column({ name: 'rated_user_id', nullable: true })
   rated_user_id: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'rated_user_id' })
   ratedUser: User;
 

@@ -15,6 +15,7 @@ import { MailService } from 'src/mail/mail.service';
 import { v4 as uuidv4 } from 'uuid';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { GroupMember } from 'src/entities/group-member.entity';
+import { ChatService } from 'src/chat/chat.service';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +28,7 @@ constructor(
 
   @InjectRepository(OtpVerification)
   private readonly otpRepository: Repository<OtpVerification>,
+    private readonly chatService: ChatService, 
 
   private readonly jwtService: JwtService,
   private readonly mailService: MailService,
@@ -52,7 +54,7 @@ constructor(
 
     if (existing && !existing.is_verified) {
       // ✅ KHÔNG xoá hard; chỉ cập nhật lại thông tin & regenerate OTP
-      existing.fullName = dto.fullName;
+      existing.nickname = dto.nickname;
       existing.phone = dto.phone ?? existing.phone;
       existing.passwordHash = passwordHash;
       user = await this.userRepository.save(existing);
@@ -60,7 +62,7 @@ constructor(
       user = this.userRepository.create({
         email: dto.email,
         passwordHash,
-        fullName: dto.fullName,
+        nickname: dto.nickname,
         phone: dto.phone,
         roleId: 2, // mặc định member
         statusId: existing?.statusId ?? 1, // tuỳ hệ thống: 1 = active
@@ -74,6 +76,7 @@ constructor(
           group_role_id: 1,
           pending: 3
     })
+  await this.chatService.createRoomGroup(dto.group_id);
 
 
     // 🔐 Tạo OTP xác minh: 6 chữ số, lưu HASH
@@ -138,6 +141,13 @@ constructor(
     if (!user)
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
+    const bannedStatusId = 3; 
+
+    if (String(user.status.id) === String(bannedStatusId)) {
+      // ⛔ TỪ CHỐI ĐĂNG NHẬP nếu statusId là 3
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa bởi Admin.');
+    }
+
     if (!user.is_verified) {
       throw new UnauthorizedException(
         'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực OTP.',
@@ -157,7 +167,7 @@ constructor(
     return {
       token,
       role: user.role?.name,
-      fullName: user.fullName,
+      nickname: user.nickname,
       id: user.id,
       tokenType: 'Bearer',
     };

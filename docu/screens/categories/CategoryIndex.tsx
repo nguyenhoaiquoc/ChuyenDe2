@@ -133,11 +133,10 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            authorName: item.user?.nickname || item.user?.name || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
 
-
-            category: item.category || null, 
+            category: item.category || null,
 
             subCategory: item.subCategory
               ? {
@@ -147,10 +146,10 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
                   source_table: item.subCategory.source_table,
                   source_id: item.subCategory.source_id,
                 }
-              : null, 
+              : null,
 
-            category_change: item.category_change || null, 
-            sub_category_change: item.sub_category_change || null, 
+            category_change: item.category_change || null,
+            sub_category_change: item.sub_category_change || null,
 
             imageCount: item.images?.length || (imageUrl ? 1 : 0),
             isFavorite: false,

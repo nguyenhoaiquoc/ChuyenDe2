@@ -23,7 +23,7 @@ export class Group {
   @Column({ type: 'bigint' })
   owner_id: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'owner_id' })
   owner: User;
 

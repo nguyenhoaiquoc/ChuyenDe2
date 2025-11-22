@@ -17,10 +17,6 @@ export class Report {
   @PrimaryGeneratedColumn("increment")
   id: number;
 
-  @ManyToOne(() => Product, (product) => product.reports, { onDelete: "CASCADE" })
-  @JoinColumn({ name: "product_id" })
-  product: Product;
-
   @ManyToOne(() => User, (user) => user.reports, { onDelete: "CASCADE" })
   @JoinColumn({ name: "reporter_id" })
   reporter: User;
@@ -29,9 +25,9 @@ export class Report {
   @JoinColumn({ name: "reported_user_id" })
   reported_user: User; // <-- Quan hệ với "người bị báo cáo"
 
-  @Column({ type: "varchar", length: 191, nullable: true })
+  @Column({ type: "text", nullable: true })
   reason: string;
-
+  
   @ManyToOne(() => Status, (status) => status.reports)
   @JoinColumn({ name: "status_id" })
   status: Status;

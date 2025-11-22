@@ -14,24 +14,24 @@ export type RootStackParamList = {
   ProductDetail: { product?: Product } | undefined;
   ManagePostsScreen: undefined;
   ChooseCategoryScreen:
-    | {
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   ChooseSubCategoryScreen:
-    | {
-        category: Category;
-        group?: GroupType;
-        onPostSuccess?: () => void;
-      }
-    | undefined;
+  | {
+    category: Category;
+    group?: GroupType;
+    onPostSuccess?: () => void;
+  }
+  | undefined;
   PostFormScreen:
-    | {
-        category: { id: string; name: string };
-        subCategory: { id: string; name: string };
-      }
-    | undefined;
+  | {
+    category: { id: string; name: string };
+    subCategory: { id: string; name: string };
+  }
+  | undefined;
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
@@ -39,6 +39,8 @@ export type RootStackParamList = {
   SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
+  VerifyStudentScreen: undefined;
+
   ChooseExchangeCategoryScreen: {
     onSelectCategory: (category: Category, subCategory: SubCategory) => void;
   };
@@ -46,17 +48,32 @@ export type RootStackParamList = {
   ManagerGroupsScreen: undefined;
   UserInforScreen: {
     userId?: number | string;
+  ImageGalleryScreen?: {
+    onSelect?: (uri: string) => Promise<void>;
   };
-  EditProfileScreen: undefined;
+  UserInforScreen: {
+    onUpdate?: (updatedUser: any) => void; 
+     userId: number | string;
+  } | undefined;
+  EditProfileScreen: {
+    onUpdate?: (updatedUser: any) => void;
+  } | undefined;
   SellProductScreen: undefined;
   PurchaseRequestScreen: undefined;
   NotificationScreen: undefined;
   CreateGroupScreen: undefined;
   SavedPostsScreen: undefined;
   HomeAdminScreen: undefined;
+  AdminVerification: undefined;
+  AdminDashboardScreen: undefined;
+  SearchProduct: undefined;
+  SearchResultScreen: {
+    query: string;
+  };
   ManageProductsUserScreen: undefined;
-  ManageCategoriesScreen: undefined;
-  ManageGroupPostsScreen: undefined;
+  ManageCategoriesScreen: undefined;  
+  ManageGroupPostsScreen: undefined; 
+  ManageReportsScreen: undefined; 
 
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
@@ -168,9 +185,9 @@ export type Category = { id: string; name: string; image?: string };
 export type SubCategory = {
   id: string | number;
   name: string;
-  parent_category_id?: number | null; // (Trường này API có gửi)
-  source_table?: string | null; // (Trường này API có gửi)
-  source_id?: number | null; // (Trường này API có gửi)
+  parent_category_id?: number | null; 
+  source_table?: string | null; 
+  source_id?: number | null; 
 };
 export type ProductType = {
   id: string | number;
@@ -311,6 +328,7 @@ export type Product = {
   user?: {
     id?: string | number;
     name?: string;
+    nickname?: string;
     avatar?: string;
     image?: string;
   };
