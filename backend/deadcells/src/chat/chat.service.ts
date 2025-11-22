@@ -210,7 +210,7 @@ async getChatList(userId: number, limit = 20, offset = 0) {
       r.room_type === 'PAIR' && partners.length > 0
         ? {
             id: partners[0].user.id,
-            name: partners[0].user.fullName,
+            name: partners[0].user.nickname,
             avatar: partners[0].user.image,
           }
         : null;
@@ -565,7 +565,7 @@ async getRoomMetaData(userId: number, roomId: number) {
       room.room_type === 'PAIR' && partners.length > 0 && partners[0].user
         ? {
             id: partners[0].user.id,
-            name: partners[0].user.fullName,
+            name: partners[0].user.nickname,
             avatar: partners[0].user.image,
           }
         : null,

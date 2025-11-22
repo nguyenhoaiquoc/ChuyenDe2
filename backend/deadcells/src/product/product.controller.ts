@@ -45,12 +45,12 @@ export class ProductController {
   // 🟢 Lấy danh sách bài hiển thị ngoài trang chủ
   @Get()
   @UseGuards(OptionalJwtAuthGuard)
-  async findAll(@Req() req, @Query('category_id') category_id?: string) {
+  async findAll(@Req() req, @Query('category_id') category_id?: string, @Query('view') view?: string) {
     const userId = req.user?.id || null;
     if (category_id) {
       return await this.productService.findByCategoryId(Number(category_id));
     }
-    return await this.productService.findAllFormatted(userId);
+    return await this.productService.findAllFormatted(userId, view);
   }
 
   // 🟢 Người dùng xem tất cả bài đăng của chính mình

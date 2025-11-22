@@ -153,64 +153,62 @@ export class UsersService {
     };
 
     return this.userRepo.save(user);
-  
   }
   async getPendingCCCDRequests(): Promise<User[]> {
-  return this.userRepo.find({
-    where: {
-      cccd_pending_data: Not(IsNull()), 
-    },
-    select: ['id', 'fullName', 'cccd_pending_data'],
-  });
-}
-
-async approveCCCD(userId: number): Promise<any> {
-  const user = await this.findOne(userId);
-
-  if (!user.cccd_pending_data) {
-    throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+    return this.userRepo.find({
+      where: {
+        cccd_pending_data: Not(IsNull()),
+      },
+      select: ['id', 'fullName', 'cccd_pending_data'],
+    });
   }
 
-  const pending = user.cccd_pending_data;
+  async approveCCCD(userId: number): Promise<any> {
+    const user = await this.findOne(userId);
 
-  // Cập nhật dữ liệu thật từ pending
-  const updateData: Partial<User> = {
-    is_cccd_verified: true,
-    verifiedAt: new Date(),
-    fullName: pending.fullName || user.fullName,
-    citizenId: pending.citizenId || user.citizenId,
-    gender: pending.gender || user.gender,
-    dob: pending.dob ? new Date(pending.dob) : user.dob,
-    hometown: pending.hometown || user.hometown,
-    address_json: pending.address
-      ? { full: pending.address, source: 'cccd_scan', updatedAt: new Date() }
-      : user.address_json,
-    image: pending.imageUrl || user.image,
-  };
+    if (!user.cccd_pending_data) {
+      throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+    }
 
-  // Xóa pending sau khi duyệt
-  user.cccd_pending_data = null;
+    const pending = user.cccd_pending_data;
 
-  Object.assign(user, updateData);
-  await this.userRepo.save(user);
+    // Cập nhật dữ liệu thật từ pending
+    const updateData: Partial<User> = {
+      is_cccd_verified: true,
+      verifiedAt: new Date(),
+      fullName: pending.fullName || user.fullName,
+      citizenId: pending.citizenId || user.citizenId,
+      gender: pending.gender || user.gender,
+      dob: pending.dob ? new Date(pending.dob) : user.dob,
+      hometown: pending.hometown || user.hometown,
+      address_json: pending.address
+        ? { full: pending.address, source: 'cccd_scan', updatedAt: new Date() }
+        : user.address_json,
+      image: pending.imageUrl || user.image,
+    };
 
-  return { success: true, message: 'Đã phê duyệt thành công' };
-}
+    // Xóa pending sau khi duyệt
+    user.cccd_pending_data = null;
 
-async rejectCCCD(userId: number): Promise<any> {
-  const user = await this.findOne(userId);
+    Object.assign(user, updateData);
+    await this.userRepo.save(user);
 
-  if (!user.cccd_pending_data) {
-    throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+    return { success: true, message: 'Đã phê duyệt thành công' };
   }
 
-  // Chỉ xóa pending, không thay đổi dữ liệu thật
-  user.cccd_pending_data = null;
-  await this.userRepo.save(user);
+  async rejectCCCD(userId: number): Promise<any> {
+    const user = await this.findOne(userId);
 
-  return { success: true, message: 'Đã từ chối yêu cầu' };
-}
-  
+    if (!user.cccd_pending_data) {
+      throw new BadRequestException('Không có yêu cầu nào đang chờ duyệt');
+    }
+
+    // Chỉ xóa pending, không thay đổi dữ liệu thật
+    user.cccd_pending_data = null;
+    await this.userRepo.save(user);
+
+    return { success: true, message: 'Đã từ chối yêu cầu' };
+  }
 
   async searchUsersForInvite(currentUserId: number | string, search?: string) {
     const userId = Number(currentUserId);
@@ -394,5 +392,20 @@ async rejectCCCD(userId: number): Promise<any> {
         image: r.ratedUser.image,
       },
     }));
+  }
+
+  async findIdByEmail(email: string) {
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id', 'nickname', 'email'], // Chỉ chọn các trường an toàn
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `Không tìm thấy người dùng với email ${email}`,
+      );
+    }
+
+    return user;
   }
 }

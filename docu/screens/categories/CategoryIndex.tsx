@@ -133,7 +133,7 @@ const CategoryIndex: React.FC<Props> = ({ route, navigation }) => {
             location: locationText,
             time: timeDisplay,
             tag: tagText,
-            authorName: item.user?.fullName || item.user?.name || "Ẩn danh",
+            authorName: item.user?.nickname || item.user?.name || "Ẩn danh",
             user_id: item.user?.id ?? item.user_id ?? 0,
 
             category: item.category || null,

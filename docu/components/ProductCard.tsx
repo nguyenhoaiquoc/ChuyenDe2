@@ -31,7 +31,7 @@ export default function ProductCard({
       ? product.category.name
       : (product.category ?? "Chưa rõ danh mục"));
   const postType = product.postType;
-  const authorName = product.authorName;
+  const authorName = product.user?.nickname || product.authorName;
   const category =
     typeof product.category === "object"
       ? product.category.name

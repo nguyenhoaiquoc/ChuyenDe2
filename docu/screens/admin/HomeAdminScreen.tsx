@@ -130,7 +130,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Quản lý Báo Cáo"
             subtitle="Xem xét và xử lý các báo cáo"
             color="bg-yellow-600"
-            onPress={navigateToWIP} // Đổi thành navigation.navigate("ManageReportsScreen")
+            onPress={() => navigation.navigate("ManageReportsScreen")} 
           />
 
           <Text className="text-gray-400 font-semibold uppercase pt-2 pb-1 px-1">
@@ -143,7 +143,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Duyệt tin Công Khai"
             subtitle="Duyệt các tin đăng công khai"
             color="bg-green-600"
-            onPress={() => navigation.navigate("ManageProductsScreen")}
+            onPress={() => navigation.navigate("ManageProductsUserScreen")}
           />
 
           {/* 5. Duyệt tin Nhóm */}
