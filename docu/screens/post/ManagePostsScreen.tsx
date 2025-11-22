@@ -306,7 +306,7 @@ export default function ManagePostsScreen({
   /** Mở menu 3 chấm */
   const handleOpenMenu = (product: Product, pageY: number) => {
     setSelectedProduct(product); // Lưu cả sản phẩm
-    setMenuPosition({ top: pageY, right: 50 });
+    setMenuPosition({ top: pageY - 230, right: 20 });
     setIsMenuVisible(true);
   }; /** Đóng menu 3 chấm */
 
@@ -490,24 +490,6 @@ export default function ManagePostsScreen({
         <Text className="text-lg font-semibold text-gray-800">
           Quản lý đăng tin
         </Text>
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => navigation.navigate("ChatListScreen")}
-            className="mr-3"
-          >
-            <Ionicons name="chatbox-ellipses-outline" size={22} color="#333" />
-          </TouchableOpacity>
-          <TouchableOpacity className="relative" onPress={handleBellPress}>
-            <Feather name="bell" size={22} color="#333" />
-            {unreadCount > 0 && (
-              <View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center border border-white">
-                <Text className="text-[10px] font-bold text-white">
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        </View>
       </View>
 
       <FlatList

@@ -5,40 +5,36 @@ import React, {
   ReactNode,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import axios from "axios";
 import { path } from "../../config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io, Socket } from "socket.io-client";
 
-// Định nghĩa những gì Context sẽ cung cấp
 type NotificationContextType = {
   unreadCount: number;
   setUnreadCount: (count: number) => void;
   fetchUnreadCount: () => Promise<void>;
 };
 
-// Tạo Context
 const NotificationContext = createContext<NotificationContextType | undefined>(
   undefined
 );
 
-// Biến lưu socket (để nó không bị tạo lại mỗi lần render)
-let socket: Socket | null = null;
-
-// Tạo Provider (cái bọc)
 export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   const [unreadCount, setUnreadCount] = useState(0);
+  
+  // 1. Dùng useRef thay vì biến toàn cục để quản lý vòng đời theo Component
+  const socketRef = useRef<Socket | null>(null);
 
-  // Hàm gọi API để lấy số lượng (dùng khi app mới mở)
   const fetchUnreadCount = useCallback(async () => {
     try {
       const userId = await AsyncStorage.getItem("userId");
       if (!userId) {
-        setUnreadCount(0); // Nếu chưa đăng nhập, count = 0
+        setUnreadCount(0);
         return;
       }
-
       const response = await axios.get(
         `${path}/notifications/user/${userId}/unread-count`
       );
@@ -46,78 +42,89 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
         setUnreadCount(response.data.count);
       }
     } catch (error) {
-      console.error("Lỗi fetch unread count (HTTP):", error);
-      setUnreadCount(0); // Đặt về 0 nếu lỗi
+      console.error("Lỗi fetch unread count:", error);
     }
   }, []);
 
   // ✅ LOGIC KẾT NỐI SOCKET.IO (REAL-TIME)
   useEffect(() => {
+    let currentSocket: Socket | null = null;
+
     const setupSocket = async () => {
       const userId = await AsyncStorage.getItem("userId");
-      if (!userId) {
-        // Nếu không có user, không kết nối socket
-        return;
+      if (!userId) return;
+
+      // Nếu đã có socket cũ đang chạy, ngắt nó đi để tạo cái mới sạch sẽ
+      if (socketRef.current) {
+        socketRef.current.disconnect();
       }
 
-      // 1. Kết nối tới server
-      if (!socket) {
-        socket = io(`${path}/notification`, {
-          transports: ["websocket"], // 🔥 bắt buộc để tránh lỗi polling
-          autoConnect: true,
-        });
-        console.log("Socket path:", path);
-        console.log(`Đang kết nối Socket.IO tới ${path}...`);
+      console.log(`🔌 Đang kết nối Socket tới: ${path}/notification`);
 
-        socket.on("disconnect", (reason) => {
-          console.log("⚠️ Socket đã ngắt kết nối, lý do:", reason);
-        });
+      // 2. Khởi tạo Socket
+      // Lưu ý: Namespace phải khớp với Backend (@WebSocketGateway({ namespace: '/notification' }))
+      currentSocket = io(`${path}/notification`, {
+        transports: ["websocket"],
+        autoConnect: true,
+        reconnection: true,       // Tự động kết nối lại khi rớt mạng
+        reconnectionAttempts: 5,  // Thử lại 5 lần
+        reconnectionDelay: 1000,
+      });
 
-        socket.on("connect_error", (err) => {
-          console.log("❌ Lỗi kết nối socket:", err.message);
-        });
+      socketRef.current = currentSocket;
 
-        socket.on("error", (err) => {
-          console.log("❌ Socket error:", err);
-        });
+      // Hàm gửi định danh (Tách ra để tái sử dụng)
+      const sendIdentity = () => {
+        console.log(`🚀 Gửi định danh cho User ID: ${userId}`);
+        currentSocket?.emit("identify", { userId });
+      };
 
-        // 2. Khi kết nối thành công, gửi "định danh"
-        socket.on("connect", () => {
-          // ✅ SỬA LỖI Ở ĐÂY: Thêm 'if (socket)'
-          if (socket) {
-            console.log(`✅ Socket đã kết nối: ${socket.id}`);
-            socket.emit("identify", { userId });
-          }
-        });
+      // 3. Lắng nghe sự kiện CONNECT
+      currentSocket.on("connect", () => {
+        console.log(`✅ Socket Connected: ${currentSocket?.id}`);
+        sendIdentity();
+      });
 
-        // 3. LẮNG NGHE SỰ KIỆN PUSH TỪ SERVER
-        socket.on("unread_count_update", (data: { count: number }) => {
-          console.log(`🔥 Nhận được PUSH 'unread_count_update':`, data.count);
-          setUnreadCount(data.count);
-        });
-
-        // (Các hàm log lỗi/ngắt kết nối)
-        socket.on("disconnect", () => {
-          console.log("Socket đã ngắt kết nối.");
-        });
-
-        socket.on("connect_error", (err) => {
-          console.error("Lỗi kết nối Socket.IO:", err.message);
-        });
+      // 🔥 SỬA LỖI RACE CONDITION: 
+      // Nếu socket kết nối quá nhanh trước khi .on('connect') kịp chạy,
+      // thì thuộc tính .connected sẽ là true. Lúc này ta gọi hàm luôn.
+      if (currentSocket.connected) {
+        sendIdentity();
       }
+
+      // 4. Lắng nghe sự kiện RECONNECT (khi mạng chập chờn rồi có lại)
+      // Quan trọng: Khi reconnect, socket id đổi, phải gửi lại identify
+      currentSocket.io.on("reconnect", () => {
+         console.log("🔄 Socket Reconnected -> Gửi lại định danh");
+         sendIdentity();
+      });
+
+      // 5. Nhận PUSH từ Server
+      currentSocket.on("unread_count_update", (data: { count: number }) => {
+        console.log(`🔔 REALTIME UPDATE: ${data.count}`);
+        setUnreadCount(data.count);
+      });
+
+      currentSocket.on("disconnect", (reason) => {
+        console.log("⚠️ Socket Disconnected:", reason);
+      });
+
+      currentSocket.on("connect_error", (err) => {
+        console.log("❌ Socket Error:", err.message);
+      });
     };
 
     setupSocket();
 
-    // Cleanup khi component bị hủy (ví dụ: logout)
+    // Cleanup
     return () => {
-      if (socket) {
-        console.log("Đang ngắt kết nối socket...");
-        socket.disconnect();
-        socket = null;
+      if (socketRef.current) {
+        console.log("🛑 Cleanup: Ngắt kết nối socket");
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, []); // Chỉ chạy 1 lần khi Provider được tạo
+  }, []); 
 
   return (
     <NotificationContext.Provider
@@ -128,7 +135,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// Tạo Hook (để dễ sử dụng)
 export const useNotification = () => {
   const context = useContext(NotificationContext);
   if (context === undefined) {

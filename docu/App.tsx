@@ -51,6 +51,7 @@ import InviteMembersScreen from "./screens/groups/crud/InviteMembersScreen";
 import QRInviteScreen from "./screens/groups/crud/QRInviteScreen";
 import DeepLinkHandlerScreen from "./screens/groups/crud/DeepLinkHandlerScreen";
 import React, { useEffect } from "react";
+import ManageGroupPostsScreen from "./screens/admin/ManageGroupPostsScreen";
 import EditProductScreen from "./screens/products/EditProductScreen";
 import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";

@@ -83,6 +83,18 @@ export default function EditProductScreen() {
   const [address, setAddress] = useState(product.address_json?.full || "");
   const [user, setUser] = useState<{ id: number; name: string } | null>(null);
 
+  const [groups, setGroups] = useState<{ id: number; name: string }[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(
+    product.group_id ? Number(product.group_id) : null
+  );
+  const [showGroupModal, setShowGroupModal] = useState(false);
+
+  // Hàm xử lý chọn nhóm
+  const handleSelectGroup = (id: number | null) => {
+    setSelectedGroupId(id);
+    setShowGroupModal(false);
+  };
+
   // ID
   const [conditionId, setConditionId] = useState<number | null>(
     product.condition ? Number(product.condition.id) : null
@@ -314,6 +326,23 @@ export default function EditProductScreen() {
     };
     fetchUser();
   }, []);
+
+  useEffect(() => {
+    const fetchGroups = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await axios.get(`${path}/groups/my-public-joined`, {
+          params: { userId: user.id },
+        });
+        if (Array.isArray(res.data)) {
+          setGroups(res.data);
+        }
+      } catch (err: any) {
+        console.error("Lỗi tải nhóm:", err.message);
+      }
+    };
+    fetchGroups();
+  }, [user]);
 
   const handleSelectCondition = (id: number) => {
     setSelectedConditionId(id);
@@ -614,7 +643,13 @@ export default function EditProductScreen() {
           String(exchangeSubCategory.id)
         );
       }
-
+      if (selectedGroupId) {
+        formData.append("group_id", String(selectedGroupId));
+        formData.append("visibility_type", "1");
+      } else {
+        formData.append("visibility_type", "0");
+        // formData.append("group_id", "");
+      }
       // 2. Gửi danh sách ID ảnh cần xóa
       if (imageIdsToDelete.length > 0) {
         formData.append("imageIdsToDelete", JSON.stringify(imageIdsToDelete));
@@ -2135,7 +2170,33 @@ export default function EditProductScreen() {
           />
           <Text style={styles.helperText}>Chọn địa chỉ giao dịch</Text>
         </View>
-
+        {/* Chọn phạm vi bài đăng */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.dropdown}
+            onPress={() => setShowGroupModal(true)}
+          >
+            <Text style={styles.dropdownLabel}>Đăng tại (Phạm vi)</Text>
+            <View style={styles.dropdownContent}>
+              <Text
+                style={styles.dropdownText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {selectedGroupId
+                  ? groups.find((g) => Number(g.id) === Number(selectedGroupId))
+                      ?.name ||
+                    product.group?.name ||
+                    "Không xác định"
+                  : "Toàn trường"}
+              </Text>
+              <FontAwesome6 name="chevron-down" size={20} color="#8c7ae6" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.helperText}>
+            Chọn đăng công khai hoặc trong nhóm bạn đã tham gia
+          </Text>
+        </View>
         {/* Loại bài đăng  */}
         {!isLoadingOptions && (
           <View style={styles.section}>
@@ -2750,6 +2811,72 @@ export default function EditProductScreen() {
 
             <TouchableOpacity
               onPress={() => setShowDealTypeModal(false)}
+              style={styles.modalCancelButton}
+            >
+              <Text style={styles.modalCancelText}>Hủy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* MODAL CHỌN NHÓM */}
+      {showGroupModal && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.dropdownLabel}>Chọn nơi đăng bài</Text>
+            <ScrollView style={{ flexShrink: 1, maxHeight: 300 }}>
+              {/* Option 1: Toàn trường */}
+              <TouchableOpacity
+                style={[
+                  styles.modalOption,
+                  selectedGroupId === null && styles.modalOptionSelected,
+                ]}
+                onPress={() => handleSelectGroup(null)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.modalOptionText}>Toàn trường</Text>
+                  <Text style={{ fontSize: 12, color: "#94a3b8" }}>
+                    Hiển thị công khai cho tất cả sinh viên
+                  </Text>
+                </View>
+                {selectedGroupId === null && (
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={20}
+                    color="#8c7ae6"
+                  />
+                )}
+              </TouchableOpacity>
+
+              {/* Option 2: Các nhóm đã tham gia */}
+              {groups.map((group) => (
+                <TouchableOpacity
+                  key={group.id}
+                  style={[
+                    styles.modalOption,
+                    selectedGroupId === group.id && styles.modalOptionSelected,
+                  ]}
+                  onPress={() => handleSelectGroup(group.id)}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalOptionText}>{group.name}</Text>
+                    <Text style={{ fontSize: 12, color: "#94a3b8" }}>
+                      Chỉ hiển thị trong nhóm này
+                    </Text>
+                  </View>
+                  {selectedGroupId === group.id && (
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={20}
+                      color="#8c7ae6"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={() => setShowGroupModal(false)}
               style={styles.modalCancelButton}
             >
               <Text style={styles.modalCancelText}>Hủy</Text>

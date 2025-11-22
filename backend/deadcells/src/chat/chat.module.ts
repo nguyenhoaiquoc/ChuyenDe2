@@ -15,12 +15,20 @@ import { GroupMember } from 'src/entities/group-member.entity';
 import { GroupModule } from 'src/groups/group.module';
 import { UsersModule } from 'src/users/users.module';
 
-
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ConversationRoom, ConversationParticipant, Message,User,Group,GroupMember]),
-  AuthModule, UsersModule,   forwardRef(() => GroupModule)],
-  
+    TypeOrmModule.forFeature([
+      ConversationRoom,
+      ConversationParticipant,
+      Message,
+      User,
+      Group,
+      GroupMember,
+    ]),
+    AuthModule,
+    forwardRef(() => GroupModule),
+    UsersModule,
+  ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, JwtAuthGuard],
   exports: [ChatService],
