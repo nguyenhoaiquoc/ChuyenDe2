@@ -71,6 +71,7 @@ export type RootStackParamList = {
   ManageProductsUserScreen: undefined;
   ManageCategoriesScreen: undefined;  
   ManageGroupPostsScreen: undefined; 
+  ManageReportsScreen: undefined; 
 
   PostsTab: undefined;
   MyGroupPostsScreen: { groupId: number };
@@ -325,6 +326,7 @@ export type Product = {
   user?: {
     id?: string | number;
     name?: string;
+    nickname?: string;
     avatar?: string;
     image?: string;
   };

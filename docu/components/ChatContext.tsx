@@ -41,11 +41,11 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
       const token = await AsyncStorage.getItem("token");
       if (!token) {
-        console.log("[ChatContext] ⛔ Chưa có token, chưa connect socket");
+        // console.log("[ChatContext] ⛔ Chưa có token, chưa connect socket");
         return;
       }
 
-      console.log("[ChatContext] 🔄 Tạo socket mới với token");
+      // console.log("[ChatContext] 🔄 Tạo socket mới với token");
       const socket = io(path, {
         auth: { token }, // backend tự decode userId từ token
         transports: ["websocket"],
@@ -54,24 +54,24 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       socketRef.current = socket;
 
       socket.on("connect", () => {
-        console.log("[ChatContext] ✅ socket connected:", socket.id);
+        // console.log("[ChatContext] ✅ socket connected:", socket.id);
         // Hỏi tổng unread lần đầu
         socket.emit("getUnreadCount", {});
       });
 
       socket.on("connect_error", (err) => {
-        console.log("[ChatContext] ⚠️ connect_error:", err?.message);
+        // console.log("[ChatContext] ⚠️ connect_error:", err?.message);
       });
 
       // Server gửi tổng unread về
       socket.on("unreadCount", (data: any) => {
         const count = Number(data?.count ?? 0);
-        console.log("🔔 [ChatContext] WS unreadCount =", count);
+        // console.log("🔔 [ChatContext] WS unreadCount =", count);
         setUnreadCount(count);
       });
 
       socket.on("disconnect", (reason) => {
-        console.log("[ChatContext] 🔌 socket disconnected:", reason);
+        // console.log("[ChatContext] 🔌 socket disconnected:", reason);
       });
     };
 
@@ -85,7 +85,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
       clearInterval(intervalId);
       if (socketRef.current) {
-        console.log("[ChatContext] 🧹 Cleanup: disconnect socket");
+        // console.log("[ChatContext] 🧹 Cleanup: disconnect socket");
         socketRef.current.disconnect();
         socketRef.current = null;
       }
@@ -95,10 +95,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const markRoomAsRead = (roomId: number) => {
     const socket = socketRef.current;
     if (!socket || !socket.connected) {
-      console.log("[ChatContext] markRoomAsRead: socket chưa connect");
+      // console.log("[ChatContext] markRoomAsRead: socket chưa connect");
       return;
     }
-    console.log("[ChatContext] ▶️ emit markAsRead roomId=", roomId);
+    // console.log("[ChatContext] ▶️ emit markAsRead roomId=", roomId);
     socket.emit("markAsRead", { roomId });
 
     // ❌ Không setUnreadCount(0) ở đây

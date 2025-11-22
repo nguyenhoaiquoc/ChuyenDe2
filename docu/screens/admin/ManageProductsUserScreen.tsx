@@ -240,7 +240,18 @@ export default function ManageProductsUserScreen() {
     }
   };
 
-  const renderProductItem = ({ item }: { item: Product }) => (
+const renderProductItem = ({ item }: { item: Product }) => {
+  // Xác định loại hiển thị (Visibility Type) và Tên danh mục
+  const visibilityType = "Toàn trường"; // Màn hình này chỉ load tin Toàn trường
+  
+  const categoryName = item.category?.name;
+  const subCategoryName = item.subCategory?.name;
+  const categoryDisplay = 
+    categoryName && subCategoryName 
+    ? `${categoryName} - ${subCategoryName}` 
+    : categoryName || subCategoryName || "Chưa rõ danh mục";
+
+  return (
     <View className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow border border-gray-100">
       <TouchableOpacity
         className="flex-1 flex-row"
@@ -256,6 +267,14 @@ export default function ManageProductsUserScreen() {
             numberOfLines={2}
           >
             {item.name}
+          </Text>
+          {/* 1. HIỂN THỊ LOẠI HIỂN THỊ (Toàn trường) */}
+          <Text className="text-sm text-indigo-600 font-medium">
+            {visibilityType}
+          </Text>
+          {/* 2. HIỂN THỊ DANH MỤC */}
+          <Text className="text-xs text-gray-500 mt-0.5">
+            Danh mục: {categoryDisplay}
           </Text>
           <Text className="text-sm text-gray-500">
             Đăng bởi:{" "}
@@ -316,6 +335,7 @@ export default function ManageProductsUserScreen() {
       </TouchableOpacity>
     </View>
   );
+};
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">

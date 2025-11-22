@@ -30,7 +30,7 @@ const TABS = {
   APPROVED: "Đã duyệt",
   REJECTED: "Bị từ chối",
   HIDDEN: "Đã ẩn",
-  EXPIRED: "Hết hạn", 
+  EXPIRED: "Hết hạn",
   SOLD: "Đã bán",
 };
 
@@ -106,7 +106,7 @@ export default function ManageGroupPostsScreen() {
     else if (activeTab === TABS.HIDDEN)
       posts = allPosts.filter((p) => p.productStatus?.id == 4);
     else if (activeTab === TABS.EXPIRED)
-      posts = allPosts.filter((p) => p.productStatus?.id == 5); 
+      posts = allPosts.filter((p) => p.productStatus?.id == 5);
     else if (activeTab === TABS.SOLD)
       posts = allPosts.filter((p) => p.productStatus?.id == 6);
     setFilteredPosts(posts);
@@ -200,82 +200,106 @@ export default function ManageGroupPostsScreen() {
     }
   };
 
-  const renderProductItem = ({ item }: { item: Product }) => (
-    <View className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow border border-gray-100">
-      <TouchableOpacity
-        className="flex-1 flex-row"
-        onPress={() => navigation.navigate("ProductDetail", { product: item })}
-      >
-        <Image
-          source={{ uri: item.image }}
-          className="w-20 h-20 rounded-md bg-gray-200"
-        />
-        <View className="flex-1 ml-3 justify-between">
-          <Text
-            className="text-base font-semibold text-gray-800"
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-          <Text className="text-sm text-indigo-600 font-medium">
-            Nhóm: {item.group?.name || "Không rõ"}
-          </Text>
-          <Text className="text-sm text-gray-500">
-            Đăng bởi: {item.authorName}
-          </Text>
-          <Text className="text-sm font-bold text-red-600 mt-1">
-            {item.dealType?.name === "Miễn phí"
-              ? "Miễn phí"
-              : item.dealType?.name === "Trao đổi"
-                ? "Trao đổi"
-                : item.price
-                  ? `${Number(item.price).toLocaleString("vi-VN")} đ`
-                  : "Liên hệ"}
-          </Text>
+  const renderProductItem = ({ item }: { item: Product }) => {
+    // Xác định loại hiển thị (Visibility Type) và Tên danh mục
+    const visibilityType =
+      Number(item.visibility_type) === 1
+        ? `Nhóm: ${item.group?.name || "Không rõ"}`
+        : "Toàn trường";
 
-          {/* Nút Duyệt/Từ chối cho tab Chờ Duyệt */}
-          {activeTab === TABS.PENDING && (
-            <View className="flex-row mt-2 space-x-2">
+    const categoryName = item.category?.name;
+    const subCategoryName = item.subCategory?.name;
+    const categoryDisplay =
+      categoryName && subCategoryName
+        ? `${categoryName} - ${subCategoryName}`
+        : categoryName || subCategoryName || "Chưa rõ danh mục";
+
+    return (
+      <View className="flex-row bg-white mx-4 my-2 rounded-lg p-3 shadow border border-gray-100">
+        <TouchableOpacity
+          className="flex-1 flex-row"
+          onPress={() =>
+            navigation.navigate("ProductDetail", { product: item })
+          }
+        >
+          <Image
+            source={{ uri: item.image }}
+            className="w-20 h-20 rounded-md bg-gray-200"
+          />
+          <View className="flex-1 ml-3 justify-between">
+            <Text
+              className="text-base font-semibold text-gray-800"
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+            {/* 1. HIỂN THỊ LOẠI HIỂN THỊ (Nhóm) */}
+            <Text className="text-sm text-indigo-600 font-medium">
+              {visibilityType}
+            </Text>
+            {/* 2. HIỂN THỊ DANH MỤC */}
+            <Text className="text-xs text-gray-500 mt-0.5">
+              Danh mục: {categoryDisplay}
+            </Text>
+            <Text className="text-sm text-gray-500">
+              Đăng bởi: {item.authorName}
+            </Text>
+            <Text className="text-sm font-bold text-red-600 mt-1">
+              {item.dealType?.name === "Miễn phí"
+                ? "Miễn phí"
+                : item.dealType?.name === "Trao đổi"
+                  ? "Trao đổi"
+                  : item.price
+                    ? `${Number(item.price).toLocaleString("vi-VN")} đ`
+                    : "Liên hệ"}
+            </Text>
+
+            {/* Nút Duyệt/Từ chối cho tab Chờ Duyệt */}
+            {activeTab === TABS.PENDING && (
+              <View className="flex-row mt-2 space-x-2">
+                <TouchableOpacity
+                  className="flex-1 py-1.5 bg-green-500 rounded items-center"
+                  onPress={() => handleUpdateStatus(item, true)}
+                >
+                  <Text className="text-white font-semibold text-xs">
+                    Duyệt
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  className="flex-1 py-1.5 bg-red-500 rounded items-center"
+                  onPress={() => handleUpdateStatus(item, false)}
+                >
+                  <Text className="text-white font-semibold text-xs">
+                    Từ chối
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Nút Duyệt gia hạn cho tab Hết Hạn */}
+            {activeTab === TABS.EXPIRED && (
               <TouchableOpacity
-                className="flex-1 py-1.5 bg-green-500 rounded items-center"
-                onPress={() => handleUpdateStatus(item, true)}
-              >
-                <Text className="text-white font-semibold text-xs">Duyệt</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 py-1.5 bg-red-500 rounded items-center"
-                onPress={() => handleUpdateStatus(item, false)}
+                className="mt-2 py-1.5 bg-blue-500 rounded items-center self-start px-4"
+                onPress={() => handleApproveExtension(item)}
               >
                 <Text className="text-white font-semibold text-xs">
-                  Từ chối
+                  Duyệt Gia Hạn
                 </Text>
               </TouchableOpacity>
-            </View>
-          )}
+            )}
+          </View>
+        </TouchableOpacity>
 
-          {/* 4. Nút Duyệt gia hạn cho tab Hết Hạn */}
-          {activeTab === TABS.EXPIRED && (
-            <TouchableOpacity
-              className="mt-2 py-1.5 bg-blue-500 rounded items-center self-start px-4"
-              onPress={() => handleApproveExtension(item)}
-            >
-              <Text className="text-white font-semibold text-xs">
-                Duyệt Gia Hạn
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </TouchableOpacity>
-
-      {/* MENU 3 CHẤM */}
-      <TouchableOpacity
-        className="p-2 -mr-2"
-        onPress={(e) => handleOpenMenu(item, e.nativeEvent.pageY)}
-      >
-        <Feather name="more-vertical" size={24} color="#6b7280" />
-      </TouchableOpacity>
-    </View>
-  );
+        {/* MENU 3 CHẤM */}
+        <TouchableOpacity
+          className="p-2 -mr-2"
+          onPress={(e) => handleOpenMenu(item, e.nativeEvent.pageY)}
+        >
+          <Feather name="more-vertical" size={24} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">

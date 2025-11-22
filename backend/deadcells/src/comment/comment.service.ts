@@ -35,7 +35,7 @@ export class CommentService {
         created_at: true,
         user: {
           id: true,
-          fullName: true,
+          nickname: true,
           image: true,
         },
         children: { // Chọn dữ liệu cho các bình luận con
@@ -44,7 +44,7 @@ export class CommentService {
           created_at: true,
           user: {
             id: true,
-            fullName: true,
+            nickname: true,
             image: true,
           },
         },
@@ -107,7 +107,7 @@ export class CommentService {
         created_at: true,
         user: {
           id: true,
-          fullName: true,
+          nickname: true,
           image: true,
         },
       }

@@ -57,10 +57,10 @@ import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupDeepLink } from "./src/navigation/DeepLinkHandler";
-import AdminVerificationScreen from './screens/admin/user/AdminVerificationScreen';
 import { ChatProvider } from "./components/ChatContext";
 import AdminVerificationScreen from "./screens/admin/user/AdminVerificationScreen";
 import AdminDashboardScreen from "./screens/admin/AdminDashboardScreen";
+import ManageReportsScreen from "./screens/admin/ManageReportsScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -74,7 +74,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NotificationProvider>
         <ChatProvider>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             <StatusBar hidden />
             <Stack.Navigator
               initialRouteName="Home"
@@ -239,6 +239,7 @@ export default function App() {
               />
               <Stack.Screen name="AdminVerification" component={AdminVerificationScreen} />
               <Stack.Screen name="AdminDashboardScreen" component={AdminDashboardScreen} />
+              <Stack.Screen name="ManageReportsScreen" component={ManageReportsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </ChatProvider>

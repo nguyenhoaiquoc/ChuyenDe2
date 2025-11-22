@@ -141,6 +141,13 @@ constructor(
     if (!user)
       throw new UnauthorizedException('Email hoặc mật khẩu không đúng');
 
+    const bannedStatusId = 3; 
+
+    if (String(user.status.id) === String(bannedStatusId)) {
+      // ⛔ TỪ CHỐI ĐĂNG NHẬP nếu statusId là 3
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa bởi Admin.');
+    }
+
     if (!user.is_verified) {
       throw new UnauthorizedException(
         'Tài khoản chưa được xác thực. Vui lòng kiểm tra email để xác thực OTP.',

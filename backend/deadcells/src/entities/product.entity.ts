@@ -253,9 +253,6 @@ export class Product {
   @Column({ type: 'json', nullable: true })
   address_json: object;
 
-  @OneToMany(() => Report, (report) => report.product)
-  reports: Report[];
-
   @OneToMany(() => Comment, (comment) => comment.product)
   comments: Comment[];
   // ===== Trạng thái bài đăng =====

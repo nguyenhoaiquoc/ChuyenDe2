@@ -522,9 +522,66 @@ export class ProductService {
   }
 
   // Format dữ liệu cho client (React Native)
-  async findAllFormatted(userId?: number): Promise<any[]> {
-    const products = await this.productRepo.find({
-      where: { product_status_id: 2 },
+  // async findAllFormatted(userId?: number, view?: string): Promise<any[]> {
+  //   const products = await this.productRepo.find({
+  //     where: { product_status_id: 2 },
+  //     relations: [
+  //       'images',
+  //       'user',
+  //       'dealType',
+  //       'condition',
+  //       'category',
+  //       'subCategory',
+  //       'category_change',
+  //       'sub_category_change',
+  //       'postType',
+  //       'productType',
+
+
+  //       'size',
+  //       'brand',
+  //       'color',
+  //       'capacity',
+  //       'warranty',
+  //       'productModel',
+  //       'processor',
+  //       'ramOption',
+  //       'storageType',
+  //       'graphicsCard',
+  //       'breed',
+  //       'ageRange',
+  //       'gender',
+  //       'engineCapacity',
+  //       'productStatus',
+  //       'group',
+  //     ],
+  //     order: { created_at: 'DESC' },
+  //   });
+
+  //   if (view !== 'admin_all') {
+  //     findOptions.where = { product_status_id: 2 };
+  //   }
+
+  //   const visibleProducts: Product[] = [];
+
+  //   for (const p of products) {
+  //     const vis = Number(p.visibility_type);
+
+  //     if (vis === 0 || p.visibility_type == null) {
+  //       visibleProducts.push(p);
+  //     } else if (vis === 1 && p.group_id && userId) {
+  //       const isMember = await this.groupService.isMember(p.group_id, userId);
+  //       if (isMember) visibleProducts.push(p);
+  //     }
+  //   }
+
+  //   return this.formatProducts(visibleProducts);
+  // }
+// Thêm tham số view?: string vào định nghĩa hàm
+  async findAllFormatted(userId?: number, view?: string): Promise<any[]> {
+    
+    // 1. Cấu hình query cơ bản (luôn lấy relation và sắp xếp)
+    const findOptions: any = {
       relations: [
         'images',
         'user',
@@ -536,8 +593,6 @@ export class ProductService {
         'sub_category_change',
         'postType',
         'productType',
-
-
         'size',
         'brand',
         'color',
@@ -556,9 +611,25 @@ export class ProductService {
         'group',
       ],
       order: { created_at: 'DESC' },
-    });
+    };
 
-    const visibleProducts: Product[] = [];
+    // 🟢 2. LOGIC QUAN TRỌNG:
+    // Nếu KHÔNG PHẢI là 'admin_all' thì mới ép buộc lọc status = 2.
+    // Nếu là 'admin_all', ta bỏ qua dòng này => Lấy hết (1, 2, 3...)
+    if (view !== 'admin_all') {
+      findOptions.where = { product_status_id: 2 };
+    }
+
+    const products = await this.productRepo.find(findOptions);
+
+    // 🟢 3. Nếu là Admin xem tất cả, trả về luôn (bỏ qua logic lọc hiển thị nhóm/công khai)
+    // Để Admin đếm được chính xác số lượng trong DB
+    if (view === 'admin_all') {
+       return this.formatProducts(products);
+    }
+
+    // --- Logic lọc hiển thị cho User thường (Giữ nguyên code cũ của bạn) ---
+    const visibleProducts: any[] = []; // Sửa type Product[] thành any[] nếu cần
 
     for (const p of products) {
       const vis = Number(p.visibility_type);
@@ -573,7 +644,6 @@ export class ProductService {
 
     return this.formatProducts(visibleProducts);
   }
-
   // Format danh sách sản phẩm
   async formatProducts(products: Product[], userId?: number): Promise<any[]> {
     // 1. Lấy danh sách ID sản phẩm yêu thích (chỉ 1 lần)
@@ -609,12 +679,12 @@ export class ProductService {
         user: p.user
           ? {
             id: p.user.id,
-            name: p.user.fullName,
+            name: p.user.nickname,
             email: p.user.email,
             phone: p.user.phone,
           }
           : null,
-        author_name: p.user?.fullName || 'Người bán',
+        author_name: p.user?.nickname || 'Người bán',
         author: p.author || null,
         year: p.year || null,
         mileage: p.mileage ?? null,

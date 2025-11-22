@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
   ScrollView,
@@ -13,6 +13,7 @@ import {
   Pressable,
   Platform,
   ActionSheetIOS,
+  TextInput,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
@@ -24,11 +25,20 @@ import axios from "axios";
 import { path } from "../../config";
 import { useFocusEffect, useRoute } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
-import { TextInput } from "react-native-gesture-handler";
 
-const DEFAULT_AVATAR = require("../../assets/default.png");
-const DEFAULT_COVER = require("../../assets/cover_default.jpg");
-
+const DEFAULT_AVATAR = require("../../assets/khi.png");
+const DEFAULT_COVER = require("../../assets/anhbia.jpg");
+interface User {
+  id: string;
+  name: string;
+  image?: string;
+  coverImage?: string;
+  isFollowing?: boolean;
+  followerCount?: number;
+  postCount?: number;
+  soldCount?: number;
+  
+}
 // Star Rating Component
 const StarRating = ({ rating, editable = false, onChange }: any) => (
   <View className="flex-row gap-1">
@@ -97,7 +107,11 @@ const DisplayingRoute = () => (
       onPress={() => {
         /* Logic điều hướng đến trang đăng tin */
       }}
-    ></TouchableOpacity>
+    >
+      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
+        Đăng tin Ngay
+      </Text>
+    </TouchableOpacity>
   </View>
 );
 
@@ -110,7 +124,11 @@ const SoldRoute = () => (
       onPress={() => {
         /* Logic điều hướng đến trang đăng tin */
       }}
-    ></TouchableOpacity>
+    >
+      <Text className="bg-yellow-400 px-8 rounded-md py-1 mt-2 text-white font-medium">
+        Đăng tin mới
+      </Text>
+    </TouchableOpacity>
   </View>
 );
 
@@ -125,10 +143,14 @@ const mapProductData = (item: any) => {
   })();
 
   return {
-    ...item, 
-    
-    authorName: item.author_name || item.user?.name || item.user?.fullName || "Người dùng",
-    
+    ...item,
+
+    authorName:
+      item.author_name ||
+      item.user?.name ||
+      item.user?.fullName ||
+      "Người dùng",
+
     image: imageUrl,
     price: item.price ? item.price.toString() : "0",
     user: item.user || { id: item.user_id, name: "Người dùng" },
@@ -204,9 +226,9 @@ const RenderProductItem = ({ item, navigation }: any) => {
   );
 };
 
-export default function UserInforScreen({ navigation }: any) {
+export default function UserInforScreen({ navigation, route }: any) {
   const layout = useWindowDimensions();
-  const route = useRoute<any>();
+  // const route = useRoute<any>();
   // 1. Lấy userId từ route params
   const { userId: profileUserId } = route.params as { userId: string | number };
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -219,71 +241,25 @@ export default function UserInforScreen({ navigation }: any) {
   const [ratingContent, setRatingContent] = useState("");
   const [ratingMenuVisible, setRatingMenuVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [reportReason, setReportReason] = useState<string | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
   const [displayingProducts, setDisplayingProducts] = useState<any[]>([]);
   const [soldProducts, setSoldProducts] = useState<any[]>([]);
+
+  const [reportDescription, setReportDescription] = useState("");
+  const [isSendingReport, setIsSendingReport] = useState(false);
 
   const [routes, setRoutes] = useState([
     { key: "displaying", title: "Đang hiển thị (0)" },
     { key: "sold", title: "Đã bán (0)" },
   ]);
 
-  const renderScene = ({ route }: any) => {
-    switch (route.key) {
-      case "displaying":
-        return (
-          <ScrollView
-            className="flex-1 bg-gray-50 pt-3"
-            contentContainerStyle={{ paddingBottom: 20 }}
-            scrollEnabled={false}
-          >
-            {displayingProducts.length > 0 ? (
-              displayingProducts.map((item) => (
-                <RenderProductItem
-                  key={item.id}
-                  item={item}
-                  navigation={navigation}
-                />
-              ))
-            ) : (
-              <View className="items-center mt-10">
-                <Text className="text-gray-500">
-                  Chưa có sản phẩm nào đang hiển thị
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        );
-
-      case "sold":
-        return (
-          <ScrollView
-            className="flex-1 bg-gray-50 pt-3"
-            contentContainerStyle={{ paddingBottom: 20 }}
-            scrollEnabled={false}
-          >
-            {soldProducts.length > 0 ? (
-              soldProducts.map((item) => (
-                <RenderProductItem
-                  key={item.id}
-                  item={item}
-                  navigation={navigation}
-                />
-              ))
-            ) : (
-              <View className="items-center mt-10">
-                <Text className="text-gray-500">
-                  Chưa có sản phẩm nào đã bán
-                </Text>
-              </View>
-            )}
-          </ScrollView>
-        );
-      default:
-        return null;
-    }
-  };
+  const renderScene = SceneMap({
+    displaying: DisplayingRoute,
+    sold: SoldRoute,
+  });
 
   // States
   const [index, setIndex] = useState(0);
@@ -293,6 +269,8 @@ export default function UserInforScreen({ navigation }: any) {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  const descriptionRef = useRef<TextInput>(null);
+
   // Check if current user is viewing their own profile
   const isOwnProfile = currentUserId === profileUserId?.toString();
 
@@ -301,29 +279,58 @@ export default function UserInforScreen({ navigation }: any) {
     AsyncStorage.getItem("userId").then(setCurrentUserId);
   }, []);
 
+   useEffect(() => {
+    if (!currentUserId || !profileUserId) return;
+
+    const loadFollowStatus = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+        const res = await axios.get(`${path}/follow/status`, {
+          params: { followerId: currentUserId, followingId: profileUserId },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+       setUser((prev: User | null) =>
+  prev
+    ? {
+        ...prev,
+        isFollowing: res.data.isFollowing,
+        followerCount: res.data.isFollowing
+          ? (prev.followerCount || 0) + 1
+          : (prev.followerCount || 1) - 1,
+      }
+    : null
+);
+
+      } catch (err) {
+        console.log("Check follow status error:", err);
+      }
+    };
+
+    loadFollowStatus();
+  }, [currentUserId, profileUserId]);
+
   // Data Fetching
   const fetchAllData = useCallback(async () => {
     const token = await AsyncStorage.getItem("token");
     if (!profileUserId) return; // Đảm bảo có profileUserId
 
     try {
-      const [profileRes, ratingsRes, avgRes, productsRes, checkRes] =
-        await Promise.all([
-          axios.get(`${path}/users/${profileUserId}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
-          }),
-          axios.get(`${path}/users/${profileUserId}/ratings`),
-          axios.get(`${path}/users/${profileUserId}/rating-average`),
-          axios.get(`${path}/products/my-posts/${profileUserId}`),
-          // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
-          token && !isOwnProfile
-            ? axios
-                .get(`${path}/users/${profileUserId}/check-rating`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                })
-                .catch(() => ({ data: { hasRated: false } }))
-            : Promise.resolve({ data: { hasRated: false } }),
-        ]);
+      const [profileRes, ratingsRes, avgRes, checkRes, productsRes] = await Promise.all([
+        axios.get(`${path}/users/${profileUserId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}, // Dùng token nếu có
+        }),
+        axios.get(`${path}/users/${profileUserId}/ratings`),
+        axios.get(`${path}/users/${profileUserId}/rating-average`),
+        // Chỉ check rating của mình nếu đang xem hồ sơ người khác (hoặc chính mình) và đã đăng nhập
+        token && !isOwnProfile
+          ? axios
+            .get(`${path}/users/${profileUserId}/check-rating`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .catch(() => ({ data: { hasRated: false } }))
+          : Promise.resolve({ data: { hasRated: false } }),
+      ]);
+axios.get(`${path}/products/my-posts/${profileUserId}`),
 
       setUser(profileRes.data);
       setAvatar(profileRes.data.image || null);
@@ -348,10 +355,10 @@ export default function UserInforScreen({ navigation }: any) {
 
       const rawProducts = productsRes?.data;
 
-      const allProducts = Array.isArray(rawProducts) 
-        ? rawProducts.map(mapProductData) 
+      const allProducts = Array.isArray(rawProducts)
+        ? rawProducts.map(mapProductData)
         : [];
-        
+
       // Lọc status 2 (Đang hiển thị)
       const active = allProducts.filter(
         (p: any) => p.productStatus?.id === 2 || p.status_id === 2
@@ -397,29 +404,7 @@ export default function UserInforScreen({ navigation }: any) {
   }
 
   // Follow Function (chỉ thực hiện khi xem hồ sơ người khác)
-  const toggleFollow = async () => {
-    if (isOwnProfile || !user) return;
-    const token = await AsyncStorage.getItem("token");
-    if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
 
-    try {
-      if (user?.isFollowing) {
-        await axios.delete(`${path}/users/${user.id}/follow`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser((prev: any) => ({ ...prev, isFollowing: false }));
-      } else {
-        await axios.post(
-          `${path}/users/${user.id}/follow`,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setUser((prev: any) => ({ ...prev, isFollowing: true }));
-      }
-    } catch (err) {
-      Alert.alert("Lỗi", "Không thể theo dõi");
-    }
-  };
 
   // Rating Functions (chỉ cho phép khi xem hồ sơ người khác)
   const handleSubmitRating = async () => {
@@ -431,6 +416,7 @@ export default function UserInforScreen({ navigation }: any) {
     try {
       const endpoint = `${path}/users/${user.id}/rate`;
       await axios.post(
+
         endpoint,
         { stars: selectedStars, content: ratingContent },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -470,8 +456,71 @@ export default function UserInforScreen({ navigation }: any) {
     ]);
   };
 
-  // --- LOGIC TẢI ẢNH (ĐÃ TÁCH RIÊNG) ---
+  const handleSendReport = async () => {
+    // 0. Cấu hình giới hạn ký tự
+    const MAX_LENGTH = 200;
 
+    // 1. Kiểm tra độ dài trước (Tránh lỗi spam hoặc quá tải)
+    if (reportDescription.length > MAX_LENGTH) {
+      Alert.alert(
+        "Nội dung quá dài",
+        `Vui lòng nhập tối đa ${MAX_LENGTH} ký tự. Hiện tại: ${reportDescription.length} ký tự.`
+      );
+      return;
+    }
+
+    // 2. Kiểm tra chưa chọn lý do
+    if (!reportReason) {
+      Alert.alert("Thông báo", "Vui lòng chọn lý do báo cáo.");
+      return;
+    }
+
+    // 3. Kiểm tra riêng: Nếu chọn "Lý do khác" thì bắt buộc phải nhập chữ
+    if (reportReason === "Lý do khác" && !reportDescription.trim()) {
+      Alert.alert(
+        "Thông báo",
+        "Với 'Lý do khác', bạn vui lòng nhập chi tiết vi phạm."
+      );
+      return;
+    }
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token || !currentUserId) {
+      Alert.alert("Lỗi", "Bạn cần đăng nhập để báo cáo.");
+      return;
+    }
+
+    try {
+      setIsSendingReport(true);
+
+      const finalReason = reportDescription.trim()
+        ? `${reportReason}: ${reportDescription}`
+        : reportReason;
+
+      const payload = {
+        reporter_id: Number(currentUserId),
+        reported_user_id: Number(user.id),
+        reason: finalReason,
+      };
+
+      await axios.post(`${path}/reports`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      Alert.alert("Thành công", "Đã gửi báo cáo tới ban quản trị.");
+
+      setReportReason(null);
+      setReportDescription("");
+      setReportVisible(false);
+    } catch (error: any) {
+      console.log("Report Error:", error.response?.data || error);
+      const msg =
+        error.response?.data?.message || "Có lỗi xảy ra khi gửi báo cáo.";
+      Alert.alert("Thất bại", msg);
+    } finally {
+      setIsSendingReport(false);
+    }
+  };
   // --- HÀM 1: UPLOAD ẢNH LÊN CLOUDINARY VÀ SERVER ---
   const uploadImage = async (
     field: "image" | "coverImage",
@@ -639,10 +688,6 @@ export default function UserInforScreen({ navigation }: any) {
     setMenuVisible(false);
   };
 
-  const currentTabProducts = index === 0 ? displayingProducts : soldProducts;
-  const listHeight =
-    currentTabProducts.length > 0 ? currentTabProducts.length * 120 + 100 : 350;
-
   return (
     <ScrollView className="flex-1 bg-gray-50">
       <StatusBar style="auto" />
@@ -668,22 +713,60 @@ export default function UserInforScreen({ navigation }: any) {
           source={
             coverImage
               ? {
-                  uri: coverImage.startsWith("http")
-                    ? coverImage
-                    : `${path}/${coverImage.replace(/\\/g, "/")}`,
-                }
+                uri: coverImage.startsWith("http")
+                  ? coverImage
+                  : `${path}/${coverImage.replace(/\\/g, "/")}`,
+              }
               : DEFAULT_COVER
           }
           style={{ backgroundColor: "#d1d5db" }}
         />
         {/* Nút upload/chỉnh sửa ảnh bìa - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH */}
-        {isOwnProfile && (
+
+        {!isOwnProfile && (
           <TouchableOpacity
-            onPress={() => handleImageOptions("coverImage")}
-            disabled={isUploading}
-            className="absolute right-5 top-1/4 bg-white rounded-full p-1"
+            onPress={async () => {
+              if (!user) return;
+              const token = await AsyncStorage.getItem("token");
+              if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+
+              try {
+                let updatedUser;
+                if (user.isFollowing) {
+                  // Unfollow
+                  await axios.delete(`${path}/users/${user.id}/follow`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  updatedUser = {
+                    ...user,
+                    isFollowing: false,
+                    followerCount: (user.followerCount || 1) - 1,
+                  };
+                } else {
+                  // Follow
+                  await axios.post(
+                    `${path}/users/${user.id}/follow`,
+                    {},
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  updatedUser = {
+                    ...user,
+                    isFollowing: true,
+                    followerCount: (user.followerCount || 0) + 1,
+                  };
+                }
+                setUser(updatedUser);
+              } catch (err: any) {
+                console.log("Follow Error:", err.response?.data || err.message || err);
+                Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
+              }
+            }}
+            className={`py-2 px-4 rounded-md ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"
+              }`}
           >
-            <MaterialIcons name="camera-alt" size={16} color="black" />
+            <Text className="text-white font-medium text-sm">
+              {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -695,10 +778,10 @@ export default function UserInforScreen({ navigation }: any) {
             source={
               avatar
                 ? {
-                    uri: avatar.startsWith("http")
-                      ? avatar
-                      : `${path}/${avatar.replace(/\\/g, "/")}`,
-                  }
+                  uri: avatar.startsWith("http")
+                    ? avatar
+                    : `${path}/${avatar.replace(/\\/g, "/")}`,
+                }
                 : DEFAULT_AVATAR
             }
             style={{ backgroundColor: "#d1d5db" }}
@@ -727,17 +810,51 @@ export default function UserInforScreen({ navigation }: any) {
       <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
         {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
         {!isOwnProfile && (
-          <TouchableOpacity
-            onPress={toggleFollow}
-            className={`text-xs p-1 rounded-md px-2 ${
-              user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"
-            }`}
-          >
-            <Text className="text-white font-medium px-4">
-              {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
-            </Text>
-          </TouchableOpacity>
-        )}
+  <TouchableOpacity
+    onPress={async () => {
+      if (!user) return;
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+
+      try {
+        let updatedUser;
+        if (user.isFollowing) {
+          // Unfollow
+          await axios.delete(`${path}/users/${user.id}/follow`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          updatedUser = {
+            ...user,
+            isFollowing: false,
+            followerCount: (user.followerCount || 1) - 1,
+          };
+        } else {
+          // Follow
+          await axios.post(
+            `${path}/users/${user.id}/follow`,
+            {}, // không cần body
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          updatedUser = {
+            ...user,
+            isFollowing: true,
+            followerCount: (user.followerCount || 0) + 1,
+          };
+        }
+        setUser(updatedUser);
+      } catch (err: any) {
+        console.log("Follow Error:", err.response?.data || err.message || err);
+        Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
+      }
+    }}
+    className={`text-xs p-1 rounded-md px-2 ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"}`}
+  >
+    <Text className="text-white font-medium px-4">
+      {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+    </Text>
+  </TouchableOpacity>
+)}
+
 
         {/* Nút Menu 3 chấm (dành cho cả hai) */}
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
@@ -866,7 +983,7 @@ export default function UserInforScreen({ navigation }: any) {
               </View>
             </View>
             {/* Số điện thoại (CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH) */}
-            {isOwnProfile && (
+            {
               <View className="flex flex-row gap-2 items-center">
                 <MaterialIcons name="phone" size={16} color="gray" />
                 <View className="flex-1 flex-row justify-between">
@@ -876,7 +993,7 @@ export default function UserInforScreen({ navigation }: any) {
                   </Text>
                 </View>
               </View>
-            )}
+            }
             {/* Tên gợi nhớ */}
             <View className="flex flex-row gap-2 items-center">
               <MaterialIcons name="person-outline" size={16} color="gray" />
@@ -934,7 +1051,7 @@ export default function UserInforScreen({ navigation }: any) {
       </View>
 
       {/* Tabs */}
-      <View className="mt-8" style={{ height: listHeight }}>
+      <View className="mt-8 h-[350px]">
         <TabView
           navigationState={{ index, routes }}
           renderScene={renderScene}
@@ -1125,40 +1242,128 @@ export default function UserInforScreen({ navigation }: any) {
         onRequestClose={() => setReportVisible(false)}
       >
         <Pressable
-          className="flex-1 bg-black/40 justify-center items-center"
+          className="flex-1 bg-black/40 justify-center items-center px-4"
           onPress={() => setReportVisible(false)}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            className="bg-white w-80 rounded-2xl p-5 shadow"
+            className="bg-white w-full max-w-sm rounded-2xl p-5 shadow-xl"
           >
-            <Text className="text-base font-semibold text-center mb-4">
-              Người dùng này có vấn đề gì?
+            <Text className="text-lg font-bold text-center mb-4 text-gray-800">
+              Báo cáo vi phạm
             </Text>
-            {[
-              "Hình ảnh không phù hợp",
-              "Thông tin sai lệch",
-              "Lừa đảo",
-              "Lý do khác",
-            ].map((item, i) => (
+
+            {/* Danh sách lý do */}
+            <View className="gap-2">
+              {[
+                "Hình ảnh không phù hợp",
+                "Thông tin sai lệch",
+                "Lừa đảo/Gian lận",
+                "Quấy rối/Spam",
+                "Lý do khác",
+              ].map((item, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => setReportReason(item)}
+                  className={`py-3 px-4 rounded-xl border ${
+                    reportReason === item
+                      ? "bg-red-50 border-red-500"
+                      : "bg-gray-50 border-gray-100"
+                  }`}
+                >
+                  <View className="flex-row items-center justify-between">
+                    <Text
+                      className={`${
+                        reportReason === item
+                          ? "text-red-600 font-medium"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      {item}
+                    </Text>
+                    {reportReason === item && (
+                      <MaterialIcons name="check" size={18} color="#ef4444" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Ô nhập mô tả thêm */}
+            {reportReason && (
+              <View className="mt-4 animate-pulse">
+                <View className="flex-row justify-between mb-1 ml-1">
+                  <Text className="text-xs text-gray-600 font-medium">
+                    {reportReason === "Lý do khác"
+                      ? "Chi tiết vi phạm (Bắt buộc):"
+                      : "Chi tiết thêm (Tùy chọn):"}
+                  </Text>
+                  {/* 🟢 Thêm bộ đếm ký tự ở đây */}
+                  <Text
+                    className={`text-xs ${reportDescription.length > 200 ? "text-red-500" : "text-gray-400"}`}
+                  >
+                    {reportDescription.length}/200
+                  </Text>
+                </View>
+
+                <TextInput
+                  className={`bg-gray-50 border rounded-xl p-3 h-24 text-sm ${
+                    reportReason === "Lý do khác" && !reportDescription.trim()
+                      ? "border-red-300"
+                      : "border-gray-200"
+                  }`}
+                  placeholder={
+                    reportReason === "Lý do khác"
+                      ? "Vui lòng nhập rõ lý do..."
+                      : "Mô tả rõ hơn về vi phạm này..."
+                  }
+                  multiline
+                  textAlignVertical="top"
+                  value={reportDescription}
+                  onChangeText={setReportDescription}
+                  maxLength={200}
+                />
+              </View>
+            )}
+
+            {/* Buttons Action */}
+            <View className="mt-5 gap-3">
               <TouchableOpacity
-                key={i}
-                className="py-2 rounded-lg mb-1 bg-gray-50"
+                onPress={handleSendReport}
+                disabled={
+                  !reportReason ||
+                  isSendingReport ||
+                  (reportReason === "Lý do khác" && !reportDescription.trim())
+                }
+                className={`py-3 rounded-xl flex-row justify-center items-center ${
+                  !reportReason ||
+                  (reportReason === "Lý do khác" && !reportDescription.trim())
+                    ? "bg-gray-300"
+                    : "bg-red-500"
+                }`}
               >
-                <Text className="text-center text-gray-700">{item}</Text>
+                {isSendingReport ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <Text className="text-center text-white font-bold text-base">
+                    Gửi báo cáo
+                  </Text>
+                )}
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity className="mt-4 py-3 rounded-xl bg-red-500">
-              <Text className="text-center text-white font-medium">
-                Gửi báo cáo
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setReportVisible(false)}
-              className="mt-3 py-2 rounded-xl bg-gray-100"
-            >
-              <Text className="text-center text-gray-700 font-medium">Hủy</Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setReportVisible(false);
+                  setReportReason(null);
+                  setReportDescription("");
+                }}
+                className="py-3 rounded-xl bg-gray-100"
+              >
+                <Text className="text-center text-gray-700 font-semibold">
+                  Hủy bỏ
+                </Text>
+              </TouchableOpacity>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
