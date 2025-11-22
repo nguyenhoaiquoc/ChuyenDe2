@@ -337,19 +337,6 @@ const PostFormScreen = ({
     setShowGroupModal(false);
   };
 
-  // Fetch các nhóm mà user đã tham gia
-  useEffect(() => {
-    if (user?.id) {
-      // Gọi endpoint chỉ lấy nhóm PUBLIC đã tham gia
-      axios
-        .get(`${path}/groups/my-public-joined`)
-        .then((res) => {
-          setGroups(res.data);
-        })
-        .catch((err) => console.log("Lỗi tải nhóm:", err));
-    }
-  }, [user]);
-
   // Loaders
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [isLoadingOptions, setIsLoadingOptions] = useState(true);

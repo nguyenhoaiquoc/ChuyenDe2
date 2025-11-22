@@ -209,6 +209,7 @@ const mapProductData = (item: any): Product => {
     status_id: item.status_id?.toString() || undefined,
     visibility_type: item.visibility_type?.toString() || undefined,
     group_id: item.group_id || null,
+    group: item.group || null,
   };
 };
 
@@ -297,16 +298,6 @@ export default function ManagePostsScreen({
       setFilteredPosts(postsByName);
     }
   }, [activeStatus, allPosts, searchText]); // ✅ THÊM searchText VÀO ĐÂY
-
-  const handleBellPress = async () => {
-    const userId = await AsyncStorage.getItem("userId");
-    if (!userId) return navigation.navigate("NotificationScreen");
-    try {
-      await axios.patch(`${path}/notifications/user/${userId}/mark-all-read`);
-      setUnreadCount(0);
-    } catch {}
-    navigation.navigate("NotificationScreen");
-  };
 
   /** Mở menu 3 chấm */
   const handleOpenMenu = (product: Product, pageY: number) => {
@@ -637,6 +628,24 @@ export default function ManagePostsScreen({
                   >
                     {item.name}
                   </Text>
+                  <View className="flex-row items-center mb-1">
+                    <Feather 
+                      name={item.group ? "users" : "globe"} 
+                      size={12} 
+                      color="#6b7280" 
+                    />
+                    <Text className="text-xs text-gray-500 ml-1">
+                      {item.group && item.group.name 
+                        ? item.group.name 
+                        : "Toàn trường"}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center mb-1">
+                    <Feather name="tag" size={12} color="#6b7280" />
+                    <Text className="text-xs text-gray-500 ml-1" numberOfLines={1}>
+                      {item.tag}
+                    </Text>
+                  </View>
                   <Text className="text-sm font-medium text-indigo-600 mb-1">
                     {item.price}
                   </Text>
