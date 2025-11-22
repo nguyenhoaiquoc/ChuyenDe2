@@ -464,60 +464,60 @@ export default function ProductDetailScreen() {
     );
   };
 
-  const handleChatPress = async () => {
-    try {
-      if (!currentUser) {
-        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-        return;
-      }
-
-      const tokenValue = await AsyncStorage.getItem("token");
-      if (!tokenValue) {
-        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
-        return;
-      }
-
-      const sellerId = String(product.user_id);
-      const buyerId = String(currentUser.id);
-
-      // 🟢 Gọi API mở hoặc tạo phòng chat (đã sửa backend nhận product_id)
-      const response = await openOrCreateRoom(tokenValue, {
-        seller_id: sellerId,
-        buyer_id: buyerId,
-        room_type: "PAIR",
-        product_id: String(product.id), // backend giờ nhận product_id
-      });
-
-      const room = response.room ?? response;
-      console.log("🟢 Room nhận được:", room);
-
-      // Xác định người còn lại trong phòng (người bán)
-      const otherUserId =
-        sellerId === String(currentUser.id) ? buyerId : sellerId;
-      const otherUserName = product.authorName || "Người bán";
-      const otherUserAvatar = sellerAvatar
-        ? sellerAvatar.startsWith("http")
-          ? sellerAvatar
-          : `${path}${sellerAvatar}`
-        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-      console.log("dewdew", otherUserAvatar);
-
-      // console.log("🚀 Điều hướng ChatRoom với token:", tokenValue);
-      navigation.navigate("ChatRoomScreen", {
-        roomId: room.id,
-        product,
-        otherUserId,
-        otherUserName,
-        otherUserAvatar,
-        currentUserId: currentUser.id,
-        currentUserName: currentUser.name,
-        token: tokenValue,
-      });
-    } catch (error) {
-      console.error("❌ Lỗi mở phòng chat:", error);
-      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+const handleChatPress = async () => {
+  try {
+    if (!currentUser) {
+      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+      return;
     }
-  };
+
+    const token = await AsyncStorage.getItem("token");
+    if (!token) throw new Error("Không tìm thấy token.");
+
+    // Gửi lên userId của người muốn chat và productId
+    const payload = {
+      userId: product.user_id,
+      productId: product.id,
+    };
+
+    const response = await fetch(`${path}/chat/room`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
+
+    const room = await response.json();
+
+    // Xác định thông tin người còn lại
+    const otherUserName = product.authorName || "Người bán";
+    const otherUserAvatar = sellerAvatar
+      ? sellerAvatar.startsWith("http")
+        ? sellerAvatar
+        : `${path}${sellerAvatar}`
+      : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+    // Điều hướng sang ChatRoom
+    navigation.navigate("ChatRoomScreen", {
+      roomId: room.id,
+      product,
+      otherUserId: product.user_id,
+      otherUserName,
+      otherUserAvatar,
+      currentUserId: currentUser.id,
+      currentUserName: currentUser.name,
+      token,
+    });
+  } catch (error) {
+    console.error("s Lỗi mở phòng chat:", error);
+    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+  }
+};
+
 
   // Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {

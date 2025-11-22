@@ -935,9 +935,7 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
                   </TouchableOpacity>
                 </View>
 
-                <View className="bg-gray-300 px-4 py-2 rounded-full">
-                  <Text>Địa chỉ</Text>
-                </View>
+                
               </View>
 
               <View className="flex flex-row gap-2 mt-2">
