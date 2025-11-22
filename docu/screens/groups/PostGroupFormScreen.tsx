@@ -15,17 +15,13 @@ import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import * as ImagePicker from "expo-image-picker";
 import AddressPicker from "../../components/AddressPicker";
 import axios from "axios";
-import { path } from "../../config"; 
+import { path } from "../../config";
 import * as ImageManipulator from "expo-image-manipulator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 // (Sửa lại đường dẫn import types của bạn)
-import {
-  RootStackParamList,
-  Category,
-  SubCategory,
-} from "../../types";
+import { RootStackParamList, Category, SubCategory } from "../../types";
 
 // 1. Định nghĩa props cho màn hình này
 type PostGroupFormProps = NativeStackScreenProps<
@@ -321,7 +317,6 @@ const PostGroupFormScreen = ({ navigation, route }: PostGroupFormProps) => {
       });
 
       if (response.status === 201 || response.status === 200) {
-        // ✅ GỌI CALLBACK TRƯỚC (để reload data trong GroupDetailScreen)
         if (onPostSuccess && typeof onPostSuccess === "function") {
           onPostSuccess();
         }

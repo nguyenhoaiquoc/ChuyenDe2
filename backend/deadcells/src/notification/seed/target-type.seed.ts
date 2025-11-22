@@ -9,7 +9,7 @@ export class TargetTypeSeedService implements OnModuleInit {
   async onModuleInit() {
     const repo = this.dataSource.getRepository(TargetType);
 
-    const types = ['product', 'user_profile', 'comment', 'group', 'message'];
+    const types = ['product', 'user', 'comment', 'group', 'message'];
 
     for (const name of types) {
       const exists = await repo.findOne({ where: { name } });

@@ -358,6 +358,14 @@ export class ProductService {
 
     //  GỬI THÔNG BÁO GỢI Ý (NẾU AUTO-APPROVE)
     if (productStatusGr && productStatusGr.id === 2) {
+      this.notificationService
+        .notifyFollowersOfNewPost(savedProduct)
+        .catch((err) =>
+          this.logger.error(
+            'Lỗi thông báo user follow đăng bài:',
+            err.message,
+          ),
+        );
       this.notifyMatchingPosts(savedProduct.id);
     }
 
@@ -1093,7 +1101,10 @@ export class ProductService {
     id: number,
     dto: UpdateProductStatusDto,
   ): Promise<Product> {
-    const product = await this.productRepo.findOneBy({ id });
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
     if (!product) {
       throw new NotFoundException(`Không tìm thấy sản phẩm ID ${id}`);
     }
@@ -1110,6 +1121,11 @@ export class ProductService {
     const updatedProduct = await this.productRepo.save(product); // Thông báo
 
     if (dto.product_status_id === 2) {
+      try {
+        await this.notificationService.notifyFollowersOfNewPost(updatedProduct);
+      } catch (err) {
+        this.logger.error('Lỗi notifyFollowersOfNewPost:', err.message);
+      }
       this.notificationService
         .notifyUserOfPostSuccess(updatedProduct)
         .catch((err) =>

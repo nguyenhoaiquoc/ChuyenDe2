@@ -77,6 +77,9 @@ export default function ProductDetailScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteCount, setFavoriteCount] = useState(0);
 
+  const [averageRating, setAverageRating] = useState<number | null>(null);
+  const [ratingCount, setRatingCount] = useState<number>(0);
+
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
 
@@ -117,6 +120,26 @@ export default function ProductDetailScreen() {
       fetchFavoriteData();
     }
   }, [product.id, currentUser, product.productStatus?.id]);
+
+  useEffect(() => {
+    const fetchRating = async () => {
+      try {
+        console.log(product.authorName);
+        console.log(product.user?.avatar);
+        console.log("id", product.user_id);
+        const res = await fetch(
+          `${path}/users/${product.user_id}/rating-average`
+        );
+        const data = await res.json();
+        setAverageRating(data.average ? parseFloat(data.average) : null);
+        setRatingCount(data.count || 0);
+      } catch (error) {
+        console.error("Lỗi khi lấy đánh giá:", error);
+      }
+    };
+
+    fetchRating();
+  }, [product.user_id]);
 
   const fetchComments = useCallback(async () => {
     if (!product.id) return; // Thêm kiểm tra
@@ -319,6 +342,7 @@ export default function ProductDetailScreen() {
       Alert.alert("Lỗi", "Không tìm thấy ID người dùng.");
       return;
     }
+    const numericId = Number(userId);
     // Dẫn tới màn hình UserDetail, kèm product và flag isOwner
     navigation.navigate("UserInforScreen", {
       userId: product.user_id,
@@ -589,6 +613,7 @@ const handleChatPress = async () => {
 
         // Dùng key 'image' (giống hệt trang UserScreen của bạn)
         if (res.data?.image) {
+          console.log(res.data?.image);
           setSellerAvatar(res.data.image);
         }
       } catch (err) {
@@ -640,6 +665,18 @@ const handleChatPress = async () => {
       </TouchableOpacity>
     );
   };
+
+  useEffect(() => {
+    AsyncStorage.getItem("token").then((token) => {
+      fetch(`${path}/products/${product.id}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : "" },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Đây là dữ liệu log ra", data);
+        });
+    });
+  }, [product.id]);
 
   return (
     <View className="flex-1 bg-white">
@@ -787,8 +824,22 @@ const handleChatPress = async () => {
                 <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
               </View>
               <View className="flex-row items-center">
-                <Text className="text-yellow-500 font-bold">4.1 ★</Text>
-                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text>
+                {/* <Text className="text-yellow-500 font-bold"> ★ </Text>
+                <Text className="text-gray-500 text-xs">(14 đánh giá)</Text> */}
+                {averageRating !== null ? (
+                  <>
+                    <Text className="text-sm text-yellow-500 ml-2">
+                      {averageRating.toFixed(1)} ★
+                    </Text>
+                    <Text className="text-gray-500 text-xs ml-2">
+                      ({ratingCount} đánh giá)
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-sm text-gray-400">
+                    Chưa có đánh giá
+                  </Text>
+                )}
               </View>
             </View>
           </TouchableOpacity>

@@ -14,6 +14,8 @@ import {
   Platform,
   ActionSheetIOS,
   TextInput,
+  Platform,
+  ActionSheetIOS,
 } from "react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../types";
@@ -23,8 +25,14 @@ import { TabView, SceneMap, TabBar } from "react-native-tab-view";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { path } from "../../config";
-import { useFocusEffect, useRoute } from "@react-navigation/native";
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../types";
 
 const DEFAULT_AVATAR = require("../../assets/default.png");
 const DEFAULT_COVER = require("../../assets/cover_default.jpg");
@@ -59,6 +67,8 @@ const StarRating = ({ rating, editable = false, onChange }: any) => (
 
 // Rating Card Component
 const RatingCard = ({ rating }: any) => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const timeAgo = (date: string) => {
     const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
     if (seconds < 3600) return "Vừa xong";
@@ -70,14 +80,23 @@ const RatingCard = ({ rating }: any) => {
     <View className="bg-white p-2 rounded-xl mb-2 border border-gray-100 shadow-sm">
       <View className="flex-row items-center justify-between mb-1">
         <View className="flex-row items-center">
-          <Image
-            source={
-              rating.reviewer.avatar
-                ? { uri: rating.reviewer.avatar }
-                : DEFAULT_AVATAR
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate("UserInforScreen", {
+                userId: rating.reviewer.id,
+              })
             }
-            className="w-8 h-8 rounded-full mr-2"
-          />
+          >
+            <Image
+              source={
+                rating.reviewer.avatar
+                  ? { uri: rating.reviewer.avatar }
+                  : DEFAULT_AVATAR
+              }
+              className="w-8 h-8 rounded-full mr-2"
+            />
+          </TouchableOpacity>
+
           <View>
             <Text className="font-semibold text-xxs">
               {rating.reviewer?.name || "Người dùng"}
@@ -192,10 +211,18 @@ const RenderProductItem = ({ item, navigation }: any) => {
 
 export default function UserInforScreen({ navigation, route }: any) {
   const layout = useWindowDimensions();
-  // const route = useRoute<any>();
-  // 1. Lấy userId từ route params
+  const route = useRoute<any>();
   const { userId: profileUserId } = route.params as { userId: string | number };
+
+  // States
+  const [index, setIndex] = useState(0);
+  const [showMore, setShowMore] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string>("");
   const [ratings, setRatings] = useState<any[]>([]);
   const [averageRating, setAverageRating] = useState<number | null>(null);
   const [ratingCount, setRatingCount] = useState(0);
@@ -209,6 +236,11 @@ export default function UserInforScreen({ navigation, route }: any) {
   const [isReporting, setIsReporting] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  
   const [displayingProducts, setDisplayingProducts] = useState<any[]>([]);
   const [soldProducts, setSoldProducts] = useState<any[]>([]);
 
@@ -284,12 +316,18 @@ export default function UserInforScreen({ navigation, route }: any) {
 
   const descriptionRef = useRef<TextInput>(null);
 
-  // Check if current user is viewing their own profile
   const isOwnProfile = currentUserId === profileUserId?.toString();
 
-  // 2. Fetch current user id (người đang đăng nhập)
   useEffect(() => {
-    AsyncStorage.getItem("userId").then(setCurrentUserId);
+    const fetchCurrentUser = async () => {
+      const [userId, userName] = await Promise.all([
+        AsyncStorage.getItem("userId"),
+        AsyncStorage.getItem("userName"),
+      ]);
+      setCurrentUserId(userId);
+      setCurrentUserName(userName || "");
+    };
+    fetchCurrentUser();
   }, []);
 
   useEffect(() => {
@@ -324,7 +362,8 @@ export default function UserInforScreen({ navigation, route }: any) {
   // Data Fetching
   const fetchAllData = useCallback(async () => {
     const token = await AsyncStorage.getItem("token");
-    if (!profileUserId) return; // Đảm bảo có profileUserId
+    const storedUserId = await AsyncStorage.getItem("userId");
+    if (!profileUserId) return;
 
     try {
       const [profileRes, ratingsRes, avgRes, checkRes, productsRes] =
@@ -349,21 +388,56 @@ export default function UserInforScreen({ navigation, route }: any) {
       setAvatar(profileRes.data.image || null);
       setCoverImage(profileRes.data.coverImage || null);
 
+      // Fetch ratings
+      const [ratingsRes, avgRes] = await Promise.all([
+        axios.get(`${path}/users/${profileUserId}/ratings`),
+        axios.get(`${path}/users/${profileUserId}/rating-average`),
+      ]);
+
       setRatings(ratingsRes.data || []);
       setAverageRating(
         avgRes.data.average ? Number(avgRes.data.average) : null
       );
       setRatingCount(avgRes.data.count || 0);
 
-      // Cập nhật thông tin đánh giá của mình (nếu có)
-      if (checkRes.data.hasRated) {
-        setMyRating(checkRes.data);
-        setSelectedStars(checkRes.data.stars);
-        setRatingContent(checkRes.data.content || "");
-      } else {
-        setMyRating(null);
-        setSelectedStars(0);
-        setRatingContent("");
+      //   Fetch follower/following count
+      const [followerRes, followingRes] = await Promise.all([
+        axios.get(`${path}/follow/${profileUserId}/follower-count`),
+        axios.get(`${path}/follow/${profileUserId}/following-count`),
+      ]);
+
+      setFollowerCount(followerRes.data.count || 0);
+      setFollowingCount(followingRes.data.count || 0);
+
+      //   Check follow status (chỉ khi xem profile người khác)
+      if (token && storedUserId && storedUserId !== String(profileUserId)) {
+        const statusRes = await axios.get(
+          `${path}/follow/status?followerId=${storedUserId}&followingId=${profileUserId}`
+        );
+        setIsFollowing(statusRes.data.isFollowing || false);
+      }
+
+      // Check rating của mình
+      if (token && storedUserId !== String(profileUserId)) {
+        try {
+          const checkRes = await axios.get(
+            `${path}/users/${profileUserId}/check-rating`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (checkRes.data.hasRated) {
+            setMyRating(checkRes.data);
+            setSelectedStars(checkRes.data.stars);
+            setRatingContent(checkRes.data.content || "");
+          } else {
+            setMyRating(null);
+            setSelectedStars(0);
+            setRatingContent("");
+          }
+        } catch {
+          setMyRating(null);
+        }
       }
 
       const rawProducts = productsRes?.data;
@@ -394,7 +468,7 @@ export default function UserInforScreen({ navigation, route }: any) {
       console.log("Lỗi khi lấy dữ liệu:", err.message);
       Alert.alert("Lỗi", "Không thể tải thông tin người dùng.");
     }
-  }, [profileUserId, isOwnProfile]); // Thêm isOwnProfile vào dependencies
+  }, [profileUserId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -402,23 +476,105 @@ export default function UserInforScreen({ navigation, route }: any) {
     }, [fetchAllData])
   );
 
-  // Helper Function
   function timeSince(dateString: string) {
     if (!dateString) return "Mới tham gia";
     const diff = Date.now() - new Date(dateString).getTime();
     const months = Math.floor(diff / (1000 * 60 * 60 * 24 * 30));
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
-
     if (years > 0)
       return `${years} năm ${remainingMonths > 0 ? remainingMonths + " tháng" : ""}`;
     if (months > 0) return `${months} tháng`;
     return "Mới tham gia";
   }
 
-  // Follow Function (chỉ thực hiện khi xem hồ sơ người khác)
+  //   TOGGLE FOLLOW - CẬP NHẬT UI NGAY LẬP TỨC
+  const toggleFollow = async () => {
+    if (isOwnProfile || isFollowLoading) return;
 
-  // Rating Functions (chỉ cho phép khi xem hồ sơ người khác)
+    const token = await AsyncStorage.getItem("token");
+    if (!token || !currentUserId) {
+      return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+    }
+
+    // Optimistic UI update
+    const previousIsFollowing = isFollowing;
+    const previousFollowerCount = followerCount;
+
+    setIsFollowing(!isFollowing);
+    setFollowerCount((prev) => (isFollowing ? prev - 1 : prev + 1));
+    setIsFollowLoading(true);
+
+    try {
+      const res = await axios.post(
+        `${path}/follow/toggle`,
+        {
+          followerId: Number(currentUserId),
+          followingId: Number(profileUserId),
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Cập nhật state từ server response
+      setIsFollowing(res.data.isFollowing);
+      setFollowerCount(res.data.followerCount);
+    } catch (err) {
+      // Rollback nếu lỗi
+      setIsFollowing(previousIsFollowing);
+      setFollowerCount(previousFollowerCount);
+      Alert.alert("Lỗi", "Không thể thực hiện. Vui lòng thử lại.");
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  const handleChatPress = async () => {
+    try {
+      if (!currentUserId) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
+      const token = await AsyncStorage.getItem("token");
+      if (!token) {
+        Alert.alert("Lỗi", "Không tìm thấy token. Vui lòng đăng nhập lại.");
+        return;
+      }
+
+      const response = await fetch(`${path}/chat/room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: profileUserId }),
+      });
+
+      if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
+
+      const room = await response.json();
+      const otherUserName = user?.fullName || "Người dùng";
+      const otherUserAvatar = avatar
+        ? avatar.startsWith("http")
+          ? avatar
+          : `${path}/${avatar.replace(/\\/g, "/")}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        otherUserId: profileUserId,
+        otherUserName,
+        otherUserAvatar,
+        currentUserId,
+        currentUserName,
+        token,
+      });
+    } catch (error) {
+      console.error("Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
+    }
+  };
+
+  // Rating Functions
   const handleSubmitRating = async () => {
     if (isOwnProfile || selectedStars === 0)
       return Alert.alert("Lỗi", "Vui lòng chọn số sao");
@@ -426,9 +582,8 @@ export default function UserInforScreen({ navigation, route }: any) {
     if (!token) return Alert.alert("Lỗi", "Vui lòng đăng nhập để đánh giá.");
 
     try {
-      const endpoint = `${path}/users/${user.id}/rate`;
       await axios.post(
-        endpoint,
+        `${path}/users/${profileUserId}/rate`,
         { stars: selectedStars, content: ratingContent },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -454,12 +609,12 @@ export default function UserInforScreen({ navigation, route }: any) {
           const token = await AsyncStorage.getItem("token");
           if (!token) return;
           try {
-            await axios.delete(`${path}/users/${user.id}/rate`, {
+            await axios.delete(`${path}/users/${profileUserId}/rate`, {
               headers: { Authorization: `Bearer ${token}` },
             });
             setMyRating(null);
             fetchAllData();
-          } catch (error) {
+          } catch {
             Alert.alert("Lỗi", "Không thể xóa đánh giá.");
           }
         },
@@ -692,7 +847,6 @@ export default function UserInforScreen({ navigation, route }: any) {
     }
   };
 
-  // Copy Link
   const handleCopyLink = async () => {
     await Clipboard.setStringAsync(`https://yourapp.com/user/${user?.id}`);
     Alert.alert("Thành công", "Liên kết đã được sao chép");
@@ -716,7 +870,7 @@ export default function UserInforScreen({ navigation, route }: any) {
         </Text>
       </View>
 
-      {/* Ảnh bìa */}
+      {/* Cover Image */}
       <View className="w-full h-[100px] relative mt-2">
         <Image
           key={coverImage}
@@ -802,7 +956,6 @@ export default function UserInforScreen({ navigation, route }: any) {
             }
             style={{ backgroundColor: "#d1d5db" }}
           />
-          {/* Nút upload/chỉnh sửa avatar - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA MÌNH */}
           {isOwnProfile && (
             <TouchableOpacity
               onPress={() => handleImageOptions("image")}
@@ -814,7 +967,6 @@ export default function UserInforScreen({ navigation, route }: any) {
           )}
         </View>
 
-        {/* Loading Indicator */}
         {isUploading && (
           <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/30 flex items-center justify-center">
             <ActivityIndicator size="large" color="#FFFFFF" />
@@ -824,64 +976,39 @@ export default function UserInforScreen({ navigation, route }: any) {
 
       {/* Action Buttons */}
       <View className="flex flex-row justify-end gap-4 mt-8 mr-4">
-        {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
         {!isOwnProfile && (
           <TouchableOpacity
-            onPress={async () => {
-              if (!user) return;
-              const token = await AsyncStorage.getItem("token");
-              if (!token)
-                return Alert.alert("Lỗi", "Vui lòng đăng nhập để theo dõi.");
+            onPress={handleChatPress}
+            className="flex-row items-center bg-white border border-green-400 p-1 rounded-md px-3"
+          >
+            <MaterialIcons name="chat" size={16} color="#008c07ff" />
+            <Text className="text-green-500 font-medium ml-1 px-2">Chat</Text>
+          </TouchableOpacity>
+        )}
 
-              try {
-                let updatedUser;
-                if (user.isFollowing) {
-                  // Unfollow
-                  await axios.delete(`${path}/users/${user.id}/follow`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                  });
-                  updatedUser = {
-                    ...user,
-                    isFollowing: false,
-                    followerCount: (user.followerCount || 1) - 1,
-                  };
-                } else {
-                  // Follow
-                  await axios.post(
-                    `${path}/users/${user.id}/follow`,
-                    {}, // không cần body
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  );
-                  updatedUser = {
-                    ...user,
-                    isFollowing: true,
-                    followerCount: (user.followerCount || 0) + 1,
-                  };
-                }
-                setUser(updatedUser);
-              } catch (err: any) {
-                console.log(
-                  "Follow Error:",
-                  err.response?.data || err.message || err
-                );
-                Alert.alert("Lỗi", "Không thể thực hiện thao tác theo dõi.");
-              }
-            }}
-            className={`text-xs p-1 rounded-md px-2 ${user?.isFollowing ? "bg-gray-400" : "bg-yellow-400"}`}
+        {/*   NÚT FOLLOW ĐÃ SỬA */}
+        {!isOwnProfile && (
+          <TouchableOpacity
+            onPress={toggleFollow}
+            disabled={isFollowLoading}
+            className={`text-xs p-1 rounded-md px-2 ${isFollowing ? "bg-gray-400" : "bg-yellow-400"} ${isFollowLoading ? "opacity-50" : ""}`}
           >
             <Text className="text-white font-medium px-4">
-              {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+              {isFollowLoading
+                ? "..."
+                : isFollowing
+                  ? "Đang theo dõi"
+                  : "Theo dõi"}
             </Text>
           </TouchableOpacity>
         )}
 
-        {/* Nút Menu 3 chấm (dành cho cả hai) */}
         <TouchableOpacity onPress={() => setMenuVisible(true)}>
           <MaterialIcons name="more-vert" size={24} color="black" />
         </TouchableOpacity>
       </View>
 
-      {/* Tên và Đánh giá */}
+      {/* Name and Rating */}
       <View className="pl-3 mt-[-10px] flex flex-col gap-2">
         <Text className="font-bold text-lg">{user?.nickname || "..."}</Text>
         <View className="flex-row items-center">
@@ -896,12 +1023,14 @@ export default function UserInforScreen({ navigation, route }: any) {
             <Text className="text-sm text-gray-600">Chưa có đánh giá</Text>
           )}
         </View>
+
+        {/* HIỂN THỊ SỐ LƯỢNG FOLLOW */}
         <View className="flex flex-row gap-3">
           <Text className="border-r pr-2 text-xs text-gray-700">
-            Người theo dõi: {user?.followerCount || 0}
+            Người theo dõi: {followerCount}
           </Text>
           <Text className="text-xs text-gray-700">
-            Đang theo dõi: {user?.followingCount || 0}
+            Đang theo dõi: {followingCount}
           </Text>
         </View>
       </View>
@@ -973,7 +1102,11 @@ export default function UserInforScreen({ navigation, route }: any) {
               Đánh giá từ người dùng ({ratingCount})
             </Text>
             {ratings.map((rating) => (
-              <RatingCard key={rating.id} rating={rating} />
+              <RatingCard
+                key={rating.id}
+                rating={rating}
+                navigation={navigation}
+              />
             ))}
           </View>
         )}

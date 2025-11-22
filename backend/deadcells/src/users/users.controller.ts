@@ -61,6 +61,12 @@ export class UsersController {
     return this.usersService.getMyRatings(req.user.id);
   }
 
+  @Get('feedback')
+  @UseGuards(JwtAuthGuard)
+  async getFeedback(@Req() req) {
+    return this.usersService.getFeedback(req.user.id);
+  }
+
   @Get(':id')
   async getUser(@Param('id') id: string) {
     return this.usersService.findOne(+id);

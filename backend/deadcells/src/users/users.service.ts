@@ -6,7 +6,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 import { User } from 'src/entities/user.entity';
-import { Express } from 'express';
 import { Rating } from 'src/entities/rating.entity';
 
 @Injectable()
@@ -14,9 +13,6 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
-
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
 
     @InjectRepository(Rating)
     private readonly ratingRepo: Repository<Rating>,
@@ -216,7 +212,7 @@ export class UsersService {
       throw new BadRequestException('User ID không hợp lệ');
     }
 
-    const query = this.userRepository
+    const query = this.userRepo
       .createQueryBuilder('user')
       .where('user.id != :currentUserId', { currentUserId: userId })
       .andWhere('user.deleted_at IS NULL')
@@ -375,8 +371,15 @@ export class UsersService {
   }
 
   async getMyRatings(userId: number) {
+    const cleanUserId = Number(userId);
+
+    // Thêm kiểm tra an toàn ở đây
+    if (isNaN(cleanUserId)) {
+      throw new BadRequestException('User ID trong token không hợp lệ.');
+    }
+
     const ratings = await this.ratingRepo.find({
-      where: { user_id: userId },
+      where: { reviewer: { id: userId } },
       relations: ['ratedUser'],
       order: { created_at: 'DESC' },
     });
@@ -394,6 +397,15 @@ export class UsersService {
     }));
   }
 
+  /** Lấy cả đánh giá tôi nhận được và tôi đã cho */
+  async getFeedback(userId: number) {
+    const received = await this.getUserRatings(userId); // người khác đánh giá tôi
+    const given = await this.getMyRatings(userId); // tôi đã đánh giá người khác
+
+    return {
+      received,
+      given,
+    };
   async findIdByEmail(email: string) {
     const user = await this.userRepository.findOne({
       where: { email },

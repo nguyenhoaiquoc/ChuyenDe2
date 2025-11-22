@@ -392,6 +392,12 @@ export default function NotificationScreen({ navigation }: Props) {
       );
 
       switch (item.action?.name) {
+        case "following_new_post":
+          return (
+            <Text>
+              {actorName} đã đăng một bài viết mới: {productName}
+            </Text>
+          );
         case "post_success":
           return <Text>Bạn đã đăng thành công {productName}.</Text>;
         case "admin_new_post":
@@ -408,6 +414,8 @@ export default function NotificationScreen({ navigation }: Props) {
           );
         case "favorite_confirmation":
           return <Text>Bạn đã thích {productName}.</Text>;
+        case "new_follow":
+          return <Text>{actorName} đã đang theo dõi bạn.</Text>;
         case "matching_buy_request":
           return (
             <Text>

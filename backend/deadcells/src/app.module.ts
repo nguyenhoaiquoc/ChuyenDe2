@@ -46,6 +46,7 @@ import { GroupMember } from './entities/group-member.entity';
 import { ProductStatusModule } from './product-statuses/product-status.module';
 import { AdminModule } from './admin/admin.module';
 import { NotificationModule } from './notification/notification.module';
+import { FollowModule } from './follow/follow.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { NotificationModule } from './notification/notification.module';
     ChatModule,
     GroupModule,
     FavoritesModule,
+    FollowModule,
     OriginModule,
     MaterialModule,
     SizeModule,

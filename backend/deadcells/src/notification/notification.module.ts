@@ -11,6 +11,7 @@ import { NotificationGateway } from './notification.gateway';
 import { GroupMember } from 'src/entities/group-member.entity';
 import { NotificationActionSeedService } from './seed/notification-action.seed';
 import { TargetTypeSeedService } from './seed/target-type.seed';
+import { Follower } from 'src/entities/follower.entity';
 
 @Module({
   imports: [
@@ -19,10 +20,16 @@ import { TargetTypeSeedService } from './seed/target-type.seed';
       NotificationAction,
       TargetType,
       User,
-      GroupMember
+      GroupMember,
+      Follower,
     ]),
   ],
-  providers: [NotificationService, NotificationGateway, NotificationActionSeedService, TargetTypeSeedService],
+  providers: [
+    NotificationService,
+    NotificationGateway,
+    NotificationActionSeedService,
+    TargetTypeSeedService,
+  ],
   controllers: [NotificationController],
   exports: [NotificationService],
 })
