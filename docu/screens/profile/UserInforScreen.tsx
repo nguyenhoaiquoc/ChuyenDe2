@@ -329,8 +329,8 @@ export default function UserInforScreen({ navigation, route }: any) {
             })
             .catch(() => ({ data: { hasRated: false } }))
           : Promise.resolve({ data: { hasRated: false } }),
+          axios.get(`${path}/products/my-posts/${profileUserId}`),
       ]);
-axios.get(`${path}/products/my-posts/${profileUserId}`),
 
       setUser(profileRes.data);
       setAvatar(profileRes.data.image || null);
