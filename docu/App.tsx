@@ -57,6 +57,7 @@ import SuggestionScreen from "./screens/products/SuggestionScreen";
 import ManageCategoriesScreen from "./screens/admin/category/ManageCategoriesScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { setupDeepLink } from "./src/navigation/DeepLinkHandler";
+import AdminVerificationScreen from './screens/admin/user/AdminVerificationScreen';
 import { ChatProvider } from "./components/ChatContext";
 import AdminVerificationScreen from "./screens/admin/user/AdminVerificationScreen";
 import AdminDashboardScreen from "./screens/admin/AdminDashboardScreen";

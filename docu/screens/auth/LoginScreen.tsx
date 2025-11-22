@@ -65,8 +65,8 @@ export default function LoginScreen({ navigation }: Props) {
       }
 
       await AsyncStorage.setItem("token", accessToken);
-      if (data.fullName)
-        await AsyncStorage.setItem("userName", String(data.fullName));
+      if (data.nickname)
+        await AsyncStorage.setItem("userName", String(data.nickname));
       if (data.id != null)
         await AsyncStorage.setItem("userId", String(data.id));
       if (data.role) await AsyncStorage.setItem("role", String(data.role));

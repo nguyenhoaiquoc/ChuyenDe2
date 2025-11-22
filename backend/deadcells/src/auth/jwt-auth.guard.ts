@@ -5,14 +5,14 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service'; // ← THÊM DÒNG NÀY
+import { UsersService } from '../users/users.service'; 
 import { Reflector } from '@nestjs/core';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly usersService: UsersService, // ← THÊM SERVICE ĐỂ LẤY USER TỪ DB
+    private readonly usersService: UsersService,
     private readonly reflector: Reflector,
   ) {}
 

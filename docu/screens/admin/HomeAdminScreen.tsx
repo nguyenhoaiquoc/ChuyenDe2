@@ -143,7 +143,7 @@ export default function HomeAdminScreen({ navigation }: Props) {
             title="Duyệt tin Công Khai"
             subtitle="Duyệt các tin đăng công khai"
             color="bg-green-600"
-            onPress={() => navigation.navigate("ManageProductsUserScreen")}
+            onPress={() => navigation.navigate("ManageProductsScreen")}
           />
 
           {/* 5. Duyệt tin Nhóm */}

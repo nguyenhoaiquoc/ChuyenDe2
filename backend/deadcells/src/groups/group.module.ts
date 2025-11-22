@@ -2,7 +2,6 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GroupService } from './group.service';
 import { GroupController } from './group.controller';
-
 import { Group } from '../entities/group.entity';
 import { GroupMember } from '../entities/group-member.entity';
 import { GroupRole } from '../entities/group-role.entity';

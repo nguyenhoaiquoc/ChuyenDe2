@@ -160,7 +160,7 @@ constructor(
     return {
       token,
       role: user.role?.name,
-      fullName: user.fullName,
+      nickname: user.nickname,
       id: user.id,
       tokenType: 'Bearer',
     };
