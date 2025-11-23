@@ -46,8 +46,6 @@ export type RootStackParamList = {
   };
   ChooseExchangeSubCategoryScreen: undefined;
   ManagerGroupsScreen: undefined;
-  UserInforScreen: {
-    userId?: number | string;
   ImageGalleryScreen?: {
     onSelect?: (uri: string) => Promise<void>;
   };
@@ -82,7 +80,7 @@ export type RootStackParamList = {
   EditGroupScreen: { group: any };
   InviteMembersScreen: { groupId: number };
   QRInviteScreen: { groupId: number };
-  DeepLinkHandlerScreen: undefined;
+  DeepLinkHandler: undefined;
   GroupDetailScreen: {
     groupId: number;
     initialJoinStatus?: "none" | "pending" | "joined";

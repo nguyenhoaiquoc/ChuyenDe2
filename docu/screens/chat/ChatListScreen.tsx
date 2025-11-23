@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  View, Text, TouchableOpacity, Image, ScrollView,
-  ActivityIndicator, Alert,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { FontAwesome5 } from "@expo/vector-icons";
@@ -36,15 +41,24 @@ export default function ChatListScreen({ navigation }: Props) {
       });
       setChatList(res.data?.data || []);
     } catch (err: any) {
-      console.log("❌ Lỗi tải danh sách chat:", err?.response?.data || err?.message);
+      console.log(
+        "❌ Lỗi tải danh sách chat:",
+        err?.response?.data || err?.message
+      );
     } finally {
       setLoading(false);
     }
   }, []);
 
   // Lần đầu + khi quay lại màn hình thì refresh
-  useEffect(() => { fetchChats(); }, [fetchChats]);
-  useFocusEffect(useCallback(() => { fetchChats(); }, [fetchChats]));
+  useEffect(() => {
+    fetchChats();
+  }, [fetchChats]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchChats();
+    }, [fetchChats])
+  );
 
   // 🔴 NEW: Kết nối socket ngay tại ChatList để nhận realtime
   useEffect(() => {
@@ -62,8 +76,12 @@ export default function ChatListScreen({ navigation }: Props) {
       });
       socketRef.current = socket;
 
-      socket.on("connect", () => console.log("✅ ChatList socket connected:", socket.id));
-      socket.on("connect_error", (e) => console.log("⚠️ connect_error ChatList:", e?.message));
+      socket.on("connect", () =>
+        console.log("✅ ChatList socket connected:", socket.id)
+      );
+      socket.on("connect_error", (e) =>
+        console.log("⚠️ connect_error ChatList:", e?.message)
+      );
 
       // Khi có tin nhắn mới gửi tới mình → bôi đen room đó + đẩy lên đầu
       socket.on("receiveMessage", (msg: any) => {
@@ -74,15 +92,20 @@ export default function ChatListScreen({ navigation }: Props) {
         setChatList((prev) => {
           // clone danh sách
           const list = [...prev];
-          const idx = list.findIndex((r) => Number(r.room_id) === Number(msg.conversation_id));
+          const idx = list.findIndex(
+            (r) => Number(r.room_id) === Number(msg.conversation_id)
+          );
 
           const patchFields = {
             last_message: msg.content ?? (msg.media_url ? "[Ảnh]" : ""),
             last_message_at: msg.created_at ?? new Date().toISOString(),
             // chỉ bôi đen nếu tin mới là gửi CHO MÌNH và chưa đọc (server mặc định is_read=false khi mới gửi)
-            is_last_unread: isForMe ? true : (list[idx]?.is_last_unread ?? false),
-            unread_count:
-              isForMe ? (Number(list[idx]?.unread_count || 0) + 1) : (list[idx]?.unread_count || 0),
+            is_last_unread: isForMe
+              ? true
+              : (list[idx]?.is_last_unread ?? false),
+            unread_count: isForMe
+              ? Number(list[idx]?.unread_count || 0) + 1
+              : list[idx]?.unread_count || 0,
           };
 
           if (idx >= 0) {
@@ -91,7 +114,9 @@ export default function ChatListScreen({ navigation }: Props) {
             const rest = list.filter((_, i) => i !== idx);
             const newList = [updated, ...rest];
             // sort chắc cú theo last_message_at desc (ISO string so sánh được)
-            newList.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+            newList.sort((a, b) =>
+              String(b.last_message_at).localeCompare(String(a.last_message_at))
+            );
             return newList;
           } else {
             // Chưa có room trong list (VD: lần đầu chat) → lấy meta rồi push
@@ -104,7 +129,9 @@ export default function ChatListScreen({ navigation }: Props) {
       socket.on("messageEdited", (m: any) => {
         setChatList((prev) => {
           const list = [...prev];
-          const idx = list.findIndex((r) => Number(r.room_id) === Number(m.conversation_id));
+          const idx = list.findIndex(
+            (r) => Number(r.room_id) === Number(m.conversation_id)
+          );
           if (idx < 0) return list;
           // chỉ update nếu message vừa sửa chính là last_message hiện đang hiển thị
           // (Bạn có thể lưu thêm last_message_id ở payload getChatList để so sánh chắc hơn)
@@ -114,11 +141,12 @@ export default function ChatListScreen({ navigation }: Props) {
             last_message_at: m.updated_at ?? list[idx].last_message_at,
           };
           list[idx] = updated;
-          return list.sort((a, b) => String(b.last_message_at).localeCompare(String(a.last_message_at)));
+          return list.sort((a, b) =>
+            String(b.last_message_at).localeCompare(String(a.last_message_at))
+          );
         });
       });
 
-      
       socket.on("messageRecalled", (payload: { id: number }) => {
         // Khi thu hồi, nếu đó là last_message, hiển thị rỗng/placeholder
         // (cần last_message_id trong payload getChatList để làm chính xác 100%)
@@ -169,8 +197,13 @@ export default function ChatListScreen({ navigation }: Props) {
   const renderTime = (dt?: string) => {
     if (!dt) return "";
     try {
-      return new Date(dt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-    } catch { return ""; }
+      return new Date(dt).toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "";
+    }
   };
 
   return (
@@ -179,8 +212,12 @@ export default function ChatListScreen({ navigation }: Props) {
       <View className="flex flex-row justify-between mt-14 items-center px-5">
         <Text className="text-2xl font-bold">Chat</Text>
         <View className="flex flex-row gap-10">
-          <FontAwesome5 name="search" size={20} color="gray"
-            onPress={() => navigation.navigate("SearchScreen")} />
+          <FontAwesome5
+            name="search"
+            size={20}
+            color="gray"
+            onPress={() => navigation.navigate("SearchScreen")}
+          />
           <FontAwesome5 name="bars" size={20} color="gray" />
         </View>
       </View>
@@ -188,8 +225,10 @@ export default function ChatListScreen({ navigation }: Props) {
       <View className="w-full h-[1px] bg-gray-300 mt-10" />
       <View className="flex flex-row justify-between px-5 my-5">
         <Text className="text-xl font-bold">Tất cả tin nhắn</Text>
-        <Text className="text-xl font-bold"
-          onPress={() => navigation.navigate("UnreadMessageScreen")}>
+        <Text
+          className="text-xl font-bold"
+          onPress={() => navigation.navigate("UnreadMessageScreen")}
+        >
           Tin chưa đọc
         </Text>
       </View>
@@ -203,19 +242,22 @@ export default function ChatListScreen({ navigation }: Props) {
         <ScrollView className="flex-1">
           <View className="mb-20">
             {chatList.length === 0 ? (
-              <Text className="text-center text-gray-500 mt-10">Bạn chưa có cuộc trò chuyện nào</Text>
+              <Text className="text-center text-gray-500 mt-10">
+                Bạn chưa có cuộc trò chuyện nào
+              </Text>
             ) : (
               chatList.map((room) => {
-  console.log("partner object:", room.partner);
+                console.log("partner object:", room.partner);
 
-const avatarObj = room.partner ?? room.group;
-const displayName = avatarObj?.name ?? "Người dùng ẩn danh";
+                const avatarObj = room.partner ?? room.group;
+                const displayName = avatarObj?.name ?? "Người dùng ẩn danh";
                 const unreadFlag = room?.is_last_unread === true;
                 const unreadCount: number = Number(room?.unread_count || 0);
-                
-                  const avatarUri =
-  (room.partner?.avatar || room.group?.thumbnail_url
-   || "https://cdn-icons-png.flaticon.com/512/149/149071.png");
+
+                const avatarUri =
+                  room.partner?.avatar ||
+                  room.group?.thumbnail_url ||
+                  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
                 return (
                   <TouchableOpacity
                     key={room.room_id}
@@ -223,26 +265,33 @@ const displayName = avatarObj?.name ?? "Người dùng ẩn danh";
                     onPress={() => handleOpenRoom(room)}
                   >
                     <View className="relative">
-  <Image
-  className="w-[46px] h-[46px] rounded-full"
-  source={{ uri: avatarUri }}
-/>
-                {unreadFlag && (
+                      <Image
+                        className="w-[46px] h-[46px] rounded-full"
+                        source={{ uri: avatarUri }}
+                      />
+                      {unreadFlag && (
                         <View className="absolute -top-1 -right-1 bg-blue-500 w-3.5 h-3.5 rounded-full" />
                       )}
                     </View>
 
                     <View className="w-[88%] pl-3 border-b border-gray-200 pb-3">
                       <View className="flex flex-row justify-between items-center">
-                        <Text className={`text-lg ${unreadFlag ? "font-extrabold text-black" : "font-semibold"}`} numberOfLines={1}>
-                      {displayName}
-
-                      </Text>
-                        <Text className="text-gray-400 text-xs ml-2">{renderTime(room.last_message_at)}</Text>
+                        <Text
+                          className={`text-lg ${unreadFlag ? "font-extrabold text-black" : "font-semibold"}`}
+                          numberOfLines={1}
+                        >
+                          {displayName}
+                        </Text>
+                        <Text className="text-gray-400 text-xs ml-2">
+                          {renderTime(room.last_message_at)}
+                        </Text>
                       </View>
 
                       <View className="flex flex-row items-center mt-0.5">
-                        <Text className={`${unreadFlag ? "font-bold text-black" : "text-gray-500"} flex-1`} numberOfLines={1}>
+                        <Text
+                          className={`${unreadFlag ? "font-bold text-black" : "text-gray-500"} flex-1`}
+                          numberOfLines={1}
+                        >
                           {room.last_message || "(chưa có tin nhắn)"}
                         </Text>
                         {unreadCount > 0 && (

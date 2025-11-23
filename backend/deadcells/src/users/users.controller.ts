@@ -39,12 +39,6 @@ export class UsersController {
     return await this.usersService.findAll();
   }
 
-  @Get('email/:email')
-  async findIdByEmail(@Param('email') email: string) {
-    // Gọi hàm service vừa tạo
-    return this.usersService.findIdByEmail(email);
-  }
-
   /**
    * Lấy thông tin user theo ID
    */

@@ -1,5 +1,6 @@
 // Menu.tsx
 import { View, Text, TouchableOpacity } from "react-native";
+import { useState, useEffect } from "react";
 import {
   FontAwesome,
   Feather,
@@ -7,15 +8,14 @@ import {
   MaterialIcons,
 } from "@expo/vector-icons";
 import "../global.css";
-import { useNavigation, useNavigationState } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
 import { useChat } from "./ChatContext";
 import { io } from "socket.io-client";
-import { path } from "../config";
-import React, { useState, useEffect } from "react";
+import { path } from "../config"; // ✅ nhớ import path server (VD: http://192.168.x.x:3000)
 
 export default function Menu() {
   const navigation =
@@ -45,32 +45,6 @@ export default function Menu() {
       setIsLoggedIn(!!token);
     };
     checkLogin();
-  }, []);
-
-  // ✅ Kết nối socket để nhận số tin chưa đọc
-  useEffect(() => {
-    const connectSocket = async () => {
-      const token = await AsyncStorage.getItem("token");
-      const userId = await AsyncStorage.getItem("userId");
-      if (!token || !userId) return;
-
-      const socket = io(`${path}`, {
-        auth: { userId, token },
-        transports: ["websocket"],
-      });
-
-      socket.on("unreadCount", (data) => {
-        setUnreadCount(data.count || 0);
-      });
-
-      socket.emit("getUnreadCount", { userId });
-
-      return () => {
-        socket.disconnect();
-      };
-    };
-
-    connectSocket();
   }, []);
 
   return (

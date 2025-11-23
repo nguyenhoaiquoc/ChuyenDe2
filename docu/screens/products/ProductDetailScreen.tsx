@@ -48,6 +48,8 @@ const formatPrice = (price: number | string, dealTypeName?: string) => {
 export default function ProductDetailScreen() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [sellerAvatar, setSellerAvatar] = useState<string | null>(null);
+  const [soldCount, setSoldCount] = useState(0);
+
   useEffect(() => {
     (async () => {
       const id = await AsyncStorage.getItem("userId");
@@ -488,60 +490,59 @@ export default function ProductDetailScreen() {
     );
   };
 
-const handleChatPress = async () => {
-  try {
-    if (!currentUser) {
-      Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
-      return;
+  const handleChatPress = async () => {
+    try {
+      if (!currentUser) {
+        Alert.alert("Thông báo", "Bạn cần đăng nhập để chat.");
+        return;
+      }
+
+      const token = await AsyncStorage.getItem("token");
+      if (!token) throw new Error("Không tìm thấy token.");
+
+      // Gửi lên userId của người muốn chat và productId
+      const payload = {
+        userId: product.user_id,
+        productId: product.id,
+      };
+
+      const response = await fetch(`${path}/chat/room`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
+
+      const room = await response.json();
+
+      // Xác định thông tin người còn lại
+      const otherUserName = product.authorName || "Người bán";
+      const otherUserAvatar = sellerAvatar
+        ? sellerAvatar.startsWith("http")
+          ? sellerAvatar
+          : `${path}${sellerAvatar}`
+        : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+      // Điều hướng sang ChatRoom
+      navigation.navigate("ChatRoomScreen", {
+        roomId: room.id,
+        product,
+        otherUserId: product.user_id,
+        otherUserName,
+        otherUserAvatar,
+        currentUserId: currentUser.id,
+        currentUserName: currentUser.name,
+        token,
+      });
+    } catch (error) {
+      console.error("s Lỗi mở phòng chat:", error);
+      Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
     }
-
-    const token = await AsyncStorage.getItem("token");
-    if (!token) throw new Error("Không tìm thấy token.");
-
-    // Gửi lên userId của người muốn chat và productId
-    const payload = {
-      userId: product.user_id,
-      productId: product.id,
-    };
-
-    const response = await fetch(`${path}/chat/room`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) throw new Error("Lỗi khi mở phòng chat");
-
-    const room = await response.json();
-
-    // Xác định thông tin người còn lại
-    const otherUserName = product.authorName || "Người bán";
-    const otherUserAvatar = sellerAvatar
-      ? sellerAvatar.startsWith("http")
-        ? sellerAvatar
-        : `${path}${sellerAvatar}`
-      : "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-    // Điều hướng sang ChatRoom
-    navigation.navigate("ChatRoomScreen", {
-      roomId: room.id,
-      product,
-      otherUserId: product.user_id,
-      otherUserName,
-      otherUserAvatar,
-      currentUserId: currentUser.id,
-      currentUserName: currentUser.name,
-      token,
-    });
-  } catch (error) {
-    console.error("s Lỗi mở phòng chat:", error);
-    Alert.alert("Lỗi", "Không thể mở phòng chat. Vui lòng thử lại!");
-  }
-};
-
+  };
 
   // Render item ảnh (hiển thị từng ảnh trong array)
   const renderImageItem = ({ item }: { item: ProductImage }) => {
@@ -624,6 +625,39 @@ const handleChatPress = async () => {
     fetchSellerAvatar();
   }, [product.user_id]);
 
+  useEffect(() => {
+    const fetchSellerInfo = async () => {
+      // Chỉ chạy khi có product.user_id
+      if (!product.user_id) return;
+
+      try {
+        // 1. Gọi API lấy thông tin User (Avatar)
+        const userRes = await axios.get(`${path}/users/${product.user_id}`);
+        if (userRes.data?.image) {
+          setSellerAvatar(userRes.data.image);
+        }
+
+        // 2. 🚀 Gọi API lấy danh sách bài đăng của người bán để đếm số lượng đã bán
+        // (Sử dụng API giống bên màn hình UserInforScreen)
+        const productsRes = await axios.get(
+          `${path}/products/my-posts/${product.user_id}`
+        );
+        const listProducts = productsRes.data || [];
+
+        // Lọc ra các sản phẩm có status là 6 (Đã bán)
+        const count = listProducts.filter(
+          (p: any) => p.productStatus?.id === 6 || p.status_id === 6
+        ).length;
+
+        setSoldCount(count); // Cập nhật vào state
+      } catch (err) {
+        console.log("Lỗi lấy thông tin người bán:", err);
+      }
+    };
+
+    fetchSellerInfo();
+  }, [product.user_id]);
+
   const renderRelatedItem = ({ item }: { item: Product }) => {
     return (
       <TouchableOpacity
@@ -673,7 +707,7 @@ const handleChatPress = async () => {
       })
         .then((res) => res.json())
         .then((data) => {
-          console.log("Đây là dữ liệu log ra", data);
+          // console.log("Đây là dữ liệu log ra", data);
         });
     });
   }, [product.id]);
@@ -821,7 +855,9 @@ const handleChatPress = async () => {
                 <Text className="font-semibold">
                   {product.authorName || "Người dùng"}
                 </Text>
-                <Text className="text-gray-500 text-xs">đã bán 1 lần</Text>
+                <Text className="text-gray-500 text-xs">
+                  đã bán {soldCount} lần
+                </Text>
               </View>
               <View className="flex-row items-center">
                 {/* <Text className="text-yellow-500 font-bold"> ★ </Text>
@@ -897,7 +933,7 @@ const handleChatPress = async () => {
                   style={{ flexShrink: 1, flexWrap: "wrap" }}
                 >
                   {formatAgeRangeName(product.tag || "Chưa rõ")}
-                  </Text>
+                </Text>
               </View>
 
               {/* Giống thú cưng */}

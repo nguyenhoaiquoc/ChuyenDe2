@@ -406,18 +406,5 @@ export class UsersService {
       received,
       given,
     };
-  async findIdByEmail(email: string) {
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: ['id', 'nickname', 'email'], // Chỉ chọn các trường an toàn
-    });
-
-    if (!user) {
-      throw new NotFoundException(
-        `Không tìm thấy người dùng với email ${email}`,
-      );
-    }
-
-    return user;
   }
 }

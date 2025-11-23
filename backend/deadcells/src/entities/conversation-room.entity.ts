@@ -61,11 +61,4 @@ export class ConversationRoom {
 
   @OneToMany(() => Message, (m) => m.conversation)
   messages: Message[];
-
-  @ManyToOne(() => Group)
-  @JoinColumn({ name: 'group_id' })
-  group: Group;
-
-  @Column({ type: 'int', nullable: true })
-  group_id: number;
 }
