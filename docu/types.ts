@@ -35,8 +35,6 @@ export type RootStackParamList = {
   UnreadMessageScreen: undefined;
   SearchScreen: undefined;
   ViewHistory: undefined;
-  SavedSearchScreen: undefined;
-  SavedPosts: undefined;
   FeedbackScreen: undefined;
   UserScreen: undefined;
   VerifyStudentScreen: undefined;

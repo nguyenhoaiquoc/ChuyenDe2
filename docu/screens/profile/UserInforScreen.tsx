@@ -39,7 +39,6 @@ interface User {
   soldCount?: number;
 }
 
-
 // Star Rating Component
 const StarRating = ({ rating, editable = false, onChange }: any) => (
   <View className="flex-row gap-1">
@@ -97,8 +96,6 @@ const RatingCard = ({ rating }: any) => {
     </View>
   );
 };
-
-
 
 const mapProductData = (item: any) => {
   // Xử lý ảnh thumbnail
@@ -297,8 +294,8 @@ export default function UserInforScreen({ navigation, route }: any) {
   }, []);
 
   // Data Fetching
-// Data Fetching
-// Data Fetching
+  // Data Fetching
+  // Data Fetching
   const fetchAllData = useCallback(async () => {
     const token = await AsyncStorage.getItem("token");
     const storedCurrentUserId = await AsyncStorage.getItem("userId");
@@ -308,14 +305,14 @@ export default function UserInforScreen({ navigation, route }: any) {
     try {
       // Gọi song song tất cả các API cần thiết
       const [
-        profileRes, 
-        ratingsRes, 
-        avgRes, 
-        checkRes, 
+        profileRes,
+        ratingsRes,
+        avgRes,
+        checkRes,
         productsRes,
         // 👇 THÊM 2 API NÀY ĐỂ LẤY SỐ LIỆU FOLLOW
         followerCountRes,
-        followingCountRes
+        followingCountRes,
       ] = await Promise.all([
         // 1. Thông tin cơ bản
         axios.get(`${path}/users/${profileUserId}`, {
@@ -335,22 +332,26 @@ export default function UserInforScreen({ navigation, route }: any) {
           : Promise.resolve({ data: { hasRated: false } }),
         // 5. Danh sách bài đăng
         axios.get(`${path}/products/my-posts/${profileUserId}`),
-        
+
         // 6. 👇 LẤY SỐ NGƯỜI THEO DÕI (follower-count)
         axios.get(`${path}/follow/${profileUserId}/follower-count`),
-        
+
         // 7. 👇 LẤY SỐ NGƯỜI ĐANG THEO DÕI (following-count)
         axios.get(`${path}/follow/${profileUserId}/following-count`),
       ]);
 
       // --- Kiểm tra trạng thái "Đã theo dõi" hay chưa ---
       let isFollowingStatus = false;
-      if (token && storedCurrentUserId && storedCurrentUserId !== profileUserId.toString()) {
+      if (
+        token &&
+        storedCurrentUserId &&
+        storedCurrentUserId !== profileUserId.toString()
+      ) {
         try {
           const followRes = await axios.get(`${path}/follow/status`, {
-            params: { 
-              followerId: Number(storedCurrentUserId), 
-              followingId: Number(profileUserId) 
+            params: {
+              followerId: Number(storedCurrentUserId),
+              followingId: Number(profileUserId),
             },
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -365,8 +366,8 @@ export default function UserInforScreen({ navigation, route }: any) {
         ...profileRes.data,
         isFollowing: isFollowingStatus,
         // 👇 Gán số liệu lấy được vào đây
-        followerCount: followerCountRes.data.count, 
-        followingCount: followingCountRes.data.count, 
+        followerCount: followerCountRes.data.count,
+        followingCount: followingCountRes.data.count,
       });
 
       // Các phần còn lại giữ nguyên...
@@ -711,7 +712,7 @@ export default function UserInforScreen({ navigation, route }: any) {
 
   // Copy Link
   const handleCopyLink = async () => {
-    await Clipboard.setStringAsync(`https://yourapp.com/user/${user?.id}`);
+    await Clipboard.setStringAsync(`${path}/users/${user?.id}`);
     Alert.alert("Thành công", "Liên kết đã được sao chép");
     setMenuVisible(false);
   };
@@ -798,7 +799,7 @@ export default function UserInforScreen({ navigation, route }: any) {
       </View>
 
       {/* Action Buttons */}
-   {/* Action Buttons */}
+      {/* Action Buttons */}
       <View className="flex flex-row justify-end gap-3 mt-8 mr-4 items-center">
         {/* Nút "Theo dõi" - CHỈ HIỂN THỊ TRÊN HỒ SƠ CỦA NGƯỜI KHÁC */}
         {!isOwnProfile && (
@@ -835,10 +836,10 @@ export default function UserInforScreen({ navigation, route }: any) {
             }`}
           >
             {/* Thêm icon cho đẹp (tùy chọn) */}
-            <MaterialIcons 
-              name={user?.isFollowing ? "check" : "person-add"} 
-              size={16} 
-              color="white" 
+            <MaterialIcons
+              name={user?.isFollowing ? "check" : "person-add"}
+              size={16}
+              color="white"
             />
             <Text className="text-white font-medium text-xs">
               {user?.isFollowing ? "Đang theo dõi" : "Theo dõi"}
@@ -881,10 +882,6 @@ export default function UserInforScreen({ navigation, route }: any) {
       <View className="pl-3 pr-4 flex flex-col mt-6 gap-3 mb-4">
         {/* PHẦN HIỂN THỊ CỐ ĐỊNH */}
         <View className="flex flex-row gap-2 items-center">
-          <MaterialIcons name="chat" size={16} color="gray" />
-          <Text className="text-xs text-gray-600">Phản hồi chat: Chưa có</Text>
-        </View>
-        <View className="flex flex-row gap-2 items-center">
           <MaterialIcons name="access-time" size={16} color="gray" />
           <Text className="text-xs text-gray-600">
             Đã tham gia: {timeSince(user?.createdAt)}
@@ -918,36 +915,6 @@ export default function UserInforScreen({ navigation, route }: any) {
             Địa chỉ: {user?.address_json?.full || "Chưa cung cấp"}
           </Text>
         </View>
-
-        {/* Nút "Viết đánh giá" - CHỈ HIỂN THỊ TRÊN HỒ SƠ NGƯỜI KHÁC VÀ KHI ĐÃ ĐĂNG NHẬP */}
-        {!isOwnProfile && currentUserId && (
-          <TouchableOpacity
-            onPress={() =>
-              myRating
-                ? setRatingMenuVisible(true)
-                : setRatingModalVisible(true)
-            }
-            className={`py-2 rounded-xl mt-3 ${myRating ? "bg-white border border-yellow-400" : "bg-yellow-400"}`}
-          >
-            <Text
-              className={`text-center font-medium ${myRating ? "text-yellow-500" : "text-white"}`}
-            >
-              {myRating ? "Đánh giá của bạn" : "Viết đánh giá"}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Danh sách đánh giá */}
-        {ratings.length > 0 && (
-          <View className="px-3 mt-2">
-            <Text className="text-base font-semibold mb-2">
-              Đánh giá từ người dùng ({ratingCount})
-            </Text>
-            {ratings.map((rating) => (
-              <RatingCard key={rating.id} rating={rating} />
-            ))}
-          </View>
-        )}
 
         {/* Nút xem thêm/ẩn */}
         <TouchableOpacity
@@ -1036,6 +1003,34 @@ export default function UserInforScreen({ navigation, route }: any) {
                 </Text>
               </View>
             </View>
+          </View>
+        )}
+        {/* Nút "Viết đánh giá" - CHỈ HIỂN THỊ TRÊN HỒ SƠ NGƯỜI KHÁC VÀ KHI ĐÃ ĐĂNG NHẬP */}
+        {!isOwnProfile && currentUserId && (
+          <TouchableOpacity
+            onPress={() =>
+              myRating
+                ? setRatingMenuVisible(true)
+                : setRatingModalVisible(true)
+            }
+            className={`py-2 rounded-xl mt-3 ${myRating ? "bg-white border border-yellow-400" : "bg-yellow-400"}`}
+          >
+            <Text
+              className={`text-center font-medium ${myRating ? "text-yellow-500" : "text-white"}`}
+            >
+              {myRating ? "Đánh giá của bạn" : "Viết đánh giá"}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {/* Danh sách đánh giá */}
+        {ratings.length > 0 && (
+          <View className="px-3 mt-2">
+            <Text className="text-base font-semibold mb-2">
+              Đánh giá từ người dùng ({ratingCount})
+            </Text>
+            {ratings.map((rating) => (
+              <RatingCard key={rating.id} rating={rating} />
+            ))}
           </View>
         )}
       </View>

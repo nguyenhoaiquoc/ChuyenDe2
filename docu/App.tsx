@@ -23,8 +23,6 @@ import ChooseCategoryScreen from "./screens/post/ChooseCategoryScreen";
 import ChooseSubCategoryScreen from "./screens/post/ChooseSubCategoryScreen";
 import PostFormScreen from "./screens/post/PostFormScreen";
 import ViewHistory from "./screens/profile/ViewHistory";
-import SavedSearchScreen from "./screens/profile/SavedSearchScreen";
-import SavedPosts from "./screens/profile/SavedPosts";
 import FeedbackScreen from "./screens/profile/FeedbackScreen";
 import UserScreen from "./screens/profile/UserScreen";
 import ChooseExchangeCategoryScreen from "./screens/post/ChooseExchangeCategoryScreen";
@@ -123,11 +121,6 @@ export default function App() {
               />
               <Stack.Screen name="PostFormScreen" component={PostFormScreen} />
               <Stack.Screen name="ViewHistory" component={ViewHistory} />
-              <Stack.Screen
-                name="SavedSearchScreen"
-                component={SavedSearchScreen}
-              />
-              <Stack.Screen name="SavedPosts" component={SavedPosts} />
               <Stack.Screen name="FeedbackScreen" component={FeedbackScreen} />
               <Stack.Screen name="UserScreen" component={UserScreen} />
               <Stack.Screen
