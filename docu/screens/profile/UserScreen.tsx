@@ -16,12 +16,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { path } from "../../config";
-import { disconnectSocket, getSocket } from "../../src/libs/socket";
 import React from "react";
+import { useChat } from "../../components/ChatContext";
 
 export default function UserScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { socketRef, setUnreadCount } = useChat();  // 👈 LẤY TỪ ChatContext
 
   // GỘP USER VÀO 1 OBJECT
   const [user, setUser] = useState<{
@@ -209,36 +210,44 @@ export default function UserScreen() {
               title="Đánh giá từ tôi"
               onPress={() => navigation.navigate("FeedbackScreen")}
             />
-            <UtilityItem
-              icon="log-out-outline"
-              title="Đăng xuất"
-              isLast
-              color="red"
-              onPress={async () => {
-                try {
-                  const socket = getSocket();
-                  if (socket) {
-                    socket.emit("logout");
-                    disconnectSocket();
-                  }
-                } catch (err) {
-                  console.log("Lỗi socket logout:", err);
-                }
+           <UtilityItem
+  icon="log-out-outline"
+  title="Đăng xuất"
+  isLast
+  color="red"
+  onPress={async () => {
+    try {
+      // 1. Ngắt đúng socket chat của ChatContext
+      const socket = socketRef.current;
+      if (socket) {
+        socket.emit("logout");        // cho backend biết (nếu bạn có handle)
+        socket.disconnect();          // cắt kết nối
+        socketRef.current = null;     // rất quan trọng
+      }
 
-                await AsyncStorage.multiRemove([
-                  "token",
-                  "userId",
-                  "userName",
-                  "userAvatar",
-                  "role_id",
-                ]);
+      // 2. Reset badge trên FE
+      setUnreadCount(0);
 
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: "LoginScreen" }],
-                });
-              }}
-            />
+      // 3. Xoá thông tin đăng nhập
+      await AsyncStorage.multiRemove([
+        "token",
+        "userId",
+        "userName",
+        "userAvatar",
+        "role_id",
+      ]);
+
+      // 4. Điều hướng về màn Login
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "LoginScreen" }],
+      });
+    } catch (err) {
+      console.log("Lỗi logout:", err);
+    }
+  }}
+/>
+
           </View>
         </View>
       </ScrollView>
