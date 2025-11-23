@@ -126,9 +126,9 @@ export default function ProductDetailScreen() {
   useEffect(() => {
     const fetchRating = async () => {
       try {
-        console.log(product.authorName);
-        console.log(product.user?.avatar);
-        console.log("id", product.user_id);
+        // console.log(product.authorName);
+        // console.log(product.user?.avatar);
+        // console.log("id", product.user_id);
         const res = await fetch(
           `${path}/users/${product.user_id}/rating-average`
         );
@@ -853,7 +853,7 @@ export default function ProductDetailScreen() {
               />
               <View className="ml-3 flex-1">
                 <Text className="font-semibold">
-                  {product.authorName || "Người dùng"}
+                  {product.authorName || product.user?.name || "Người dùng"}
                 </Text>
                 <Text className="text-gray-500 text-xs">
                   đã bán {soldCount} lần
@@ -991,7 +991,7 @@ export default function ProductDetailScreen() {
                   className="text-gray-800 text-sm font-medium"
                   style={{ flexShrink: 1, flexWrap: "wrap" }}
                 >
-                  {product.dealType?.name || "Chưa rõ"}
+                  {product.dealType?.name ||  "Chưa rõ"}
                 </Text>
               </View>
 
