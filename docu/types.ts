@@ -347,7 +347,7 @@ export type Comment = {
   created_at: string;
   user?: {
     id: string | number;
-    fullName?: string;
+    nickname?: string;
     image?: string;
   };
   children: Comment[];
