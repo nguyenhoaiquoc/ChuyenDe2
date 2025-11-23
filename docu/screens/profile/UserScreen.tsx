@@ -195,16 +195,6 @@ export default function UserScreen() {
               onPress={() => navigation.navigate("SavedPostsScreen")}
             />
             <UtilityItem
-              icon="trash-outline"
-              title="Tìm kiếm đã lưu"
-              onPress={() => navigation.navigate("SavedSearchScreen")}
-            />
-            <UtilityItem
-              icon="time-outline"
-              title="Lịch sử xem tin"
-              onPress={() => navigation.navigate("SavedPosts")}
-            />
-            <UtilityItem
               icon="star-outline"
               title="Đánh giá từ tôi"
               onPress={() => navigation.navigate("FeedbackScreen")}
