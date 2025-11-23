@@ -22,6 +22,7 @@ const ChatContext = createContext<ChatContextType>({
   setUnreadCount: () => {},
   socketRef: { current: null } as React.MutableRefObject<Socket | null>,
   markRoomAsRead: () => {},
+  
 });
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {

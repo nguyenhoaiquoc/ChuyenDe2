@@ -20,6 +20,7 @@ import { RootStackParamList } from "../../types";
 import { useFocusEffect } from "@react-navigation/native";
 import { io, Socket } from "socket.io-client";
 import React from "react";
+import { useChat } from "../../components/ChatContext";
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, "ChatListScreen">;
@@ -28,8 +29,8 @@ type Props = {
 export default function ChatListScreen({ navigation }: Props) {
   const [chatList, setChatList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const socketRef = useRef<Socket | null>(null);
   const currentUserIdRef = useRef<string>("");
+  const { socketRef } = useChat();
 
   const fetchChats = useCallback(async () => {
     try {
@@ -61,108 +62,76 @@ export default function ChatListScreen({ navigation }: Props) {
   );
 
   // 🔴 NEW: Kết nối socket ngay tại ChatList để nhận realtime
-  useEffect(() => {
-    (async () => {
-      const [token, uid] = await Promise.all([
-        AsyncStorage.getItem("token"),
-        AsyncStorage.getItem("userId"),
-      ]);
-      if (!token || !uid) return;
-      currentUserIdRef.current = String(uid);
+useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
 
-      const socket = io(path, {
-        auth: { token, userId: String(uid) },
-        transports: ["websocket"],
-      });
-      socketRef.current = socket;
+    const handleReceive = (msg: any) => {
+      const me = currentUserIdRef.current;
+      const isForMe = String(msg.receiver_id) === String(me);
 
-      socket.on("connect", () =>
-        console.log("✅ ChatList socket connected:", socket.id)
-      );
-      socket.on("connect_error", (e) =>
-        console.log("⚠️ connect_error ChatList:", e?.message)
-      );
+      setChatList((prev) => {
+        const list = [...prev];
+        const idx = list.findIndex(
+          (r) => Number(r.room_id) === Number(msg.conversation_id)
+        );
+        const patchFields = {
+          last_message: msg.content ?? (msg.media_url ? "[Ảnh]" : ""),
+          last_message_at: msg.created_at ?? new Date().toISOString(),
+          is_last_unread: isForMe
+            ? true
+            : list[idx]?.is_last_unread ?? false,
+          unread_count: isForMe
+            ? Number(list[idx]?.unread_count || 0) + 1
+            : list[idx]?.unread_count || 0,
+        };
 
-      // Khi có tin nhắn mới gửi tới mình → bôi đen room đó + đẩy lên đầu
-      socket.on("receiveMessage", (msg: any) => {
-        // msg phải có: conversation_id, receiver_id, content/media_url, created_at
-        const me = currentUserIdRef.current;
-        const isForMe = String(msg.receiver_id) === String(me);
-
-        setChatList((prev) => {
-          // clone danh sách
-          const list = [...prev];
-          const idx = list.findIndex(
-            (r) => Number(r.room_id) === Number(msg.conversation_id)
-          );
-
-          const patchFields = {
-            last_message: msg.content ?? (msg.media_url ? "[Ảnh]" : ""),
-            last_message_at: msg.created_at ?? new Date().toISOString(),
-            // chỉ bôi đen nếu tin mới là gửi CHO MÌNH và chưa đọc (server mặc định is_read=false khi mới gửi)
-            is_last_unread: isForMe
-              ? true
-              : (list[idx]?.is_last_unread ?? false),
-            unread_count: isForMe
-              ? Number(list[idx]?.unread_count || 0) + 1
-              : list[idx]?.unread_count || 0,
-          };
-
-          if (idx >= 0) {
-            const updated = { ...list[idx], ...patchFields };
-            // đưa room lên đầu theo last_message_at mới
-            const rest = list.filter((_, i) => i !== idx);
-            const newList = [updated, ...rest];
-            // sort chắc cú theo last_message_at desc (ISO string so sánh được)
-            newList.sort((a, b) =>
-              String(b.last_message_at).localeCompare(String(a.last_message_at))
-            );
-            return newList;
-          } else {
-            // Chưa có room trong list (VD: lần đầu chat) → lấy meta rồi push
-            return list; // tạm thời giữ nguyên; gọi meta async để thêm
-          }
-        });
-      });
-
-      // Optional: nếu server broadcast 'messageEdited' & 'messageRecalled' thì cập nhật snippet nếu trùng last_message
-      socket.on("messageEdited", (m: any) => {
-        setChatList((prev) => {
-          const list = [...prev];
-          const idx = list.findIndex(
-            (r) => Number(r.room_id) === Number(m.conversation_id)
-          );
-          if (idx < 0) return list;
-          // chỉ update nếu message vừa sửa chính là last_message hiện đang hiển thị
-          // (Bạn có thể lưu thêm last_message_id ở payload getChatList để so sánh chắc hơn)
-          const updated = {
-            ...list[idx],
-            last_message: m.content ?? (m.media_url ? "[Ảnh]" : ""),
-            last_message_at: m.updated_at ?? list[idx].last_message_at,
-          };
-          list[idx] = updated;
-          return list.sort((a, b) =>
+        if (idx >= 0) {
+          const updated = { ...list[idx], ...patchFields };
+          const rest = list.filter((_, i) => i !== idx);
+          const newList = [updated, ...rest];
+          newList.sort((a, b) =>
             String(b.last_message_at).localeCompare(String(a.last_message_at))
           );
-        });
+          return newList;
+        }
+        return list;
       });
+    };
 
-      socket.on("messageRecalled", (payload: { id: number }) => {
-        // Khi thu hồi, nếu đó là last_message, hiển thị rỗng/placeholder
-        // (cần last_message_id trong payload getChatList để làm chính xác 100%)
-        // tạm thời bỏ qua hoặc gọi fetchChats() để đồng bộ
-        fetchChats();
+    const handleEdited = (m: any) => {
+      setChatList((prev) => {
+        const list = [...prev];
+        const idx = list.findIndex(
+          (r) => Number(r.room_id) === Number(m.conversation_id)
+        );
+        if (idx < 0) return list;
+        const updated = {
+          ...list[idx],
+          last_message: m.content ?? (m.media_url ? "[Ảnh]" : ""),
+          last_message_at: m.updated_at ?? list[idx].last_message_at,
+        };
+        list[idx] = updated;
+        return list.sort((a, b) =>
+          String(b.last_message_at).localeCompare(String(a.last_message_at))
+        );
       });
+    };
 
-      // Khi mình đọc trong ChatRoom, server có thể broadcast 'unreadCount' (để badge),
-      // bạn có thể tự refresh list nếu muốn:
-      // socket.on("unreadCount", () => fetchChats());
+    const handleRecalled = () => {
+      fetchChats();
+    };
 
-      return () => {
-        socket.disconnect();
-      };
-    })();
-  }, [fetchChats]);
+    socket.on("receiveMessage", handleReceive);
+    socket.on("messageEdited", handleEdited);
+    socket.on("messageRecalled", handleRecalled);
+
+    return () => {
+      socket.off("receiveMessage", handleReceive);
+      socket.off("messageEdited", handleEdited);
+      socket.off("messageRecalled", handleRecalled);
+    };
+  }, [socketRef, fetchChats]);
 
   /** Mở phòng chat */
   const handleOpenRoom = async (room: any) => {

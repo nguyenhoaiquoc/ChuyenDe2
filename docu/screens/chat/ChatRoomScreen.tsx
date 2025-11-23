@@ -83,9 +83,8 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   const [content, setContent] = useState("");
   const [selectedImages, setSelectedImages] = useState<any[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
-  const socketRef = useRef<Socket | null>(null);
   const inputRef = useRef<TextInput>(null);
-  const { markRoomAsRead, setUnreadCount } = useChat();
+  const { markRoomAsRead, setUnreadCount, socketRef } = useChat();
 
   const [replyTarget, setReplyTarget] = useState<null | {
     id: string;
@@ -193,77 +192,86 @@ export default function ChatRoomScreen({ navigation, route }: Props) {
   };
 
   // ========= Socket connect =========
-  useEffect(() => {
-    if (!jwt || !roomId) return;
+ useEffect(() => {
+  const socket = socketRef.current;
+  if (!socket || !roomId) return;
 
-    const socket = io(path, {
-      transports: ["websocket"],
-      autoConnect: true,
-      auth: { token: jwt },
-    });
-    socketRef.current = socket;
+  // Join room
+  socket.emit("joinRoom", { room_id: String(roomId) });
 
-    socket.emit("joinRoom", { room_id: String(roomId) });
+  const handleReceive = (msg: any) => {
+    if (selfId && String(msg.sender_id) === String(selfId)) return;
+    pushOneToList(msg);
+  };
 
-    socket.on("receiveMessage", (msg: any) => {
-      // tin của người khác mới add
-      if (selfId && String(msg.sender_id) === String(selfId)) return;
-      pushOneToList(msg);
-    });
+  const handleLoad = (msgs: any[]) => {
+    const mapped: UiMsg[] = msgs.map(mapMsgToUi);
+    setMessages(mapped);
+  };
 
-    socket.on("loadMessages", (msgs: any[]) => {
-      const mapped: UiMsg[] = msgs.map(mapMsgToUi);
-      setMessages(mapped);
-    });
+  const handleUserOnline = ({ userId, online }: any) => {
+    if (otherUserId && String(userId) === String(otherUserId)) {
+      setOnlineStatus((prev) => ({ ...prev, online }));
+    }
+  };
 
-    socket.on("userOnline", ({ userId, online }) => {
-      if (otherUserId && String(userId) === String(otherUserId)) {
-        setOnlineStatus((prev) => ({ ...prev, online }));
-      }
-    });
-
-    socket.on(
-      "messageRecalled",
-      (payload: { id: number; recalled_at?: string }) => {
-        const idStr = String(payload.id);
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === idStr
-              ? { ...m, isRecalled: true, text: "", mediaUrl: null }
-              : m
-          )
-        );
-      }
+  const handleRecalled = (payload: { id: number; recalled_at?: string }) => {
+    const idStr = String(payload.id);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === idStr
+          ? { ...m, isRecalled: true, text: "", mediaUrl: null }
+          : m
+      )
     );
+  };
 
-    socket.on("messageEdited", (msg: any) => {
-      const idStr = String(msg.id);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === idStr
-            ? {
-                ...m,
-                text: msg.content ?? "",
-                edited: true,
-                time: new Date(msg.edited_at ?? msg.updated_at ?? Date.now())
-                  .toLocaleTimeString("vi-VN")
-                  .slice(0, 5),
-              }
-            : m
-        )
-      );
-    });
+  const handleEdited = (msg: any) => {
+    const idStr = String(msg.id);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === idStr
+          ? {
+              ...m,
+              text: msg.content ?? "",
+              edited: true,
+              time: new Date(msg.edited_at ?? msg.updated_at ?? Date.now())
+                .toLocaleTimeString("vi-VN")
+                .slice(0, 5),
+            }
+          : m
+      )
+    );
+  };
 
-    socket.on("newReply", (msg: any) => {
-      // nếu là bản thân gửi reply thì skip, tránh nhân đôi
-      if (selfId && String(msg.sender_id) === String(selfId)) return;
-      pushOneToList(msg);
-    });
+  const handleNewReply = (msg: any) => {
+    if (selfId && String(msg.sender_id) === String(selfId)) return;
+    pushOneToList(msg);
+  };
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [jwt, roomId, selfId, otherUserId]);
+  // Đăng ký listener
+  socket.on("receiveMessage", handleReceive);
+  socket.on("loadMessages", handleLoad);
+  socket.on("userOnline", handleUserOnline);
+  socket.on("messageRecalled", handleRecalled);
+  socket.on("messageEdited", handleEdited);
+  socket.on("newReply", handleNewReply);
+
+  // Lấy history lần đầu
+  socket.emit("getMessagesByRoom", { roomId: String(roomId) });
+
+  return () => {
+    // KHÔNG disconnect socket ở đây nữa, chỉ gỡ listener và leave room
+    socket.emit("leaveRoom", { room_id: String(roomId) });
+    socket.off("receiveMessage", handleReceive);
+    socket.off("loadMessages", handleLoad);
+    socket.off("userOnline", handleUserOnline);
+    socket.off("messageRecalled", handleRecalled);
+    socket.off("messageEdited", handleEdited);
+    socket.off("newReply", handleNewReply);
+  };
+}, [roomId, selfId, otherUserId, socketRef]);
+
 
   const isFocused = useIsFocused();
 
