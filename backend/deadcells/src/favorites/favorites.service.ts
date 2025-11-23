@@ -11,20 +11,21 @@ export class FavoritesService {
   constructor(
     @InjectRepository(Favorite)
     private readonly favoriteRepo: Repository<Favorite>,
-    @InjectRepository(Product) // 
+    @InjectRepository(Product) //
     private readonly productRepo: Repository<Product>,
     private readonly notificationService: NotificationService,
-  ) { }
+  ) {}
 
   async toggleFavorite(userId: number, productId: number) {
-    
     const product = await this.productRepo.findOne({
       where: { id: productId },
       select: ['user_id'], // Chỉ cần user_id
     });
 
     if (!product || !product.user_id) {
-      throw new NotFoundException(`Không tìm thấy sản phẩm ${productId} hoặc chủ nhân.`);
+      throw new NotFoundException(
+        `Không tìm thấy sản phẩm ${productId} hoặc chủ nhân.`,
+      );
     }
     // Giờ 'productOwnerId' đã tồn tại ở scope này
     const productOwnerId = Number(product.user_id);
@@ -37,9 +38,14 @@ export class FavoritesService {
     if (existingFavorite) {
       // BỎ THÍCH
       await this.favoriteRepo.remove(existingFavorite);
-      // GỌI HÀM XÓA 
-      this.notificationService.deleteNotificationOnUnlike(userId, productId, productOwnerId)
-        .catch(err => this.logger.error(`Lỗi (từ service) deleteNotificationOnUnlike: ${err.message}`));
+      // GỌI HÀM XÓA
+      this.notificationService
+        .deleteNotificationOnUnlike(userId, productId, productOwnerId)
+        .catch((err) =>
+          this.logger.error(
+            `Lỗi (từ service) deleteNotificationOnUnlike: ${err.message}`,
+          ),
+        );
 
       return { favorited: false, message: 'Đã bỏ yêu thích sản phẩm.' };
     } else {
@@ -48,16 +54,23 @@ export class FavoritesService {
         product_id: productId,
       });
       await this.favoriteRepo.save(newFavorite);
-      this.sendFavoriteNotifications(userId, productId, productOwnerId)
-        .catch(err => this.logger.error(`Lỗi (từ service) sendFavoriteNotifications: ${err.message}`));
+      this.sendFavoriteNotifications(userId, productId, productOwnerId).catch(
+        (err) =>
+          this.logger.error(
+            `Lỗi (từ service) sendFavoriteNotifications: ${err.message}`,
+          ),
+      );
 
       return { favorited: true, message: 'Đã thêm vào yêu thích.' };
     }
   }
 
-
   // ✅ HÀM GỬI THÔNG BÁO (PRIVATE)
-  private async sendFavoriteNotifications(actorId: number, productId: number, productOwnerId: number) {
+  private async sendFavoriteNotifications(
+    actorId: number,
+    productId: number,
+    productOwnerId: number,
+  ) {
     try {
       // 1. Gửi thông báo cho chủ sản phẩm
       if (actorId !== productOwnerId) {
@@ -73,9 +86,11 @@ export class FavoritesService {
         actorId,
         productId,
       );
-
     } catch (error) {
-      this.logger.error(`Lỗi khi gửi thông báo favorite: ${error.message}`, error.stack);
+      this.logger.error(
+        `Lỗi khi gửi thông báo favorite: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -110,7 +125,7 @@ export class FavoritesService {
     productId: number,
   ): Promise<{ isFavorite: boolean }> {
     const existing = await this.favoriteRepo.findOne({
-      where: { user_id: userId, product_id: productId },  
+      where: { user_id: userId, product_id: productId },
     });
 
     return { isFavorite: !!existing };
@@ -124,21 +139,44 @@ export class FavoritesService {
       // Dùng 'relations' để TypeORM tự động JOIN bảng 'products'
       // Thêm 'images', 'user' để ProductCard có đủ thông tin
       relations: [
-        'product', 
-        'product.images', 
+        'product', // Relation gốc
+        'product.images',
         'product.user',
         'product.dealType',
+        'product.condition',
         'product.category',
-      ], 
+        'product.subCategory',
+        'product.category_change',
+        'product.sub_category_change',
+        'product.postType',
+        'product.productType',
+        'product.origin',
+        'product.material',
+        'product.size',
+        'product.brand',
+        'product.color',
+        'product.capacity',
+        'product.warranty',
+        'product.productModel',
+        'product.processor',
+        'product.ramOption',
+        'product.storageType',
+        'product.graphicsCard',
+        'product.breed',
+        'product.ageRange',
+        'product.gender',
+        'product.engineCapacity',
+        'product.productStatus',
+        'product.group',
+      ],
       order: {
-        created_at: 'DESC', 
+        created_at: 'DESC',
       },
     });
     const products = favorites
-      .map(fav => fav.product)
-      .filter(product => product != null); 
+      .map((fav) => fav.product)
+      .filter((product) => product != null);
 
-    return products; 
-    
+    return products;
   }
 }
