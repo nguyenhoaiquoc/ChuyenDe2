@@ -605,12 +605,12 @@ export class ProductService {
         user: p.user
           ? {
               id: p.user.id,
-              name: p.user.fullName,
+              name: p.user.nickname,
               email: p.user.email,
               phone: p.user.phone,
             }
           : null,
-        author_name: p.user?.fullName || 'Người bán',
+        author_name: p.user?.nickname || 'Người bán',
         author: p.author || null,
         year: p.year || null,
         mileage: p.mileage ?? null,
