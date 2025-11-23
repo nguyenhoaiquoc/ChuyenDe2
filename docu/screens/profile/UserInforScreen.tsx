@@ -711,7 +711,7 @@ export default function UserInforScreen({ navigation, route }: any) {
 
   // Copy Link
   const handleCopyLink = async () => {
-    await Clipboard.setStringAsync(`https://yourapp.com/user/${user?.id}`);
+    await Clipboard.setStringAsync(`${path}/user/${user?.id}`);
     Alert.alert("Thành công", "Liên kết đã được sao chép");
     setMenuVisible(false);
   };
